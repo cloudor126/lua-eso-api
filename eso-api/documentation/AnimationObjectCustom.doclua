@@ -1,0 +1,13 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectCustom
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #function functionRef
+-- @function[parent = #AnimationObjectCustom] SetUpdateFunction
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectCustom
+-- @extends AnimationObject#AnimationObject
+
+return nil

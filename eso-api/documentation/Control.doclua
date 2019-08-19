@@ -1,0 +1,594 @@
+-------------------------------------------------------------------------------
+-- @module Control
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer event
+-- @return #boolean success
+-- @function[parent = #Control] AddFilterForEvent
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @function[parent = #Control] ClearAnchors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number localPitch
+-- @param #number localYaw
+-- @param #number localRoll
+-- @return #number,#number,#number worldPitch,worldYaw,worldRoll
+-- @function[parent = #Control] Convert3DLocalOrientationToWorldOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number localX
+-- @param #number localY
+-- @param #number localZ
+-- @return #number,#number,#number worldX,worldY,worldZ
+-- @function[parent = #Control] Convert3DLocalPositionToWorldPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number worldPitch
+-- @param #number worldYaw
+-- @param #number worldRoll
+-- @return #number,#number,#number localPitch,localYaw,localRoll
+-- @function[parent = #Control] Convert3DWorldOrientationToLocalOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number worldX
+-- @param #number worldY
+-- @param #number worldZ
+-- @return #number,#number,#number localX,localY,localZ
+-- @function[parent = #Control] Convert3DWorldPositionToLocalPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] Create3DRenderSpace
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer type
+-- @return #table apRet
+-- @function[parent = #Control] CreateControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] Destroy3DRenderSpace
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean usesDepthBuffer
+-- @function[parent = #Control] Does3DRenderSpaceUseDepthBuffer
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number x,y,z
+-- @function[parent = #Control] Get3DRenderSpaceForward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number pitchRadians,yawRadians,rollRadians
+-- @function[parent = #Control] Get3DRenderSpaceOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number x,y,z
+-- @function[parent = #Control] Get3DRenderSpaceOrigin
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number x,y,z
+-- @function[parent = #Control] Get3DRenderSpaceRight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #GuiRender3DSpaceSystem system
+-- @function[parent = #Control] Get3DRenderSpaceSystem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number x,y,z
+-- @function[parent = #Control] Get3DRenderSpaceUp
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number alpha
+-- @function[parent = #Control] GetAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer anchorIndex
+-- @return #boolean,#integer,#table,#integer,#number,#number,#AnchorConstrains isValidAnchor,point,relativeTo,relativePoint,offsetX,offsetY,anchorConstrains
+-- @function[parent = #Control] GetAnchor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number bottom
+-- @function[parent = #Control] GetBottom
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number centerX,centerY
+-- @function[parent = #Control] GetCenter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number childIndex
+-- @return #table childControl
+-- @function[parent = #Control] GetChild
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean clamped
+-- @function[parent = #Control] GetClampedToScreen
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number left,top,right,bottom
+-- @function[parent = #Control] GetClampedToScreenInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number alpha
+-- @function[parent = #Control] GetControlAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number scale
+-- @function[parent = #Control] GetControlScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number height
+-- @function[parent = #Control] GetDesiredHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number width
+-- @function[parent = #Control] GetDesiredWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number minWidth,minHeight,maxWidth,maxHeight
+-- @function[parent = #Control] GetDimensionConstraints
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number width,height
+-- @function[parent = #Control] GetDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer layer
+-- @function[parent = #Control] GetDrawLayer
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer level
+-- @function[parent = #Control] GetDrawLevel
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer tier
+-- @function[parent = #Control] GetDrawTier
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean excludes
+-- @function[parent = #Control] GetExcludeFromResizeToFitExtents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string handlerName
+-- @return #function functionRef
+-- @function[parent = #Control] GetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number height
+-- @function[parent = #Control] GetHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number left,top,right,bottom
+-- @function[parent = #Control] GetHitInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer id
+-- @function[parent = #Control] GetId
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean inheritAlpha
+-- @function[parent = #Control] GetInheritsAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean inheritScale
+-- @function[parent = #Control] GetInheritsScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number left
+-- @function[parent = #Control] GetLeft
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string name
+-- @function[parent = #Control] GetName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string childName
+-- @return #table returnedControl
+-- @function[parent = #Control] GetNamedChild
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numChildren
+-- @function[parent = #Control] GetNumChildren
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table OwningTopLevelWindow
+-- @function[parent = #Control] GetOwningWindow
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] GetParent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean resizes
+-- @function[parent = #Control] GetResizeToFitDescendents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number width,height
+-- @function[parent = #Control] GetResizeToFitPadding
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number right
+-- @function[parent = #Control] GetRight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number scale
+-- @function[parent = #Control] GetScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number left,top,right,bottom
+-- @function[parent = #Control] GetScreenRect
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number top
+-- @function[parent = #Control] GetTop
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer type
+-- @function[parent = #Control] GetType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number width
+-- @function[parent = #Control] GetWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] Has3DRenderSpace
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table desiredParent
+-- @return #boolean isChild
+-- @function[parent = #Control] IsChildOf
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean hidden
+-- @function[parent = #Control] IsControlHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string handlerName
+-- @return #boolean isSet
+-- @function[parent = #Control] IsHandlerSet
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean hidden
+-- @function[parent = #Control] IsHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #Control] IsKeyboardEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #Control] IsMouseEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @param #number leftOffset
+-- @param #number topOffset
+-- @param #number rightOffset
+-- @param #number bottomOffset
+-- @return #boolean isInside
+-- @function[parent = #Control] IsPointInside
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer event
+-- @param #function callback
+-- @return #boolean success
+-- @function[parent = #Control] RegisterForEvent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @param #number z
+-- @function[parent = #Control] Set3DRenderSpaceForward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number pitchRadians
+-- @param #number yawRadians
+-- @param #number rollRadians
+-- @function[parent = #Control] Set3DRenderSpaceOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number xM
+-- @param #number yM
+-- @param #number zM
+-- @function[parent = #Control] Set3DRenderSpaceOrigin
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @param #number z
+-- @function[parent = #Control] Set3DRenderSpaceRight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #GuiRender3DSpaceSystem system
+-- @function[parent = #Control] Set3DRenderSpaceSystem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @param #number z
+-- @function[parent = #Control] Set3DRenderSpaceUp
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean usesDepthBuffer
+-- @function[parent = #Control] Set3DRenderSpaceUsesDepthBuffer
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number alpha
+-- @function[parent = #Control] SetAlpha
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #integer whereOnMe
+-- @param #table anchorTargetControl
+-- @param #integer whereOnTarget
+-- @param #number offsetX
+-- @param #number offsetY
+-- @param #AnchorConstrains anchorConstrains
+-- @function[parent = #Control] SetAnchor
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #table anchorTargetControl
+-- @function[parent = #Control] SetAnchorFill
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean clamped
+-- @function[parent = #Control] SetClampedToScreen
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number top
+-- @param #number right
+-- @param #number bottom
+-- @function[parent = #Control] SetClampedToScreenInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number minWidth
+-- @param #number minHeight
+-- @param #number maxWidth
+-- @param #number maxHeight
+-- @function[parent = #Control] SetDimensionConstraints
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number width
+-- @param #number height
+-- @function[parent = #Control] SetDimensions
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #integer layer
+-- @function[parent = #Control] SetDrawLayer
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #integer level
+-- @function[parent = #Control] SetDrawLevel
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #integer tier
+-- @function[parent = #Control] SetDrawTier
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean exclude
+-- @function[parent = #Control] SetExcludeFromResizeToFitExtents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string handlerName
+-- @param #function functionRef
+-- @function[parent = #Control] SetHandler
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number height
+-- @function[parent = #Control] SetHeight
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean aHidden
+-- @function[parent = #Control] SetHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number top
+-- @param #number right
+-- @param #number bottom
+-- @function[parent = #Control] SetHitInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer id
+-- @function[parent = #Control] SetId
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean inheritAlpha
+-- @function[parent = #Control] SetInheritAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean inheritScale
+-- @function[parent = #Control] SetInheritScale
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #Control] SetKeyboardEnabled
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #Control] SetMouseEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean isMovable
+-- @function[parent = #Control] SetMovable
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #table newParent
+-- @function[parent = #Control] SetParent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number handleSize
+-- @function[parent = #Control] SetResizeHandleSize
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean resize
+-- @function[parent = #Control] SetResizeToFitDescendents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number width
+-- @param #number height
+-- @function[parent = #Control] SetResizeToFitPadding
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number scale
+-- @function[parent = #Control] SetScale
+
+-------------------------------------------------------------------------------
+-- *public*
+-- @param self
+-- @param #integer shapeType
+-- @function[parent = #Control] SetShapeType
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #table anchorTargetControl
+-- @param #number offsetX
+-- @param #number offsetY
+-- @function[parent = #Control] SetSimpleAnchor
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number offsetX
+-- @param #number offsetY
+-- @function[parent = #Control] SetSimpleAnchorParent
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #number width
+-- @function[parent = #Control] SetWidth
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @return #boolean isMoving
+-- @function[parent = #Control] StartMoving
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @function[parent = #Control] StopMovingOrResizing
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @function[parent = #Control] ToggleHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer event
+-- @return #boolean success
+-- @function[parent = #Control] UnregisterForEvent
+
+return nil

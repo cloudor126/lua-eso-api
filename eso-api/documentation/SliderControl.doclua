@@ -1,0 +1,137 @@
+-------------------------------------------------------------------------------
+-- @module SliderControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean allow
+-- @function[parent = #SliderControl] DoesAllowDraggingFromThumb
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isEnabled
+-- @function[parent = #SliderControl] GetEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number min,max
+-- @function[parent = #SliderControl] GetMinMax
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer orientation
+-- @function[parent = #SliderControl] GetOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table textureControl
+-- @function[parent = #SliderControl] GetThumbTextureControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number value
+-- @function[parent = #SliderControl] GetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number step
+-- @function[parent = #SliderControl] GetValueStep
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean flush
+-- @function[parent = #SliderControl] IsThumbFlushWithExtents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean allow
+-- @function[parent = #SliderControl] SetAllowDraggingFromThumb
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fileName
+-- @param #number texTop
+-- @param #number texLeft
+-- @param #number texBottom
+-- @param #number texRight
+-- @function[parent = #SliderControl] SetBackgroundBottomTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fileName
+-- @param #number texTop
+-- @param #number texLeft
+-- @param #number texBottom
+-- @param #number texRight
+-- @function[parent = #SliderControl] SetBackgroundMiddleTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fileName
+-- @param #number texTop
+-- @param #number texLeft
+-- @param #number texBottom
+-- @param #number texRight
+-- @function[parent = #SliderControl] SetBackgroundTopTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #SliderControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enable
+-- @function[parent = #SliderControl] SetEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number min
+-- @param #number max
+-- @function[parent = #SliderControl] SetMinMax
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer orientation
+-- @function[parent = #SliderControl] SetOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean flush
+-- @function[parent = #SliderControl] SetThumbFlushWithExtents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @param #string disabledFilename
+-- @param #string highlightedFilename
+-- @param #number thumbWidth
+-- @param #number thumbHeight
+-- @param #number texTop
+-- @param #number texLeft
+-- @param #number texBottom
+-- @param #number texRight
+-- @function[parent = #SliderControl] SetThumbTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number height
+-- @function[parent = #SliderControl] SetThumbTextureHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number value
+-- @function[parent = #SliderControl] SetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number step
+-- @function[parent = #SliderControl] SetValueStep
+
+-------------------------------------------------------------------------------
+-- @type SliderControl
+-- @extends Control#Control
+
+return nil

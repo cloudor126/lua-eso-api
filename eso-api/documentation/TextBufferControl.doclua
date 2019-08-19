@@ -1,0 +1,129 @@
+-------------------------------------------------------------------------------
+-- @module TextBufferControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aText
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #integer colorId
+-- @function[parent = #TextBufferControl] AddMessage
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TextBufferControl] Clear
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean drawLastIfOutOfRoom
+-- @function[parent = #TextBufferControl] GetDrawLastEntryIfOutOfRoom
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number timeBeforeLineBeginsToFade,timeItTakesLineToFade
+-- @function[parent = #TextBufferControl] GetLineFade
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean linkEnabed
+-- @function[parent = #TextBufferControl] GetLinkEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numLines
+-- @function[parent = #TextBufferControl] GetMaxHistoryLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numLines
+-- @function[parent = #TextBufferControl] GetNumHistoryLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numLines
+-- @function[parent = #TextBufferControl] GetNumVisibleLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer scrollPosition
+-- @function[parent = #TextBufferControl] GetScrollPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isSplitting
+-- @function[parent = #TextBufferControl] IsSplittingLongMessages
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer numLines
+-- @function[parent = #TextBufferControl] MoveScrollPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean clearAfterFade
+-- @function[parent = #TextBufferControl] SetClearBufferAfterFadeout
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer colorId
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @function[parent = #TextBufferControl] SetColorById
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean drawLastIfOutOfRoom
+-- @function[parent = #TextBufferControl] SetDrawLastEntryIfOutOfRoom
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontString
+-- @function[parent = #TextBufferControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer align
+-- @function[parent = #TextBufferControl] SetHorizontalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number timeBeforeLineFadeBegins
+-- @param #number timeForLineToFade
+-- @function[parent = #TextBufferControl] SetLineFade
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean linesInheritAlpha
+-- @function[parent = #TextBufferControl] SetLinesInheritAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean linkEnabed
+-- @function[parent = #TextBufferControl] SetLinkEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer numLines
+-- @function[parent = #TextBufferControl] SetMaxHistoryLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer line
+-- @function[parent = #TextBufferControl] SetScrollPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean splitLongMessages
+-- @function[parent = #TextBufferControl] SetSplitLongMessages
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TextBufferControl] ShowFadedLines
+
+-------------------------------------------------------------------------------
+-- @type TextBufferControl
+-- @extends Control#Control
+
+return nil

@@ -1,0 +1,40 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectScroll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endX
+-- @function[parent = #AnimationObjectScroll] SetHorizontalEnd
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number offsetX
+-- @function[parent = #AnimationObjectScroll] SetHorizontalRelative
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startX
+-- @param #number endX
+-- @function[parent = #AnimationObjectScroll] SetHorizontalStartAndEnd
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endY
+-- @function[parent = #AnimationObjectScroll] SetVerticalEnd
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number offsetY
+-- @function[parent = #AnimationObjectScroll] SetVerticalRelative
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startY
+-- @param #number endY
+-- @function[parent = #AnimationObjectScroll] SetVerticalStartAndEnd
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectScroll
+-- @extends AnimationObject#AnimationObject
+
+return nil

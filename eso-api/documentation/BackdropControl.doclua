@@ -1,0 +1,73 @@
+-------------------------------------------------------------------------------
+-- @module BackdropControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #BackdropControl] GetCenterColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #BackdropControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #BackdropControl] SetCenterColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @param #integer tileSize
+-- @param #integer addressMode
+-- @function[parent = #BackdropControl] SetCenterTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #BackdropControl] SetEdgeColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @param #integer edgeFileWidth
+-- @param #integer edgeFileHeight
+-- @param #integer edgeSize
+-- @param #integer edgeFilePadding
+-- @function[parent = #BackdropControl] SetEdgeTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number top
+-- @param #number right
+-- @param #number bottom
+-- @function[parent = #BackdropControl] SetInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean integralWrappingEnabled
+-- @function[parent = #BackdropControl] SetIntegralWrapping
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #BackdropControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #BackdropControl] SetTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @type BackdropControl
+-- @extends Control#Control
+
+return nil

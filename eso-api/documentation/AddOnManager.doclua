@@ -1,0 +1,67 @@
+-------------------------------------------------------------------------------
+-- @module AddOnManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string relevantFilter
+-- @function[parent = #AddOnManager] AddRelevantFilter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @param #number addOnDependencyIndex
+-- @return #string,#boolean name,active
+-- @function[parent = #AddOnManager] GetAddOnDependencyInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string settingFilter
+-- @function[parent = #AddOnManager] GetAddOnFilter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @return #string,#string,#string,#string,#boolean,#AddOnLoadState,#boolean name,title,author,description,enabled,state,isOutOfDate
+-- @function[parent = #AddOnManager] GetAddOnInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @return #integer numDependencies
+-- @function[parent = #AddOnManager] GetAddOnNumDependencies
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean loadOutOfDateAddons
+-- @function[parent = #AddOnManager] GetLoadOutOfDateAddOns
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numAddOns
+-- @function[parent = #AddOnManager] GetNumAddOns
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AddOnManager] RemoveAddOnFilter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AddOnManager] ResetRelevantFilters
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @param #boolean enabled
+-- @function[parent = #AddOnManager] SetAddOnEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string settingFilter
+-- @function[parent = #AddOnManager] SetAddOnFilter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean loadOutOfDateAddons
+-- @function[parent = #AddOnManager] SetLoadOutOfDateAddOns
+
+return nil

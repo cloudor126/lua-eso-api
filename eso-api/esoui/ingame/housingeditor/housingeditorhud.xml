@@ -1,0 +1,53 @@
+<GuiXml>
+    <Controls>
+        <TopLevelControl name="ZO_HousingHUDFragmentTopLevel" hidden="true">
+            <AnchorFill />
+            <OnInitialized>
+                ZO_HousingHUDFragmentTopLevel_Initialize(self)
+            </OnInitialized>
+            <Controls>
+                <!-- This control will largely be setup by the fragment -->
+                <Control name="$(parent)KeybindButton" inherits="ZO_KeybindButton" excludeFromResizeToFitExtents="true" />
+            </Controls>
+        </TopLevelControl>
+
+        <Control name="ZO_HousingHudButton" virtual="true">
+            <Controls>
+                <Texture name="$(parent)Icon">
+                    <AnchorFill/>
+                </Texture>
+
+                <Texture name="$(parent)Frame" level="2">
+                    <AnchorFill/>
+                </Texture>
+                
+                <Label name="$(parent)Text" wrapMode="ELLIPSIS" horizontalAlignment="CENTER" tier="HIGH" verticalAlignment="TOP" font="ZoFontGameSmall" excludeFromResizeToFitExtents="true">
+                    <Dimensions x="70" y="18"/>
+                    <Anchor point="TOP" relativePoint="BOTTOM" offsetY="1"/>
+                </Label>
+            </Controls>
+        </Control>
+        
+        <TopLevelControl name="ZO_HousingEditorActionBarTopLevel" hidden="true">
+            <OnInitialized>
+                ZO_HousingEditorActionBar_OnInitialize(self)
+            </OnInitialized>
+            <AnchorFill/>
+            <Controls>
+                <Control name="$(parent)ButtonContainer" resizeToFitDescendents="true">
+                    <Anchor point="BOTTOM" offsetY="-200"/>
+                    <Controls>
+                        <Control name="$(parent)YawLeftButton" inherits="ZO_HousingHudButton">
+                            <Anchor point="LEFT"/>
+                        </Control>
+                        <Control name="$(parent)YawRightButton" inherits="ZO_HousingHudButton" />
+                        <Control name="$(parent)PitchForwardButton" inherits="ZO_HousingHudButton" />
+                        <Control name="$(parent)PitchBackButton" inherits="ZO_HousingHudButton" />
+                        <Control name="$(parent)RollRightButton" inherits="ZO_HousingHudButton" />
+                        <Control name="$(parent)RollLeftButton" inherits="ZO_HousingHudButton" />
+                    </Controls>
+                </Control>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

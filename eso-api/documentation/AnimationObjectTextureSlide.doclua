@@ -1,0 +1,14 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectTextureSlide
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number slideDistanceU
+-- @param #number slideDistanceV
+-- @function[parent = #AnimationObjectTextureSlide] SetSlideDistances
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectTextureSlide
+-- @extends AnimationObject#AnimationObject
+
+return nil

@@ -1,0 +1,108 @@
+-------------------------------------------------------------------------------
+-- @module CooldownControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer duration
+-- @function[parent = #CooldownControl] GetDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number percentComplete
+-- @function[parent = #CooldownControl] GetPercentCompleteFixed
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer time
+-- @function[parent = #CooldownControl] GetTimeLeft
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #CooldownControl] ResetCooldown
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer blendMode
+-- @function[parent = #CooldownControl] SetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer remain
+-- @function[parent = #CooldownControl] SetCooldownRemainTime
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #CooldownControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #CooldownControl] SetFillColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #CooldownControl] SetLeadingEdgeTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number percentComplete
+-- @function[parent = #CooldownControl] SetPercentCompleteFixed
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean clockwise
+-- @function[parent = #CooldownControl] SetRadialCooldownClockwise
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startAlpha
+-- @param #number angularDistance
+-- @function[parent = #CooldownControl] SetRadialCooldownGradient
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number originAngle
+-- @function[parent = #CooldownControl] SetRadialCooldownOriginAngle
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #CooldownControl] SetTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #CooldownControl] SetTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer leadingEdgeHeight
+-- @function[parent = #CooldownControl] SetVerticalCooldownLeadingEdgeHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer remain
+-- @param #integer duration
+-- @param #integer cooldownType
+-- @param #integer cooldownTimeType
+-- @param #boolean drawLeadingEdge
+-- @function[parent = #CooldownControl] StartCooldown
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number percentComplete
+-- @param #integer cooldownType
+-- @param #integer cooldownTimeType
+-- @param #boolean drawLeadingEdge
+-- @function[parent = #CooldownControl] StartFixedCooldown
+
+-------------------------------------------------------------------------------
+-- @type CooldownControl
+-- @extends Control#Control
+
+return nil

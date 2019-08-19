@@ -1,0 +1,491 @@
+-------------------------------------------------------------------------------
+-- @module TooltipControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table control
+-- @param #integer cell
+-- @param #boolean useLastRow
+-- @function[parent = #TooltipControl] AddControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table control
+-- @param #integer headerRow
+-- @param #TooltipHeaderSide headerSide
+-- @function[parent = #TooltipControl] AddHeaderControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @param #string font
+-- @param #integer headerRow
+-- @param #TooltipHeaderSide headerSide
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @function[parent = #TooltipControl] AddHeaderLine
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @param #string font
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #AnchorPosition lineAnchor
+-- @param #ModifyTextType modifyTextType
+-- @param #TextAlignment textAlignment
+-- @param #boolean setToFullSize
+-- @param #number minWidth
+-- @function[parent = #TooltipControl] AddLine
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number paddingY
+-- @function[parent = #TooltipControl] AddVerticalPadding
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer queryType
+-- @param #integer keepId
+-- @param #integer objectiveId
+-- @param #ObjectivePinTier objectivePinTier
+-- @function[parent = #TooltipControl] AppendAvAObjective
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer pingType
+-- @param #string unitTag
+-- @function[parent = #TooltipControl] AppendMapPing
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number questIndex
+-- @param #number stepIndex
+-- @param #number conditionIndex
+-- @function[parent = #TooltipControl] AppendQuestCondition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number questIndex
+-- @function[parent = #TooltipControl] AppendQuestEnding
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string unitTag
+-- @function[parent = #TooltipControl] AppendUnitName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TooltipControl] ClearLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table owner
+-- @function[parent = #TooltipControl] GetOwner
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TooltipControl] HideComparativeTooltips
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aAbilityIndex
+-- @param #boolean aShowBase
+-- @function[parent = #TooltipControl] SetAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer abilityId
+-- @function[parent = #TooltipControl] SetAbilityId
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aAchievementId
+-- @function[parent = #TooltipControl] SetAchievement
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aAchievementId
+-- @function[parent = #TooltipControl] SetAchievementRewardItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aSlotId
+-- @function[parent = #TooltipControl] SetAction
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #SkillType skillType
+-- @param #number skillLineIndex
+-- @param #number skillIndex
+-- @param #MorphSlot morphSlot
+-- @param #boolean isPurchased
+-- @param #boolean isAdvised
+-- @param #boolean isBadMorph
+-- @param #integer numAvailableSkillPoints
+-- @param #boolean showSkillPointCost
+-- @param #boolean showUpgradeText
+-- @param #boolean showAdvised
+-- @param #boolean showBadMorph
+-- @param #integer:nilable overrideRank
+-- @function[parent = #TooltipControl] SetActiveSkill
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TooltipControl] SetAsComparativeTooltip1
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TooltipControl] SetAsComparativeTooltip2
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #id64 aMailId
+-- @param #number aAttachSlot
+-- @function[parent = #TooltipControl] SetAttachedMailItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag bagIndex
+-- @param #integer slotIndex
+-- @function[parent = #TooltipControl] SetBagItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number categoryIndex
+-- @param #number collectionIndex
+-- @param #number bookIndex
+-- @function[parent = #TooltipControl] SetBook
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aBuffSlotId
+-- @param #string unitTag
+-- @function[parent = #TooltipControl] SetBuff
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number entryIndex
+-- @function[parent = #TooltipControl] SetBuybackItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number disiplineIndex
+-- @param #number skillIndex
+-- @param #integer numPendingPoints
+-- @function[parent = #TooltipControl] SetChampionSkillAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer collectibleId
+-- @param #boolean addNickname
+-- @param #boolean showPurchasableHint
+-- @param #boolean showBlockReason
+-- @function[parent = #TooltipControl] SetCollectible
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #CurrencyType currencyType
+-- @param #integer quantity
+-- @function[parent = #TooltipControl] SetCurrency
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number rewardIndex
+-- @function[parent = #TooltipControl] SetDailyLoginRewardEntry
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number bonusIndex
+-- @function[parent = #TooltipControl] SetEdgeKeepBonusAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer campaignId
+-- @param #Alliance alliance
+-- @function[parent = #TooltipControl] SetEmperorBonusAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontStr
+-- @function[parent = #TooltipControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number guildSpecificItemIndex
+-- @function[parent = #TooltipControl] SetGuildSpecificItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number spacing
+-- @function[parent = #TooltipControl] SetHeaderRowSpacing
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number verticalOffset
+-- @function[parent = #TooltipControl] SetHeaderVerticalOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag itemBagIndex
+-- @param #integer itemSlotIndex
+-- @param #Bag enchantmentBagIndex
+-- @param #integer enchantmentSlotIndex
+-- @function[parent = #TooltipControl] SetItemUsingEnchantment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number bonusIndex
+-- @function[parent = #TooltipControl] SetKeepBonusAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer keepId
+-- @param #BattlegroundQueryContextType battlegroundContext
+-- @param #integer upgradeLine
+-- @param #integer level
+-- @param #number index
+-- @function[parent = #TooltipControl] SetKeepUpgrade
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number resultIndex
+-- @function[parent = #TooltipControl] SetLastCraftingResultItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aLink
+-- @function[parent = #TooltipControl] SetLink
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer lootId
+-- @function[parent = #TooltipControl] SetLootItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer marketProductId
+-- @param #boolean showCollectiblePurchasableHint
+-- @function[parent = #TooltipControl] SetMarketProduct
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number minRowHeight
+-- @function[parent = #TooltipControl] SetMinHeaderRowHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer minRows
+-- @function[parent = #TooltipControl] SetMinHeaderRows
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table owner
+-- @param #integer position
+-- @param #number offsetX
+-- @param #number offsetY
+-- @param #integer relativePoint
+-- @function[parent = #TooltipControl] SetOwner
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #SkillType skillType
+-- @param #number skillLineIndex
+-- @param #number skillIndex
+-- @param #integer rank
+-- @param #integer purchasedToRank
+-- @param #integer numAvailableSkillPoints
+-- @param #boolean showSkillPointCost
+-- @function[parent = #TooltipControl] SetPassiveSkill
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag solventBagId
+-- @param #integer solventSlotIndex
+-- @function[parent = #TooltipControl] SetPendingAlchemyItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag potencyRuneBagId
+-- @param #integer potencyRuneSlotIndex
+-- @param #Bag essenceRuneBagId
+-- @param #integer essenceRuneSlotIndex
+-- @param #Bag aspectRuneBagId
+-- @param #integer aspectRuneSlotIndex
+-- @function[parent = #TooltipControl] SetPendingEnchantingItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag bagIndex
+-- @param #integer slotIndex
+-- @param #ItemTraitType pendingTrait
+-- @function[parent = #TooltipControl] SetPendingRetraitItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number patternIndex
+-- @param #number materialIndex
+-- @param #integer materialQuantity
+-- @param #integer itemStyleId
+-- @param #number traitIndex
+-- @function[parent = #TooltipControl] SetPendingSmithingItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #id64 placedFurnitureId
+-- @function[parent = #TooltipControl] SetPlacedFurniture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aProgressionIndex
+-- @param #integer aMorph
+-- @param #integer aRank
+-- @param #boolean aShowAdvice
+-- @param #boolean aAdvised
+-- @function[parent = #TooltipControl] SetProgressionAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recipeListIndex
+-- @param #number recipeIndex
+-- @param #number ingredientIndex
+-- @function[parent = #TooltipControl] SetProvisionerIngredientItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recipeListIndex
+-- @param #number recipeIndex
+-- @function[parent = #TooltipControl] SetProvisionerResultItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number questIndex
+-- @param #number stepIndex
+-- @param #number conditionIndex
+-- @function[parent = #TooltipControl] SetQuestItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aPerkIndex
+-- @function[parent = #TooltipControl] SetQuestReward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number questIndex
+-- @param #number toolIndex
+-- @function[parent = #TooltipControl] SetQuestTool
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer rewardId
+-- @param #integer quantity
+-- @function[parent = #TooltipControl] SetReward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Alliance alliance
+-- @param #ObjectiveType artifactType
+-- @param #number bonusIndex
+-- @function[parent = #TooltipControl] SetScrollBonusAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer skillType
+-- @param #number skillLineIndex
+-- @param #number skillIndex
+-- @param #boolean badMorph
+-- @function[parent = #TooltipControl] SetSkillAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer skillType
+-- @param #number skillLineIndex
+-- @function[parent = #TooltipControl] SetSkillLine
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer abilityId
+-- @param #SkillType skillType
+-- @param #number skillLineIndex
+-- @param #number skillLineAbilityIndex
+-- @param #integer morphChoice
+-- @function[parent = #TooltipControl] SetSkillLineAbilityId
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer skillType
+-- @param #number skillLineIndex
+-- @param #number skillIndex
+-- @function[parent = #TooltipControl] SetSkillUpgradeAbility
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer craftingSkillType
+-- @param #number improvementItemIndex
+-- @function[parent = #TooltipControl] SetSmithingImprovementItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #Bag itemToImproveBagId
+-- @param #integer itemToImproveSlotIndex
+-- @param #integer craftingSkillType
+-- @function[parent = #TooltipControl] SetSmithingImprovementResult
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number patternIndex
+-- @param #number materialIndex
+-- @function[parent = #TooltipControl] SetSmithingMaterialItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer itemStyleId
+-- @function[parent = #TooltipControl] SetSmithingStyleItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number traitItemIndex
+-- @function[parent = #TooltipControl] SetSmithingTraitItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number entryIndex
+-- @function[parent = #TooltipControl] SetStoreItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aWho
+-- @param #number aTradeIndex
+-- @function[parent = #TooltipControl] SetTradeItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number tradingHouseIndex
+-- @function[parent = #TooltipControl] SetTradingHouseItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number tradingHouseIndex
+-- @function[parent = #TooltipControl] SetTradingHouseListing
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number paddingY
+-- @function[parent = #TooltipControl] SetVerticalPadding
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer equipSlot
+-- @function[parent = #TooltipControl] SetWornItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TooltipControl] ShowComparativeTooltips
+
+-------------------------------------------------------------------------------
+-- @type TooltipControl
+-- @extends Control#Control
+
+return nil

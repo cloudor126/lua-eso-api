@@ -1,0 +1,71 @@
+<GuiXml>
+    <Controls>
+        <Button name="ZO_ProvisionerIngredientBarSlotTemplate" virtual="true">
+            <OnInitialized>
+                ZO_ProvisionerIngredientBarSlotTemplate_OnInitialized(self)
+            </OnInitialized>
+            <Dimensions x="205" y="205" />
+
+            <Controls>
+                <Backdrop name="$(parent)Bg" inherits="ZO_DefaultBackdrop_Gamepad" excludeFromResizeToFitExtents="true">
+                    <AnchorFill/>
+                </Backdrop>
+                <Texture name="$(parent)Icon" level="2">
+                    <Dimensions x="64" y="64"/>
+                    <Anchor point="CENTER" relativePoint="TOPLEFT" offsetX="57" offsetY="57" />
+                </Texture>
+                <Control name="$(parent)Count" inherits="ZO_FractionDisplay">
+                    <Anchor point="CENTER" relativePoint="TOPRIGHT" offsetX="-57" offsetY="57"/>
+                </Control>
+                <Label name="$(parent)IngredientName" horizontalAlignment="CENTER" verticalAlignment="CENTER" font="ZoFontGamepad34" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" wrapMode="ELLIPSIS">
+                    <Anchor point="TOPLEFT" offsetX="12" offsetY="95"/>
+                    <Anchor point="BOTTOMRIGHT" offsetX="-12" offsetY="-12"/>
+                </Label>
+            </Controls>
+        </Button>
+
+        <TopLevelControl name="ZO_GamepadProvisionerTopLevelSkillInfo" inherits="ZO_GamepadSkillsFooter" hidden="true" />
+
+        <TopLevelControl name="ZO_GamepadProvisionerTopLevel" inherits="ZO_AnchoredToQuadrant1Background" hidden="true">
+            <OnInitialized>
+                ZO_GamepadProvisioner_Initialize(self)
+            </OnInitialized>
+
+            <Controls>
+                <Control name="$(parent)HeaderContainer" inherits="ZO_GamepadScreenHeaderContainer ZO_GamepadGrid_NavQuadrant_ContainerAnchors"/>
+
+                <Scroll name="$(parent)Container" inherits="ZO_GamepadGrid_NavQuadrant_ContainerAnchors">
+                    <Controls>
+                        <Control name="$(parent)Recipe">
+                            <Anchor point="TOPLEFT" relativeTo="$(grandparent)HeaderContainerHeader" relativePoint="BOTTOMLEFT"/>
+                            <Anchor point="BOTTOMRIGHT"/>
+                            <Controls>
+                                <Control name="$(parent)List" inherits="ZO_VerticalParametricScrollListTemplate">
+                                    <AnchorFill/>
+                                </Control>
+                            </Controls>
+                        </Control>
+
+                        <Control name="$(parent)Options" hidden="true">
+                            <Anchor point="TOPLEFT" relativeTo="$(grandparent)HeaderContainerHeader" relativePoint="BOTTOMLEFT"/>
+                            <Anchor point="BOTTOMRIGHT"/>
+                            <Controls>
+                                <Control name="$(parent)List" inherits="ZO_VerticalParametricScrollListTemplate">
+                                    <AnchorFill/>
+                                </Control>
+                            </Controls>
+                        </Control>
+                    </Controls>
+                </Scroll>
+
+                <Control name="$(parent)IngredientsBar" inherits="ZO_GamepadCraftingIngredientBarTemplate">
+                    <Dimensions y="205"/>
+                </Control>
+
+                <Control name="$(parent)Tooltip" inherits="ZO_CraftingTooltip_Gamepad">
+                    <Anchor point="BOTTOM" relativeTo="$(parent)IngredientsBar" relativePoint="TOP" offsetY="-61"/>
+                </Control>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

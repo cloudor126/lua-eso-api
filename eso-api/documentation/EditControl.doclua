@@ -1,0 +1,209 @@
+-------------------------------------------------------------------------------
+-- @module EditControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string validCharacter
+-- @function[parent = #EditControl] AddValidCharacter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] Clear
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] ClearSelection
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #EditControl] GetCopyEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer cursorPosition
+-- @function[parent = #EditControl] GetCursorPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #EditControl] GetEditEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number fontHeightUIUnits
+-- @function[parent = #EditControl] GetFontHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number leftControlSpace,topControlSpace,rightControlSpace,bottomControlSpace
+-- @function[parent = #EditControl] GetIMECompositionExclusionArea
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #EditControl] GetNewLineEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #EditControl] GetPasteEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numLines
+-- @function[parent = #EditControl] GetScrollExtents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string apRet
+-- @function[parent = #EditControl] GetText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number index
+-- @function[parent = #EditControl] GetTopLineIndex
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean aRet
+-- @function[parent = #EditControl] HasFocus
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean hasSelection
+-- @function[parent = #EditControl] HasSelection
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aText
+-- @function[parent = #EditControl] InsertText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isComposing
+-- @function[parent = #EditControl] IsComposingIMEText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isMultiLine
+-- @function[parent = #EditControl] IsMultiLine
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] LoseFocus
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] RemoveAllValidCharacters
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] SelectAll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #EditControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #EditControl] SetCopyEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer cursorPosition
+-- @function[parent = #EditControl] SetCursorPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #EditControl] SetEditEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean escapeMarkup
+-- @function[parent = #EditControl] SetEscapeMarkup
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string font
+-- @function[parent = #EditControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer maxChars
+-- @function[parent = #EditControl] SetMaxInputChars
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean isMultiLine
+-- @function[parent = #EditControl] SetMultiLine
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #EditControl] SetNewLineEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #EditControl] SetPasteEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer selectionStartIndex
+-- @param #integer selectionEndIndex
+-- @function[parent = #EditControl] SetSelection
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #EditControl] SetSelectionColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aText
+-- @function[parent = #EditControl] SetText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer textType
+-- @function[parent = #EditControl] SetTextType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number index
+-- @function[parent = #EditControl] SetTopLineIndex
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #VirtualKeyboardType aKeyboardType
+-- @function[parent = #EditControl] SetVirtualKeyboardType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean escapeMarkup
+-- @function[parent = #EditControl] ShouldEscapeMarkup
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #EditControl] TakeFocus
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean aRet
+-- @function[parent = #EditControl] WasLastChangeVirtualKeyboard
+
+-------------------------------------------------------------------------------
+-- @type EditControl
+-- @extends Control#Control
+
+return nil

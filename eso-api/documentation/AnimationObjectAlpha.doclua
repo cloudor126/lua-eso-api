@@ -1,0 +1,34 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endAlpha
+-- @function[parent = #AnimationObjectAlpha] GetEndAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startAlpha
+-- @function[parent = #AnimationObjectAlpha] GetStartAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startAlpha
+-- @param #number endAlpha
+-- @function[parent = #AnimationObjectAlpha] SetAlphaValues
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endAlpha
+-- @function[parent = #AnimationObjectAlpha] SetEndAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startAlpha
+-- @function[parent = #AnimationObjectAlpha] SetStartAlpha
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectAlpha
+-- @extends AnimationObject#AnimationObject
+
+return nil

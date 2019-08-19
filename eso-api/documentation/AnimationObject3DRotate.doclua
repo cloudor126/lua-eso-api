@@ -1,0 +1,78 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObject3DRotate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endPitchRadians
+-- @function[parent = #AnimationObject3DRotate] GetEndPitch
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endRollRadians
+-- @function[parent = #AnimationObject3DRotate] GetEndRoll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endYawRadians
+-- @function[parent = #AnimationObject3DRotate] GetEndYaw
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startPitchRadians
+-- @function[parent = #AnimationObject3DRotate] GetStartPitch
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startRollRadians
+-- @function[parent = #AnimationObject3DRotate] GetStartRoll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startYawRadians
+-- @function[parent = #AnimationObject3DRotate] GetStartYaw
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endPitchRadians
+-- @function[parent = #AnimationObject3DRotate] SetEndPitch
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endRollRadians
+-- @function[parent = #AnimationObject3DRotate] SetEndRoll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endYawRadians
+-- @function[parent = #AnimationObject3DRotate] SetEndYaw
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startPitchRadians
+-- @param #number startYawRadians
+-- @param #number startRollRadians
+-- @param #number endPitchRadians
+-- @param #number endYawRadians
+-- @param #number endRollRadians
+-- @function[parent = #AnimationObject3DRotate] SetRotationValues
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startPitchRadians
+-- @function[parent = #AnimationObject3DRotate] SetStartPitch
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startRollRadians
+-- @function[parent = #AnimationObject3DRotate] SetStartRoll
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startYawRadians
+-- @function[parent = #AnimationObject3DRotate] SetStartYaw
+
+-------------------------------------------------------------------------------
+-- @type AnimationObject3DRotate
+-- @extends AnimationObject#AnimationObject
+
+return nil

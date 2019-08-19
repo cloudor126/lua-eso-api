@@ -1,0 +1,260 @@
+-------------------------------------------------------------------------------
+-- @module AnimationTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animatedControl
+-- @function[parent = #AnimationTimeline] ApplyAllAnimationsToControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] ClearAllCallbacks
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number animationIndex
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] GetAnimation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animation
+-- @return #integer offset
+-- @function[parent = #AnimationTimeline] GetAnimationOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number timelineIndex
+-- @return #table timeline
+-- @function[parent = #AnimationTimeline] GetAnimationTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animation
+-- @return #integer offset
+-- @function[parent = #AnimationTimeline] GetAnimationTimelineOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer duration
+-- @function[parent = #AnimationTimeline] GetDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] GetFirstAnimation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #AnimationType animationType
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] GetFirstAnimationOfType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table timeline
+-- @function[parent = #AnimationTimeline] GetFirstAnimationTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number progress
+-- @function[parent = #AnimationTimeline] GetFullProgress
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string EventName
+-- @return #function FunctionRef
+-- @function[parent = #AnimationTimeline] GetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] GetLastAnimation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table timeline
+-- @function[parent = #AnimationTimeline] GetLastAnimationTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer minDuration
+-- @function[parent = #AnimationTimeline] GetMinDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numTimelines
+-- @function[parent = #AnimationTimeline] GetNumAnimationTimelines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numAnimations
+-- @function[parent = #AnimationTimeline] GetNumAnimations
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table timeline
+-- @function[parent = #AnimationTimeline] GetParent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer loopsRemaining
+-- @function[parent = #AnimationTimeline] GetPlaybackLoopsRemaining
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number progress
+-- @function[parent = #AnimationTimeline] GetProgress
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean skipAnimations
+-- @function[parent = #AnimationTimeline] GetSkipAnimationsBehindPlayheadOnInitialPlay
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer animationType
+-- @param #table animatedControl
+-- @param #integer offset
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] InsertAnimation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string animationVirtualName
+-- @param #table animatedControl
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] InsertAnimationFromVirtual
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer offset
+-- @param #table animatedControl
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] InsertAnimationTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string animationVirtualName
+-- @param #table animatedControl
+-- @return #table animation
+-- @function[parent = #AnimationTimeline] InsertAnimationTimelineFromVirtual
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #function functionRef
+-- @param #integer offset
+-- @return #function functionRefRet
+-- @function[parent = #AnimationTimeline] InsertCallback
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isEnabled
+-- @function[parent = #AnimationTimeline] IsEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isPlaying
+-- @function[parent = #AnimationTimeline] IsPlaying
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean reversed
+-- @function[parent = #AnimationTimeline] IsPlayingBackward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] PlayBackward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] PlayForward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer offsetMs
+-- @function[parent = #AnimationTimeline] PlayFromEnd
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer offsetMs
+-- @function[parent = #AnimationTimeline] PlayFromStart
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] PlayInstantlyToEnd
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] PlayInstantlyToStart
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer offset
+-- @function[parent = #AnimationTimeline] SetAllAnimationOffsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animation
+-- @param #integer offset
+-- @function[parent = #AnimationTimeline] SetAnimationOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animation
+-- @param #integer offset
+-- @function[parent = #AnimationTimeline] SetAnimationTimelineOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #function callback
+-- @param #integer offset
+-- @function[parent = #AnimationTimeline] SetCallbackOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #AnimationTimeline] SetEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string EventName
+-- @param #function FunctionRef
+-- @function[parent = #AnimationTimeline] SetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer minDuration
+-- @function[parent = #AnimationTimeline] SetMinDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer maxLoopCount
+-- @function[parent = #AnimationTimeline] SetPlaybackLoopCount
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer loopsRemaining
+-- @function[parent = #AnimationTimeline] SetPlaybackLoopsRemaining
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer playbackType
+-- @param #integer maxLoopCount
+-- @function[parent = #AnimationTimeline] SetPlaybackType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number progress
+-- @function[parent = #AnimationTimeline] SetProgress
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean skipAnimations
+-- @function[parent = #AnimationTimeline] SetSkipAnimationsBehindPlayheadOnInitialPlay
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] Stop
+
+return nil

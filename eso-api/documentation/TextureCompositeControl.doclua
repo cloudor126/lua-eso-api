@@ -1,0 +1,154 @@
+-------------------------------------------------------------------------------
+-- @module TextureCompositeControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #TextureCompositeControl] AddSurface
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #TextureCompositeControl] ClearAllSurfaces
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #TextureBlendMode blendMode
+-- @function[parent = #TextureCompositeControl] GetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #TextureCompositeControl] GetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number desaturation
+-- @function[parent = #TextureCompositeControl] GetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @return #number,#number,#number,#number left,right,top,bottom
+-- @function[parent = #TextureCompositeControl] GetInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer surfaces
+-- @function[parent = #TextureCompositeControl] GetNumSurfaces
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @return #number a
+-- @function[parent = #TextureCompositeControl] GetSurfaceAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @return #number,#number,#number,#number left,right,top,bottom
+-- @function[parent = #TextureCompositeControl] GetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer,#integer pixelWidth,pixelHeight
+-- @function[parent = #TextureCompositeControl] GetTextureFileDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string filename
+-- @function[parent = #TextureCompositeControl] GetTextureFileName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #TextureCompositeControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @return #boolean hidden
+-- @function[parent = #TextureCompositeControl] IsSurfaceHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean loaded
+-- @function[parent = #TextureCompositeControl] IsTextureLoaded
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @function[parent = #TextureCompositeControl] RemoveSurface
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureBlendMode blendMode
+-- @function[parent = #TextureCompositeControl] SetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #TextureCompositeControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #TextureCompositeControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #TextureCompositeControl] SetInsets
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #TextureCompositeControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number a
+-- @function[parent = #TextureCompositeControl] SetSurfaceAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #boolean hidden
+-- @function[parent = #TextureCompositeControl] SetSurfaceHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #TextureCompositeControl] SetTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #TextureCompositeControl] SetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #TextureCompositeControl] SetTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @type TextureCompositeControl
+-- @extends Control#Control
+
+return nil

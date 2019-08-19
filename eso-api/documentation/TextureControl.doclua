@@ -1,0 +1,193 @@
+-------------------------------------------------------------------------------
+-- @module TextureControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number width,height
+-- @function[parent = #TextureControl] Get3DLocalDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #TextureAddressMode addressMode
+-- @function[parent = #TextureControl] GetAddressMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #TextureBlendMode blendMode
+-- @function[parent = #TextureControl] GetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #TextureControl] GetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number desaturation
+-- @function[parent = #TextureControl] GetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean resizesToFitFile
+-- @function[parent = #TextureControl] GetResizeToFitFile
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #ShaderEffectType shaderEffectType
+-- @function[parent = #TextureControl] GetShaderEffectType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number left,right,top,bottom
+-- @function[parent = #TextureControl] GetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer,#integer pixelWidth,pixelHeight
+-- @function[parent = #TextureControl] GetTextureFileDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string filename
+-- @function[parent = #TextureControl] GetTextureFileName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #VERTEX_POINTS vertex
+-- @return #number,#number u,v
+-- @function[parent = #TextureControl] GetVertexUV
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isFacing
+-- @function[parent = #TextureControl] Is3DQuadFacingCamera
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #TextureControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean loaded
+-- @function[parent = #TextureControl] IsTextureLoaded
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number width
+-- @param #number height
+-- @function[parent = #TextureControl] Set3DLocalDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureAddressMode addressMode
+-- @function[parent = #TextureControl] SetAddressMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #TextureControl] SetAutoAdjustWrappedCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureBlendMode blendMode
+-- @function[parent = #TextureControl] SetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #TextureControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #TextureControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ControlOrientation orientation
+-- @param #number startR
+-- @param #number startG
+-- @param #number startB
+-- @param #number startA
+-- @param #number endR
+-- @param #number endG
+-- @param #number endB
+-- @param #number endA
+-- @function[parent = #TextureControl] SetGradientColors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #TextureControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean resizesToFitFile
+-- @function[parent = #TextureControl] SetResizeToFitFile
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ShaderEffectType shaderEffectType
+-- @function[parent = #TextureControl] SetShaderEffectType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #TextureControl] SetTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #TextureControl] SetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number angleInRadians
+-- @function[parent = #TextureControl] SetTextureCoordsRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #TextureControl] SetTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number angleInRadians
+-- @param #number normalizedRotationPointX
+-- @param #number normalizedRotationPointY
+-- @function[parent = #TextureControl] SetTextureRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureSampleProcessing sampleProcessingType
+-- @param #number weight
+-- @function[parent = #TextureControl] SetTextureSampleProcessingWeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer vertexPoints
+-- @param #number red
+-- @param #number green
+-- @param #number blue
+-- @param #number alpha
+-- @function[parent = #TextureControl] SetVertexColors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #VERTEX_POINTS vertex
+-- @param #number u
+-- @param #number v
+-- @function[parent = #TextureControl] SetVertexUV
+
+-------------------------------------------------------------------------------
+-- @type TextureControl
+-- @extends Control#Control
+
+return nil

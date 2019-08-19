@@ -1,0 +1,14 @@
+-------------------------------------------------------------------------------
+-- @module FontObject
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string,#integer,#string face,size,option
+-- @function[parent = #FontObject] GetFontInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontDescriptor
+-- @function[parent = #FontObject] SetFont
+
+return nil

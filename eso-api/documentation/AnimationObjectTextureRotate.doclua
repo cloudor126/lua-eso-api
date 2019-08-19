@@ -1,0 +1,34 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectTextureRotate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endRadians
+-- @function[parent = #AnimationObjectTextureRotate] GetEndRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startRadians
+-- @function[parent = #AnimationObjectTextureRotate] GetStartRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endRadians
+-- @function[parent = #AnimationObjectTextureRotate] SetEndRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startRadians
+-- @param #number endRadians
+-- @function[parent = #AnimationObjectTextureRotate] SetRotationValues
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startRadians
+-- @function[parent = #AnimationObjectTextureRotate] SetStartRotation
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectTextureRotate
+-- @extends AnimationObject#AnimationObject
+
+return nil

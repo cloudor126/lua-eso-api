@@ -1,0 +1,52 @@
+<GuiXml> 
+    <Controls>
+        <Control name="ZO_LootHistory_GamepadEntry" inherits="ZO_LootHistory_SharedEntry" virtual="true">
+            <Dimensions x="315" y="50" />
+            <Anchor point="BOTTOMLEFT"/>
+
+            <Controls>
+                <Texture name="$(parent)Icon" override="true">
+                    <Anchor point="LEFT" offsetX="20" />
+                    <Controls>
+                        <Label name="$(parent)StackCount" override="true" inherits="ZO_GamepadMenuEntryStackCountTemplate"/>
+                        
+                        <Texture name="$(parent)CraftBagIcon" textureFile="EsoUI/Art/HUD/Gamepad/gp_lootHistory_icon_craftBag.dds" override="true">
+                            <Anchor point="LEFT" relativeTo="$(grandparent)" relativePoint="RIGHT" offsetX="-5"/>
+                        </Texture>
+                    </Controls>
+                </Texture>
+                
+                <Label name="$(parent)Label" override="true" font="ZoFontGamepad34" maxLineCount="1">
+                    <Dimensions x="220"/>
+                </Label>
+              
+                <Texture name="$(parent)Bg" override="true" textureFile="EsoUI/Art/Miscellaneous/listItem_backdrop.dds">
+                    <TextureCoords left="0.8" right="0" top="0" bottom=".78125" />
+                    <Controls>
+                        <Texture name="$(parent)CraftBagHighlight" textureFile="EsoUI/Art/HUD/Gamepad/gp_lootHistory_highlight.dds" override="true">
+                            <Dimensions y="50"/>
+                            <TextureCoords left="0" right="1" top="0" bottom="0.78125" />
+                            <Anchor point="BOTTOMLEFT" />
+                            <Anchor point="BOTTOMRIGHT" offsetX="45"/>
+                        </Texture>
+                    </Controls>
+                </Texture>
+            </Controls>
+        </Control>
+      
+        <TopLevelControl name="ZO_LootHistoryControl_Gamepad" inherits="ZO_LootHistory_Shared" >
+            <Anchor point="BOTTOMLEFT" offsetY="-120"/>
+            <OnInitialized>
+                ZO_LootHistory_Gamepad_OnInitialized(self)
+            </OnInitialized>
+            <Controls>
+                <Control name="$(parent)PersistentContainer" override="true">
+                    <Anchor point="BOTTOMLEFT" />
+                </Control>
+                <Control name="$(parent)Container" override="true">
+                    <Anchor point="BOTTOMLEFT" relativeTo="$(parent)PersistentContainer" relativePoint="TOPLEFT" offsetY="ZO_GAMEPAD_LOOT_HISTORY_ENTRY_SPACING_Y" />
+                </Control>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

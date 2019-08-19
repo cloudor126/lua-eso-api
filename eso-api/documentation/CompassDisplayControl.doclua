@@ -1,0 +1,108 @@
+-------------------------------------------------------------------------------
+-- @module CompassDisplayControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @return #number,#number,#number leadingCoefficient,coefficient,constant
+-- @function[parent = #CompassDisplayControl] GetAlphaCoefficients
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #string description
+-- @function[parent = #CompassDisplayControl] GetCenterOveredPinDescription
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #number distance
+-- @function[parent = #CompassDisplayControl] GetCenterOveredPinDistance
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #string,#MapDisplayPinType,#number,#DrawLayer,#integer,#boolean description,type,distance,drawLayer,drawLevel,suppressed
+-- @function[parent = #CompassDisplayControl] GetCenterOveredPinInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #DrawLayer,#integer drawLayer,drawLevel
+-- @function[parent = #CompassDisplayControl] GetCenterOveredPinLayerAndLevel
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #MapDisplayPinType type
+-- @function[parent = #CompassDisplayControl] GetCenterOveredPinType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @return #number minVisibleAlpha
+-- @function[parent = #CompassDisplayControl] GetMinVisibleAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @return #number minVisibleScale
+-- @function[parent = #CompassDisplayControl] GetMinVisibleScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numCenterOveredPins
+-- @function[parent = #CompassDisplayControl] GetNumCenterOveredPins
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @return #number,#number,#number leadingCoefficient,coefficient,constant
+-- @function[parent = #CompassDisplayControl] GetScaleCoefficients
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerOveredPinIndex
+-- @return #boolean suppressed
+-- @function[parent = #CompassDisplayControl] IsCenterOveredPinSuppressed
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @param #number leadingCoefficient
+-- @param #number coefficient
+-- @param #number constant
+-- @function[parent = #CompassDisplayControl] SetAlphaCoefficients
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string directionName
+-- @param #string font
+-- @param #integer cardinalDirection
+-- @function[parent = #CompassDisplayControl] SetCardinalDirection
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @param #number minVisibleAlpha
+-- @function[parent = #CompassDisplayControl] SetMinVisibleAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @param #number minVisibleScale
+-- @function[parent = #CompassDisplayControl] SetMinVisibleScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #MapDisplayPinType pinType
+-- @param #number leadingCoefficient
+-- @param #number coefficient
+-- @param #number constant
+-- @function[parent = #CompassDisplayControl] SetScaleCoefficients
+
+-------------------------------------------------------------------------------
+-- @type CompassDisplayControl
+-- @extends Control#Control
+
+return nil

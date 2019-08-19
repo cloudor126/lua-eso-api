@@ -1,0 +1,185 @@
+-------------------------------------------------------------------------------
+-- @module ButtonControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer buttonNum
+-- @param #boolean enabled
+-- @function[parent = #ButtonControl] EnableMouseButton
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table labelControl
+-- @function[parent = #ButtonControl] GetLabelControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer state
+-- @function[parent = #ButtonControl] GetState
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #ButtonControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string clickSound
+-- @function[parent = #ButtonControl] SetClickSound
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #ButtonControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #ButtonControl] SetDisabledFontColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #ButtonControl] SetDisabledPressedFontColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetDisabledPressedTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetDisabledTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #ButtonControl] SetEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer endCapWidth
+-- @function[parent = #ButtonControl] SetEndCapWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @function[parent = #ButtonControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer horizontalAlign
+-- @function[parent = #ButtonControl] SetHorizontalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer blendMode
+-- @function[parent = #ButtonControl] SetMouseOverBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #ButtonControl] SetMouseOverFontColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetMouseOverTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #ButtonControl] SetNormalFontColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @function[parent = #ButtonControl] SetNormalOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetNormalTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #ButtonControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #ButtonControl] SetPressedFontColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetPressedMouseOverTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number x
+-- @param #number y
+-- @function[parent = #ButtonControl] SetPressedOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFilename
+-- @function[parent = #ButtonControl] SetPressedTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean showingHighlight
+-- @function[parent = #ButtonControl] SetShowingHighlight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer newState
+-- @param #boolean locked
+-- @function[parent = #ButtonControl] SetState
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @function[parent = #ButtonControl] SetText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #ButtonControl] SetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #ButtonControl] SetTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer verticalAlign
+-- @function[parent = #ButtonControl] SetVerticalAlignment
+
+-------------------------------------------------------------------------------
+-- @type ButtonControl
+-- @extends Control#Control
+
+return nil

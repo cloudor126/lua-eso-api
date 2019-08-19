@@ -1,0 +1,136 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObject3DTranslate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationObject3DTranslate] ClearBezierControlPoints
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number deltaX
+-- @function[parent = #AnimationObject3DTranslate] GetDeltaOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number deltaY
+-- @function[parent = #AnimationObject3DTranslate] GetDeltaOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number deltaZ
+-- @function[parent = #AnimationObject3DTranslate] GetDeltaOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endX
+-- @function[parent = #AnimationObject3DTranslate] GetEndOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endY
+-- @function[parent = #AnimationObject3DTranslate] GetEndOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endZ
+-- @function[parent = #AnimationObject3DTranslate] GetEndOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startX
+-- @function[parent = #AnimationObject3DTranslate] GetStartOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startY
+-- @function[parent = #AnimationObject3DTranslate] GetStartOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startZ
+-- @function[parent = #AnimationObject3DTranslate] GetStartOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number deltaX,deltaY,deltaZ
+-- @function[parent = #AnimationObject3DTranslate] GetTranslateDeltas
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number index
+-- @param #number x
+-- @param #number y
+-- @param #number z
+-- @function[parent = #AnimationObject3DTranslate] SetBezierControlPoint
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaX
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObject3DTranslate] SetDeltaOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaY
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObject3DTranslate] SetDeltaOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaZ
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObject3DTranslate] SetDeltaOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endX
+-- @function[parent = #AnimationObject3DTranslate] SetEndOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endY
+-- @function[parent = #AnimationObject3DTranslate] SetEndOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endZ
+-- @function[parent = #AnimationObject3DTranslate] SetEndOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startX
+-- @function[parent = #AnimationObject3DTranslate] SetStartOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startY
+-- @function[parent = #AnimationObject3DTranslate] SetStartOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startZ
+-- @function[parent = #AnimationObject3DTranslate] SetStartOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaX
+-- @param #number deltaY
+-- @param #number deltaZ
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObject3DTranslate] SetTranslateDeltas
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startX
+-- @param #number startY
+-- @param #number startZ
+-- @param #number endX
+-- @param #number endY
+-- @param #number endZ
+-- @function[parent = #AnimationObject3DTranslate] SetTranslateOffsets
+
+-------------------------------------------------------------------------------
+-- @type AnimationObject3DTranslate
+-- @extends AnimationObject#AnimationObject
+
+return nil

@@ -1,0 +1,76 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObject
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table animatedControl
+-- @function[parent = #AnimationObject] GetAnimatedControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string applyToChildControlName
+-- @function[parent = #AnimationObject] GetApplyToChildControlName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer durationMs
+-- @function[parent = #AnimationObject] GetDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #function functionRef
+-- @function[parent = #AnimationObject] GetEasingFunction
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string EventName
+-- @return #function FunctionRef
+-- @function[parent = #AnimationObject] GetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table owningTimeline
+-- @function[parent = #AnimationObject] GetTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isEnabled
+-- @function[parent = #AnimationObject] IsEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isPlaying
+-- @function[parent = #AnimationObject] IsPlaying
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table animatedControl
+-- @function[parent = #AnimationObject] SetAnimatedControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string applyToChildControlName
+-- @function[parent = #AnimationObject] SetApplyToChildControlName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer durationMs
+-- @function[parent = #AnimationObject] SetDuration
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #function functionRef
+-- @function[parent = #AnimationObject] SetEasingFunction
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #AnimationObject] SetEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string EventName
+-- @param #function FunctionRef
+-- @function[parent = #AnimationObject] SetHandler
+
+return nil

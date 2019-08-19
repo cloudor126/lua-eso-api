@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+-- @module AnimationManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table timeline
+-- @function[parent = #AnimationManager] CreateTimeline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string timelineName
+-- @param #table animatedControl
+-- @return #table timeline
+-- @function[parent = #AnimationManager] CreateTimelineFromVirtual
+
+return nil

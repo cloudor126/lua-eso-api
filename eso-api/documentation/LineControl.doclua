@@ -1,0 +1,111 @@
+-------------------------------------------------------------------------------
+-- @module LineControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #TextureBlendMode blendMode
+-- @function[parent = #LineControl] GetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #LineControl] GetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number desaturation
+-- @function[parent = #LineControl] GetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number left,right,top,bottom
+-- @function[parent = #LineControl] GetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer,#integer pixelWidth,pixelHeight
+-- @function[parent = #LineControl] GetTextureFileDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string filename
+-- @function[parent = #LineControl] GetTextureFileName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #LineControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean loaded
+-- @function[parent = #LineControl] IsTextureLoaded
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureBlendMode blendMode
+-- @function[parent = #LineControl] SetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #LineControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #LineControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ControlOrientation orientation
+-- @param #number startR
+-- @param #number startG
+-- @param #number startB
+-- @param #number startA
+-- @param #number endR
+-- @param #number endG
+-- @param #number endB
+-- @param #number endA
+-- @function[parent = #LineControl] SetGradientColors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #LineControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #LineControl] SetTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #LineControl] SetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number thickness
+-- @function[parent = #LineControl] SetThickness
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer vertexPoints
+-- @param #number red
+-- @param #number green
+-- @param #number blue
+-- @param #number alpha
+-- @function[parent = #LineControl] SetVertexColors
+
+-------------------------------------------------------------------------------
+-- @type LineControl
+-- @extends Control#Control
+
+return nil

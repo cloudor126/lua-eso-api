@@ -1,0 +1,34 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endScale
+-- @function[parent = #AnimationObjectScale] GetEndScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startScale
+-- @function[parent = #AnimationObjectScale] GetStartScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endScale
+-- @function[parent = #AnimationObjectScale] SetEndScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startScale
+-- @param #number endScale
+-- @function[parent = #AnimationObjectScale] SetScaleValues
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startScale
+-- @function[parent = #AnimationObjectScale] SetStartScale
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectScale
+-- @extends AnimationObject#AnimationObject
+
+return nil

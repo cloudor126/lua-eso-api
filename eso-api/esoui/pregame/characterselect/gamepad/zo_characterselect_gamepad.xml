@@ -1,0 +1,284 @@
+<GuiXml>
+    <Controls>
+        <Control name="ZO_CharacterSelect_ExtraInfo_Entry" virtual="true">
+            <Dimensions x="55" y="55" />
+            <Controls>
+                <Texture name="$(parent)Icon" level="2" layer="CONTROLS" inherits="ZO_MultiIcon" excludeFromResizeToFitExtents="true">
+                    <Dimensions x="40" y="40" />
+                    <Anchor point="CENTER" />
+                </Texture>
+
+                <Label name="$(parent)TokenCount" font="ZoFontGamepadBold20" horizontalAlignment="RIGHT">
+                    <Anchor point="BOTTOMLEFT" relativeTo="$(parent)Icon" offsetY="5" />
+                    <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)Icon" offsetY="5" />
+                </Label>
+
+                <Backdrop name="$(parent)Frame" inherits="ZO_GamepadAbilityIconFrame" tier="LOW" />
+            </Controls>
+        </Control>
+
+        <Label name="ZO_GamepadCharacterSelectMenuEntryHeaderTemplate" inherits="ZO_GamepadMenuEntryHeaderTemplate" hidden="true" virtual="true" resizeToFitDescendents="true">
+            <Controls>
+                <Label name="$(parent)SubHeader" font="ZoFontGamepadCondensed27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                    <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetY="25" />
+                    <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT" offsetY="25" />
+                </Label>
+            </Controls>
+        </Label>
+        
+        <TopLevelControl name="ZO_CharacterSelectProfile_Gamepad" tier="HIGH" level="ZO_HIGH_TIER_OVER_GAMEPAD_KEYBIND_STRIP" hidden="true">
+            <AnchorFill />
+            <Controls>
+                <Label name="$(parent)Profile" font="ZoFontGamepad42">
+                    <Dimensions y="46"/>
+                    <Anchor point="BOTTOMRIGHT" relativeTo="GuiRoot" offsetX="-115" offsetY="-64" />
+                </Label>
+
+                <Label name="$(parent)ProfileLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_PROFILE_LABEL" modifyTextType="UPPERCASE">
+                    <AnchorToBaseline side="LEFT" relativeToLabel="$(parent)Profile" offsetX="-10" />
+                </Label>
+
+                <Label name="$(parent)CharacterCount" font="ZoFontGamepad42">
+                    <AnchorToBaseline side="LEFT" relativeToLabel="$(parent)ProfileLabel" offsetX="-10"/>
+                </Label>
+
+                <Label name="$(parent)CharacterCountLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_GAMEPAD_CHARACTERS" modifyTextType="UPPERCASE">
+                    <AnchorToBaseline side="LEFT" relativeToLabel="$(parent)CharacterCount" offsetX="-10"/>
+                </Label>
+
+                <Control name="$(parent)ChampionPointsContainer" hidden="true">
+                    <Controls>
+                        <Label name="$(parent)ChampionPointsCount" font="ZoFontGamepad42">
+                            <AnchorToBaseline side="LEFT" relativeToLabel="$(grandparent)CharacterCountLabel" offsetX="-20"/>
+                        </Label>
+                
+                        <Label name="$(parent)ChampionPointsLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_CHAMPION_POINTS_LABEL" modifyTextType="UPPERCASE">
+                            <AnchorToBaseline side="LEFT" relativeToLabel="$(parent)ChampionPointsCount" offsetX="-10"/>
+                        </Label>
+
+                        <Texture name="$(parent)ChampionPointsIcon" textureFile="EsoUI/Art/Champion/Gamepad/gp_champion_icon.dds">
+                            <Dimensions x="ZO_GAMEPAD_DEFAULT_LIST_ENTRY_ICON_DIMENSION" y="ZO_GAMEPAD_DEFAULT_LIST_ENTRY_ICON_DIMENSION" />
+                            <Anchor point="RIGHT" relativeTo="$(parent)ChampionPointsLabel" relativePoint="LEFT" />
+                        </Texture>
+                    </Controls>
+                </Control>
+            </Controls>
+        </TopLevelControl>
+
+        <TopLevelControl name="ZO_CharacterSelect_GamepadRenameError" inherits="ZO_GamepadGrid_NavQuadrant_2_Anchors" hidden="true">
+            <Controls>
+                <Control name="$(parent)Bg" inherits="ZO_SharedGamepadNavQuadrant_2_Background_Template"/>
+                <Label name="$(parent)Errors" font="ZoFontGamepadCondensed42" horizontalAlignment="LEFT">
+                    <Anchor point="LEFT" relativePoint="TOPLEFT" offsetX="40" offsetY="508"/>
+                    <Anchor point="RIGHT" relativePoint="TOPRIGHT" offsetX="-40" offsetY="508" />
+                </Label>
+            </Controls>
+        </TopLevelControl>
+        
+        <TopLevelControl name="ZO_CharacterSelect_Gamepad" inherits="ZO_AnchoredToQuadrant1Background" hidden="true">
+            <OnInitialized>
+                ZO_CharacterSelect_Gamepad_Initialize(self)
+            </OnInitialized>
+
+            <Controls>
+                <Control name="$(parent)CharacterViewport" inherits="ZO_PaperdollManipulation_Gamepad" />
+
+                <Scroll name="$(parent)Mask">
+                    <AnchorFill />
+                    <Controls>
+                        <Control name="$(parent)Characters" inherits="ZO_GamepadGrid_NavQuadrant_ContainerAnchors" hidden="true">
+                            <Controls>
+                                <Control name="$(parent)HeaderContainer" inherits="ZO_GamepadScreenHeaderContainer">
+                                    <AnchorFill/>
+                                    <Controls>
+                                        <Control name="$(parent)ExtraInfo" resizeToFitDescendents="true">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)HeaderMessage" relativePoint="BOTTOMLEFT" offsetY="-7" />
+                                            <Anchor point="TOPRIGHT" relativeTo="$(parent)HeaderMessage" relativePoint="BOTTOMRIGHT" offsetY="-7" />
+
+                                            <OnInitialized>
+                                                self:SetParent(self:GetParent():GetNamedChild("Header"))
+                                            </OnInitialized>
+
+                                            <Controls>
+                                                <Label name="$(parent)Header" inherits="ZO_GamepadMenuEntryHeaderTemplate" modifyTextType="UPPERCASE" horizontalAlignment="CENTER" text="SI_EXTRA_INFO_SERVICE_TOKENS_HEADER">
+                                                    <Anchor point="TOPLEFT" />
+                                                    <Anchor point="TOPRIGHT" />
+                                                </Label>
+                                                <Control name="$(parent)Centerer">
+                                                    <Dimensions y="50" />
+                                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Header" relativePoint="BOTTOMLEFT" offsetY="12" />
+                                                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Header" relativePoint="BOTTOMRIGHT" offsetY="12" />
+                                                </Control>
+                                            </Controls>
+                                        </Control>
+
+                                        <Control name="$(parent)CurrentServiceInfo" hidden="true" resizeToFitDescendents="true">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)HeaderMessage" relativePoint="BOTTOMLEFT" offsetY="-46" />
+                                            <Anchor point="TOPRIGHT" relativeTo="$(parent)HeaderMessage" relativePoint="BOTTOMRIGHT" offsetY="-46"/>
+
+                                            <OnInitialized>
+                                                self:SetParent(self:GetParent():GetNamedChild("Header"))
+                                            </OnInitialized>
+
+                                            <Controls>
+                                                <Label name="$(parent)TokenLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" modifyTextType="UPPERCASE" text="SI_SERVICE_TOKEN_COUNT_TOKENS_HEADER">
+                                                    <Anchor point="TOPLEFT" offsetY="10" />
+                                                </Label>
+                                                
+                                                <Label name="$(parent)Tokens" font="ZoFontGamepad42" horizontalAlignment="RIGHT" text="0">
+                                                    <Anchor point="TOPRIGHT" relativeTo="BOTTOMRIGHT" />
+                                                </Label>
+
+                                                <Label name="$(parent)Instructions" font="ZoFontGamepadCondensed42"  color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" horizontalAlignment="CENTER">
+                                                    <Anchor point="TOPLEFT" relativeTo="BOTTOMLEFT" offsetY="70" />
+                                                    <Anchor point="TOPRIGHT" relativeTo="BOTTOMRIGHT" offsetY="70" />
+                                                </Label>
+                                            </Controls>
+                                        </Control>
+                                    </Controls>
+                                </Control>
+                                <Control name="$(parent)List" inherits="ZO_VerticalParametricScrollListTemplate">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)HeaderContainerHeader" relativePoint="BOTTOMLEFT" />
+                                    <Anchor point="BOTTOMRIGHT" />
+                                </Control>
+                            </Controls>
+                        </Control>
+                    </Controls>
+                </Scroll>
+
+                <Control name="$(parent)CharacterDetails" inherits="ZO_GamepadGrid_NavQuadrant_2_Anchors">
+
+                    <Controls>
+                        <Control name="$(parent)Bg" inherits="ZO_SharedGamepadNavQuadrant_2_Background_Template">
+                        </Control>
+
+                        <Label name="$(parent)NeedsRename" font="ZoFontGamepadCondensed42" text="SI_CHARACTER_SELECT_GAMEPAD_RENAME_TEXT" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" hidden="true">
+                            <Anchor point="TOPLEFT" offsetX="40" offsetY="234"/>
+                            <Anchor point="BOTTOMRIGHT" offsetX="-40"/>
+                        </Label>
+
+                        <Control name="$(parent)Container" hidden="true">
+                            <Anchor point="TOPLEFT" offsetX="20" offsetY="234"/>
+                            <Anchor point="BOTTOMRIGHT" offsetX="-20"/>
+
+                            <Controls>
+                                <Label name="$(parent)Name" font="ZoFontGamepad54">
+                                    <Anchor point="TOPLEFT" offsetX="20"/>
+                                    <Anchor point="TOPRIGHT" />
+                                </Label>
+
+                                <Control name="$(parent)LevelContainer" resizeToFitDescendents="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Name" relativePoint="BOTTOMLEFT" offsetY="10" />
+                                    <Controls>
+                                        <Label name="$(parent)LevelLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_LEVEL" modifyTextType="UPPERCASE">
+                                            <Anchor point="TOPLEFT" />
+                                        </Label>
+
+                                        <Label name="$(parent)Level" font="ZoFontGamepad42">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)LevelLabel" relativePoint="TOPRIGHT" offsetX="10" offsetY="ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y" />
+
+                                            <OnInitialized>
+                                                ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(self, "LevelLabel")
+                                            </OnInitialized>
+                                        </Label>
+                                    </Controls>
+                                </Control>
+
+                                <Control name="$(parent)RaceContainer" resizeToFitDescendents="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)LevelContainer" relativePoint="BOTTOMLEFT" />
+                                    <Controls>
+                                        <Label name="$(parent)RaceLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_RACE_LABEL" modifyTextType="UPPERCASE">
+                                            <Anchor point="TOPLEFT" />
+                                        </Label>
+
+                                        <Label name="$(parent)Race" font="ZoFontGamepad42">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)RaceLabel" relativePoint="TOPRIGHT" offsetX="10" offsetY="ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y" />
+
+                                            <OnInitialized>
+                                                ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(self, "RaceLabel")
+                                            </OnInitialized>
+                                        </Label>
+                                    </Controls>
+                                </Control>
+
+
+                                <Control name="$(parent)ClassContainer" resizeToFitDescendents="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)RaceContainer" relativePoint="BOTTOMLEFT" />
+                                    <Controls>
+                                        <Label name="$(parent)ClassLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_CLASS_LABEL" modifyTextType="UPPERCASE">
+                                            <Anchor point="TOPLEFT" />
+                                        </Label>
+
+                                        <Label name="$(parent)Class" font="ZoFontGamepad42">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)ClassLabel" relativePoint="TOPRIGHT" offsetX="10" offsetY="ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y" />
+
+                                            <OnInitialized>
+                                                ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(self, "ClassLabel")
+                                            </OnInitialized>
+                                        </Label>
+                                    </Controls>
+                                </Control>
+
+                                <Control name="$(parent)AllianceContainer" resizeToFitDescendents="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)ClassContainer" relativePoint="BOTTOMLEFT" />
+                                    <Controls>
+                                        <Label name="$(parent)AllianceLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_ALLIANCE_LABEL" modifyTextType="UPPERCASE">
+                                            <Anchor point="TOPLEFT" />
+                                        </Label>
+
+                                        <Label name="$(parent)Alliance" font="ZoFontGamepad42">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)AllianceLabel" relativePoint="TOPRIGHT" offsetX="10" offsetY="ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y" />
+
+                                            <OnInitialized>
+                                                ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(self, "AllianceLabel")
+                                            </OnInitialized>
+                                        </Label>
+                                    </Controls>
+                                </Control>
+
+                                <Control name="$(parent)LocationContainer" resizeToFitDescendents="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)AllianceContainer" relativePoint="BOTTOMLEFT" />
+                                    <Controls>
+                                        <Label name="$(parent)LocationLabel" font="ZoFontGamepad27" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="SI_CHARACTER_SELECT_LOCATION_LABEL" modifyTextType="UPPERCASE">
+                                            <Anchor point="TOPLEFT" />
+                                        </Label>
+
+                                        <Label name="$(parent)Location" font="ZoFontGamepad42" wrapMode="ELLIPSIS">
+                                            <Anchor point="TOPLEFT" relativeTo="$(parent)LocationLabel" relativePoint="TOPRIGHT" offsetX="10" offsetY="ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y" />
+
+                                            <OnInitialized>
+                                                ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(self, "LocationLabel")
+                                            </OnInitialized>
+                                        </Label>
+                                    </Controls>
+                                </Control>
+                            </Controls>
+                        </Control>
+
+                        <Control name="$(parent)ExtraInfoDetails" hidden="true">
+                            <Anchor point="TOPLEFT" relativeTo="$(parent)Container" />
+                            <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)Container" />
+                            
+                            <Controls>
+                                <Label name="$(parent)Title" font="ZoFontGamepad45" modifyTextType="UPPERCASE">
+                                    <Anchor point="TOPLEFT" offsetX="20" />
+                                    <Anchor point="TOPRIGHT" />
+                                </Label>
+
+                                <Label name="$(parent)Description1" font="ZoFontGamepadCondensed42" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Title" relativePoint="BOTTOMLEFT" offsetY="50" />
+                                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Title" relativePoint="BOTTOMRIGHT" offsetY="50" />
+                                </Label>
+
+                                <Label name="$(parent)Description2" font="ZoFontGamepadCondensed42" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Description1" relativePoint="BOTTOMLEFT" offsetY="50" />
+                                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Description1" relativePoint="BOTTOMRIGHT" offsetY="50" />
+                                </Label>
+                            </Controls>
+                        </Control>
+                    </Controls>
+                </Control>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

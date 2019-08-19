@@ -1,0 +1,23 @@
+-------------------------------------------------------------------------------
+-- @module MapDisplayControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number normalizedRadius
+-- @function[parent = #MapDisplayControl] GetZoom
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string pinFont
+-- @function[parent = #MapDisplayControl] SetPinFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number normalizedRadius
+-- @function[parent = #MapDisplayControl] SetZoom
+
+-------------------------------------------------------------------------------
+-- @type MapDisplayControl
+-- @extends Control#Control
+
+return nil

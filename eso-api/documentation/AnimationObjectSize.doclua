@@ -1,0 +1,40 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectSize
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endHeight
+-- @function[parent = #AnimationObjectSize] SetEndHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endWidth
+-- @function[parent = #AnimationObjectSize] SetEndWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startHeight
+-- @param #number endHeight
+-- @function[parent = #AnimationObjectSize] SetStartAndEndHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startWidth
+-- @param #number endWidth
+-- @function[parent = #AnimationObjectSize] SetStartAndEndWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startHeight
+-- @function[parent = #AnimationObjectSize] SetStartHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startWidth
+-- @function[parent = #AnimationObjectSize] SetStartWidth
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectSize
+-- @extends AnimationObject#AnimationObject
+
+return nil

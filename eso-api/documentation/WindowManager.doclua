@@ -1,0 +1,125 @@
+-------------------------------------------------------------------------------
+-- @module WindowManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table control
+-- @param #string virtualName
+-- @function[parent = #WindowManager] ApplyTemplateToControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table controlA
+-- @param #table controlB
+-- @return #integer order
+-- @function[parent = #WindowManager] CompareControlVisualOrder
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string name
+-- @param #table parent
+-- @param #ControlType type
+-- @return #table apRet
+-- @function[parent = #WindowManager] CreateControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string controlName
+-- @param #table parent
+-- @param #string virtualName
+-- @param #string optionalSuffix
+-- @return #table apRet
+-- @function[parent = #WindowManager] CreateControlFromVirtual
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string name
+-- @return #table apRet
+-- @function[parent = #WindowManager] CreateTopLevelWindow
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string name
+-- @param #string suffix
+-- @return #table ret
+-- @function[parent = #WindowManager] GetControlByName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table focusControl
+-- @function[parent = #WindowManager] GetFocusControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string handlerName
+-- @return #function functionRef
+-- @function[parent = #WindowManager] GetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number index
+-- @return #string candidate
+-- @function[parent = #WindowManager] GetIMECandidate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#integer selectedIndex,pageStartIndex,pageSize
+-- @function[parent = #WindowManager] GetIMECandidatePageInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table mouseOverControl
+-- @function[parent = #WindowManager] GetMouseOverControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numCandidates
+-- @function[parent = #WindowManager] GetNumIMECandidates
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isChoosingCandidate
+-- @function[parent = #WindowManager] IsChoosingIMECandidate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isHandlingHardwareEvent
+-- @function[parent = #WindowManager] IsHandlingHardwareEvent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isMouseOverWorld
+-- @function[parent = #WindowManager] IsMouseOverWorld
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean secureRenderModeEnabled
+-- @function[parent = #WindowManager] IsSecureRenderModeEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean isUsingCustomCandidateList
+-- @function[parent = #WindowManager] IsUsingCustomCandidateList
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string name
+-- @function[parent = #WindowManager] SetFocusByName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string handlerName
+-- @param #function functionRef
+-- @function[parent = #WindowManager] SetHandler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer cursorType
+-- @function[parent = #WindowManager] SetMouseCursor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string name
+-- @function[parent = #WindowManager] SetMouseFocusByName
+
+return nil

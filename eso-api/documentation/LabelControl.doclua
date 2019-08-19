@@ -1,0 +1,181 @@
+-------------------------------------------------------------------------------
+-- @module LabelControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table toLabel
+-- @param #number offsetX
+-- @param #AnchorPosition anchorSide
+-- @function[parent = #LabelControl] AnchorToBaseline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #LabelControl] Clean
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table toLabel
+-- @function[parent = #LabelControl] ClearAnchorToBaseline
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean didLineWrap
+-- @function[parent = #LabelControl] DidLineWrap
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #LabelControl] GetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number fontHeightUIUnits
+-- @function[parent = #LabelControl] GetFontHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer align
+-- @function[parent = #LabelControl] GetHorizontalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean linkEnabed
+-- @function[parent = #LabelControl] GetLinkEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #ModifyTextType modifyTextType
+-- @function[parent = #LabelControl] GetModifyTextType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numLines
+-- @function[parent = #LabelControl] GetNumLines
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @return #number scaledPixelWidth
+-- @function[parent = #LabelControl] GetStringWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number r,g,b,a
+-- @function[parent = #LabelControl] GetStyleColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #string apRet
+-- @function[parent = #LabelControl] GetText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number stringWidthUIUnits,stringHeightUIUnits
+-- @function[parent = #LabelControl] GetTextDimensions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number stringHeightUIUnits
+-- @function[parent = #LabelControl] GetTextHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number stringWidthUIUnits
+-- @function[parent = #LabelControl] GetTextWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer align
+-- @function[parent = #LabelControl] GetVerticalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #LabelControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number desaturation
+-- @function[parent = #LabelControl] SetDesaturation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontString
+-- @function[parent = #LabelControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer align
+-- @function[parent = #LabelControl] SetHorizontalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer lineSpacingPixels
+-- @function[parent = #LabelControl] SetLineSpacing
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean linkEnabed
+-- @function[parent = #LabelControl] SetLinkEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer maxLineCount
+-- @function[parent = #LabelControl] SetMaxLineCount
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer minLineCount
+-- @function[parent = #LabelControl] SetMinLineCount
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ModifyTextType modifyTextType
+-- @function[parent = #LabelControl] SetModifyTextType
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number newLineXPixels
+-- @function[parent = #LabelControl] SetNewLineX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #LabelControl] SetPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #LabelControl] SetStyleColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aText
+-- @function[parent = #LabelControl] SetText
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer verticalAlign
+-- @function[parent = #LabelControl] SetVerticalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer wrapMode
+-- @function[parent = #LabelControl] SetWrapMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean wasTruncated
+-- @function[parent = #LabelControl] WasTruncated
+
+-------------------------------------------------------------------------------
+-- @type LabelControl
+-- @extends Control#Control
+
+return nil

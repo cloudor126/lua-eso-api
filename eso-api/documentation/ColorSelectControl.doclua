@@ -1,0 +1,73 @@
+-------------------------------------------------------------------------------
+-- @module ColorSelectControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number hue,saturation,value
+-- @function[parent = #ColorSelectControl] GetColorAsHSV
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number red,green,blue
+-- @function[parent = #ColorSelectControl] GetColorAsRGB
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table textureControl
+-- @function[parent = #ColorSelectControl] GetColorWheelTextureControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table textureControl
+-- @function[parent = #ColorSelectControl] GetColorWheelThumbTextureControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number red,green,blue
+-- @function[parent = #ColorSelectControl] GetFullValuedColorAsRGB
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number normalizedX,normalizedY
+-- @function[parent = #ColorSelectControl] GetThumbNormalizedPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number value
+-- @function[parent = #ColorSelectControl] GetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number hue
+-- @param #number saturation
+-- @param #number value
+-- @function[parent = #ColorSelectControl] SetColorAsHSV
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number red
+-- @param #number green
+-- @param #number blue
+-- @function[parent = #ColorSelectControl] SetColorAsRGB
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table textureControl
+-- @function[parent = #ColorSelectControl] SetColorWheelThumbTextureControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number normalizedX
+-- @param #number normalizedY
+-- @function[parent = #ColorSelectControl] SetThumbNormalizedPosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number value
+-- @function[parent = #ColorSelectControl] SetValue
+
+-------------------------------------------------------------------------------
+-- @type ColorSelectControl
+-- @extends Control#Control
+
+return nil

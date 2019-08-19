@@ -1,0 +1,151 @@
+-------------------------------------------------------------------------------
+-- @module StatusBarControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #StatusBarControl] ClearFadeOutLossAdjustedTopValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #StatusBarControl] EnableFadeOut
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #StatusBarControl] EnableLeadingEdge
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean enabled
+-- @function[parent = #StatusBarControl] EnableScrollingOverlay
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number min,max
+-- @function[parent = #StatusBarControl] GetMinMax
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number value
+-- @function[parent = #StatusBarControl] GetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer barAlignment
+-- @function[parent = #StatusBarControl] SetBarAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #StatusBarControl] SetColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #StatusBarControl] SetFadeOutGainColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number topValue
+-- @function[parent = #StatusBarControl] SetFadeOutLossAdjustedTopValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number r
+-- @param #number g
+-- @param #number b
+-- @param #number a
+-- @function[parent = #StatusBarControl] SetFadeOutLossColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number adjustValue
+-- @function[parent = #StatusBarControl] SetFadeOutLossSetValueToAdjust
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #StatusBarControl] SetFadeOutTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number fadeOutSeconds
+-- @param #number fadeOutDelaySeconds
+-- @function[parent = #StatusBarControl] SetFadeOutTime
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startR
+-- @param #number startG
+-- @param #number startB
+-- @param #number startA
+-- @param #number endR
+-- @param #number endG
+-- @param #number endB
+-- @param #number endA
+-- @function[parent = #StatusBarControl] SetGradientColors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFile
+-- @param #number width
+-- @param #number height
+-- @function[parent = #StatusBarControl] SetLeadingEdge
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #StatusBarControl] SetLeadingEdgeTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aMin
+-- @param #number aMax
+-- @function[parent = #StatusBarControl] SetMinMax
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer orientation
+-- @function[parent = #StatusBarControl] SetOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string filename
+-- @function[parent = #StatusBarControl] SetTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #StatusBarControl] SetTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number aValue
+-- @function[parent = #StatusBarControl] SetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string textureFile
+-- @param #number width
+-- @param #number height
+-- @param #integer duration
+-- @function[parent = #StatusBarControl] SetupScrollingOverlay
+
+-------------------------------------------------------------------------------
+-- @type StatusBarControl
+-- @extends Control#Control
+
+return nil

@@ -1,0 +1,17 @@
+-------------------------------------------------------------------------------
+-- @module DebugTextControl
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #DebugTextControl] Clear
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontStr
+-- @function[parent = #DebugTextControl] SetFont
+
+-------------------------------------------------------------------------------
+-- @type DebugTextControl
+-- @extends Control#Control
+
+return nil

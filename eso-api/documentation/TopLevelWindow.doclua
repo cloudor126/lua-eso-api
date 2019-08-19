@@ -1,0 +1,29 @@
+-------------------------------------------------------------------------------
+-- @module TopLevelWindow
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean allow
+-- @function[parent = #TopLevelWindow] AllowBringToTop
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @function[parent = #TopLevelWindow] BringWindowToTop
+
+-------------------------------------------------------------------------------
+-- *protected-attributes*
+-- @param self
+-- @param #boolean allow
+-- @function[parent = #TopLevelWindow] SetAllowBringToTop
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean isTopmost
+-- @function[parent = #TopLevelWindow] SetTopmost
+
+-------------------------------------------------------------------------------
+-- @type TopLevelWindow
+-- @extends Control#Control
+
+return nil

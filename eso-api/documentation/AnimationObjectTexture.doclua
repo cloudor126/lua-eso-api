@@ -1,0 +1,59 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer aNumCellsHigh
+-- @function[parent = #AnimationObjectTexture] GetCellsHigh
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer aNumCellsWide
+-- @function[parent = #AnimationObjectTexture] GetCellsWide
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean mirroring
+-- @function[parent = #AnimationObjectTexture] IsMirroringAlongX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean mirroring
+-- @function[parent = #AnimationObjectTexture] IsMirroringAlongY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aNumCellsHigh
+-- @function[parent = #AnimationObjectTexture] SetCellsHigh
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aNumCellsWide
+-- @function[parent = #AnimationObjectTexture] SetCellsWide
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number framesPerSecond
+-- @function[parent = #AnimationObjectTexture] SetFramerate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer aNumCellsWide
+-- @param #integer aNumCellsHigh
+-- @function[parent = #AnimationObjectTexture] SetImageData
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean mirroring
+-- @function[parent = #AnimationObjectTexture] SetMirrorAlongX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean mirroring
+-- @function[parent = #AnimationObjectTexture] SetMirrorAlongY
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectTexture
+-- @extends AnimationObject#AnimationObject
+
+return nil

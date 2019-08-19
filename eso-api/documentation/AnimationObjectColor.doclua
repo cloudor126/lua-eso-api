@@ -1,0 +1,56 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean applyAlpha
+-- @function[parent = #AnimationObjectColor] GetApplyAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number endR,endG,endB,endA
+-- @function[parent = #AnimationObjectColor] GetEndColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number,#number startR,startG,startB,startA
+-- @function[parent = #AnimationObjectColor] GetStartColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean applyAlpha
+-- @function[parent = #AnimationObjectColor] SetApplyAlpha
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startR
+-- @param #number startG
+-- @param #number startB
+-- @param #number startA
+-- @param #number endR
+-- @param #number endG
+-- @param #number endB
+-- @param #number endA
+-- @function[parent = #AnimationObjectColor] SetColorValues
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endR
+-- @param #number endG
+-- @param #number endB
+-- @param #number endA
+-- @function[parent = #AnimationObjectColor] SetEndColor
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startR
+-- @param #number startG
+-- @param #number startB
+-- @param #number startA
+-- @function[parent = #AnimationObjectColor] SetStartColor
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectColor
+-- @extends AnimationObject#AnimationObject
+
+return nil

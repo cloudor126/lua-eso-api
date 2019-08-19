@@ -1,0 +1,100 @@
+-------------------------------------------------------------------------------
+-- @module AnimationObjectTranslate
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer anchorIndex
+-- @function[parent = #AnimationObjectTranslate] GetAnchorIndex
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number deltaX
+-- @function[parent = #AnimationObjectTranslate] GetDeltaOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number deltaY
+-- @function[parent = #AnimationObjectTranslate] GetDeltaOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endX
+-- @function[parent = #AnimationObjectTranslate] GetEndOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number endY
+-- @function[parent = #AnimationObjectTranslate] GetEndOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startX
+-- @function[parent = #AnimationObjectTranslate] GetStartOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number startY
+-- @function[parent = #AnimationObjectTranslate] GetStartOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number deltaX,deltaY
+-- @function[parent = #AnimationObjectTranslate] GetTranslateDeltas
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer anchorIndex
+-- @function[parent = #AnimationObjectTranslate] SetAnchorIndex
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaX
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObjectTranslate] SetDeltaOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaY
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObjectTranslate] SetDeltaOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endX
+-- @function[parent = #AnimationObjectTranslate] SetEndOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number endY
+-- @function[parent = #AnimationObjectTranslate] SetEndOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startX
+-- @function[parent = #AnimationObjectTranslate] SetStartOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startY
+-- @function[parent = #AnimationObjectTranslate] SetStartOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaX
+-- @param #number deltaY
+-- @param #TranslateAnimationDeltaType translateAnimationDeltaType
+-- @function[parent = #AnimationObjectTranslate] SetTranslateDeltas
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number startX
+-- @param #number startY
+-- @param #number endX
+-- @param #number endY
+-- @function[parent = #AnimationObjectTranslate] SetTranslateOffsets
+
+-------------------------------------------------------------------------------
+-- @type AnimationObjectTranslate
+-- @extends AnimationObject#AnimationObject
+
+return nil
