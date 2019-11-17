@@ -15,10 +15,10 @@ function ZO_CampaignBonusesManager:New(control)
 
     CAMPAIGN_BONUSES_FRAGMENT = ZO_FadeSceneFragment:New(control)
     CAMPAIGN_BONUSES_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
-                                                                    if(newState == SCENE_FRAGMENT_SHOWN) then
+                                                                    if newState == SCENE_FRAGMENT_SHOWN then
                                                                         manager.shown = true
                                                                         manager:RefreshData()
-                                                                    elseif(newState == SCENE_FRAGMENT_HIDDEN) then
+                                                                    elseif newState == SCENE_FRAGMENT_HIDDEN then
                                                                         manager.shown = false
                                                                     end
                                                                 end)
@@ -125,6 +125,8 @@ function ZO_CampaignBonuses_AbilitySlot_OnMouseEnter(control)
         SkillTooltip:SetScrollBonusAbility(GetUnitAlliance("player"), OBJECTIVE_ARTIFACT_OFFENSIVE, control.index)
     elseif control.bonusType == ZO_CAMPAIGN_BONUS_TYPE_EMPEROR then
         SkillTooltip:SetEmperorBonusAbility(CAMPAIGN_BONUSES.campaignBonuses:GetCurrentCampaignId(), GetUnitAlliance("player"))
+    elseif control.bonusType== ZO_CAMPAIGN_BONUS_TYPE_EDGE_KEEPS then
+        SkillTooltip:SetEdgeKeepBonusAbility(control.index)
     else
         SkillTooltip:SetKeepBonusAbility(control.index)
     end

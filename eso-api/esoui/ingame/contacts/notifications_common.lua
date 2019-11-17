@@ -3,10 +3,18 @@ NOTIFICATIONS_WAITING_DATA = 2
 NOTIFICATIONS_LEADERBOARD_DATA = 3
 NOTIFICATIONS_ALERT_DATA = 4
 NOTIFICATIONS_COLLECTIBLE_DATA = 5
-NOTIFICATIONS_LFG_JUMP_DUNGEON_DATA = 6
-NOTIFICATIONS_LFG_FIND_REPLACEMENT_DATA = 7
-NOTIFICATIONS_YES_NO_DATA = 8
-NOTIFICATIONS_LFG_READY_CHECK_DATA = 9
+NOTIFICATIONS_LFG_FIND_REPLACEMENT_DATA = 6
+NOTIFICATIONS_YES_NO_DATA = 7
+NOTIFICATIONS_LFG_READY_CHECK_DATA = 8
+NOTIFICATIONS_ESO_PLUS_SUBSCRIPTION_DATA = 9
+NOTIFICATIONS_GIFT_RECEIVED_DATA = 10
+NOTIFICATIONS_GIFT_RETURNED_DATA = 11
+NOTIFICATIONS_GIFT_CLAIMED_DATA = 12
+NOTIFICATIONS_GIFTING_GRACE_PERIOD_STARTED_DATA = 13
+NOTIFICATIONS_GIFTING_UNLOCKED_DATA = 14
+NOTIFICATIONS_NEW_DAILY_LOGIN_REWARD_DATA = 15
+NOTIFICATIONS_GUILD_NEW_APPLICATIONS = 16
+NOTIFICATIONS_MARKET_PRODUCT_UNLOCKED_DATA = 17
 
 NOTIFICATIONS_MENU_OPENED_FROM_KEYBIND = 1
 NOTIFICATIONS_MENU_OPENED_FROM_MOUSE = 2
@@ -41,7 +49,7 @@ function ZO_NotificationProvider:GetNumNotifications()
     return #self.list
 end
 
-function ZO_NotificationProvider:AddDataEntry(list, i, isHeader)
+function ZO_NotificationProvider:AddDataEntry(i, isHeader)
     self.list[i].provider = self
     self.notificationManager:AddDataEntry(self.list[i].dataType, self.list[i], isHeader)
 end
@@ -245,7 +253,7 @@ end
 
 function ZO_GuildMotDProvider:CreateMessage(guildAlliance, guildName)
     -- Overridden if necessary
-    local allianceIcon = zo_iconFormat(GetAllianceBannerIcon(guildAlliance), 24, 24)
+    local allianceIcon = zo_iconFormat(GetPlatformAllianceSymbolIcon(guildAlliance), 24, 24)
     return zo_strformat(SI_GUILD_MOTD_CHANGED_NOTIFICATION, allianceIcon, guildName)
 end
 
@@ -274,6 +282,7 @@ function ZO_CampaignQueueProvider:BuildNotificationList()
     for i = 1, GetNumCampaignQueueEntries() do
         local campaignId, isGroup = GetCampaignQueueEntry(i)
         local currentState = GetCampaignQueueState(campaignId, isGroup)
+        local campaignRulesetTypeString = GetString("SI_CAMPAIGNRULESETTYPE", GetCampaignRulesetType(GetCampaignRulesetId(campaignId)))
         local campaignName = GetCampaignName(campaignId)
         if(currentState == CAMPAIGN_QUEUE_REQUEST_STATE_CONFIRMING) then
             local remainingSeconds = GetCampaignQueueRemainingConfirmationSeconds(campaignId, isGroup)
@@ -287,7 +296,7 @@ function ZO_CampaignQueueProvider:BuildNotificationList()
                                         secsSinceRequest = ZO_NormalizeSecondsSince(secsSinceRequest),
                                         campaignName = campaignName,
                                         messageFormat = self:CreateMessageFormat(isGroup),
-                                        messageParams = { campaignName },
+                                        messageParams = { campaignRulesetTypeString, campaignName },
                                         expiresAt = GetFrameTimeSeconds() + remainingSeconds,
                                         shortDisplayText = campaignName,
                                     })
@@ -303,12 +312,16 @@ function ZO_CampaignQueueProvider:BuildNotificationList()
     end
 end
 
+function ZO_CampaignQueueProvider:Accept(data)
+    ConfirmCampaignEntry(data.campaignId, data.isGroup, true)
+end
+
 function ZO_CampaignQueueProvider:Decline(data, button, openedFromKeybind)
     ConfirmCampaignEntry(data.campaignId, data.isGroup, false)
 end
 
 function ZO_CampaignQueueProvider:CreateMessageFormat(isGroup)
-    return isGroup and SI_CAMPAIGN_QUEUE_MESSAGE_GROUP or SI_CAMPAIGN_QUEUE_MESSAGE_INDIVIDUAL
+    return SI_CAMPAIGN_QUEUE_MESSAGE
 end
 
 function ZO_CampaignQueueProvider:CreateLoadText()
@@ -385,9 +398,9 @@ function ZO_GroupInviteProvider:BuildNotificationList()
     ZO_ClearNumericallyIndexedTable(self.list)
 
     local inviterCharacterName, aMillisecondsSinceRequest, inviterDisplayName = GetGroupInviteInfo()
-	if(inviterCharacterName ~= "") then
-		local nameToUse = ZO_GetPrimaryPlayerName(inviterDisplayName, inviterCharacterName)
-		local formattedPlayerNames = ZO_GetPrimaryPlayerNameWithSecondary(inviterDisplayName, inviterCharacterName)
+    if(inviterCharacterName ~= "") then
+        local nameToUse = ZO_GetPrimaryPlayerName(inviterDisplayName, inviterCharacterName)
+        local formattedPlayerNames = ZO_GetPrimaryPlayerNameWithSecondary(inviterDisplayName, inviterCharacterName)
         table.insert(self.list,
         {
             dataType = NOTIFICATIONS_REQUEST_DATA,
@@ -467,7 +480,7 @@ function ZO_GroupElectionProvider:BuildNotificationList()
                 characterNameForGamercard = GetUnitName(targetUnitTag),
                 --For sorting
                 displayName = shortText,
-                secsSinceRequest = 0,
+                secsSinceRequest = ZO_NormalizeSecondsSince(0),
             })
     end
 end
@@ -666,19 +679,21 @@ do
                                 notificationType = NOTIFICATION_TYPE_POINTS_RESET,
                                 message = GetString(SI_NOTIFICATIONS_POINTS_RESET_SKILLS),
                                 shortDisplayText = GetString(SI_SKILLS_FORCE_RESPEC_TITLE),
-                                pointType = POINT_TYPE_SKILL
+                                pointType = POINT_TYPE_SKILL,
+                                secsSinceRequest = ZO_NormalizeSecondsSince(0),
                             }
                         )
         end
 
         if pointResetCallbackObject:GetAttributesReset() then
-            table.insert(self.list,  
+            table.insert(self.list,
                             {
                                 dataType = NOTIFICATIONS_ALERT_DATA,
                                 notificationType = NOTIFICATION_TYPE_POINTS_RESET,
                                 message = GetString(SI_NOTIFICATIONS_POINTS_RESET_ATTRIBUTES),
                                 shortDisplayText = GetString(SI_ATTRIBUTE_FORCE_RESPEC_TITLE),
-                                pointType = POINT_TYPE_ATTRIBUTE
+                                pointType = POINT_TYPE_ATTRIBUTE,
+                                secsSinceRequest = ZO_NormalizeSecondsSince(0),
                             }
                         )
         end
@@ -843,7 +858,7 @@ function ZO_LeaderboardRaidProvider:BuildNotificationList()
 
             if hasPlayer then
                 -- Player just received a notification about themselves, so filter it out
-                self:Decline({ notificationId = notificationId, })                            
+                self:Decline({ notificationId = notificationId, })
             elseif hasFriend or hasGuildMember then
                 local raidName = GetRaidName(raidId)
 
@@ -892,8 +907,16 @@ ZO_CollectionsUpdateProvider = ZO_NotificationProvider:Subclass()
 function ZO_CollectionsUpdateProvider:New(notificationManager)
     local provider = ZO_NotificationProvider.New(self, notificationManager)
 
-    provider:RegisterUpdateEvent(EVENT_COLLECTIBLE_NOTIFICATION_NEW)
-    provider:RegisterUpdateEvent(EVENT_COLLECTIBLE_NOTIFICATION_REMOVED)
+    local function OnCollectionUpdated(collectionUpdateType, collectiblesByNewUnlockState)
+        -- Typical unlock changes go through a direct notification event flow
+        if collectionUpdateType ~= ZO_COLLECTION_UPDATE_TYPE.UNLOCK_STATE_CHANGES then
+            provider.pushUpdateCallback(EVENT_COLLECTIBLE_NOTIFICATION_NEW)
+        end
+    end
+
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectibleNotificationNew", function() provider.pushUpdateCallback(EVENT_COLLECTIBLE_NOTIFICATION_NEW) end)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectionUpdated", OnCollectionUpdated)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectibleNotificationRemoved", function() provider.pushUpdateCallback(EVENT_COLLECTIBLE_NOTIFICATION_REMOVED) end)
 
     provider:BuildNotificationList()
     
@@ -914,44 +937,25 @@ function ZO_CollectionsUpdateProvider:BuildNotificationList()
 end
 
 function ZO_CollectionsUpdateProvider:CreateCollectibleNotificationData(notificationId, collectibleId)
-    if not IsCollectiblePlaceholder(collectibleId) then
-        local collectibleName = GetCollectibleName(collectibleId)
-        local categoryIndex, subcategoryIndex = GetCategoryInfoFromCollectibleId(collectibleId)
-
-        local categoryName = GetCollectibleCategoryInfo(categoryIndex)
-        local subcategoryName = subcategoryIndex and GetCollectibleSubCategoryInfo(categoryIndex, subcategoryIndex) or nil
-
-        return {
-            notificationId = notificationId,
-            collectibleId = collectibleId,
-            collectibleName = collectibleName,
-
-            categoryIndex = categoryIndex,
-            categoryName = categoryName,
-
-            subcategoryIndex = subcategoryIndex,
-            subcategoryName = subcategoryName,
-        }
-    end
+    return ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
 end
 
 function ZO_CollectionsUpdateProvider:AddCollectibleNotification(data)
-    local collectibleName = data.collectibleName
-    local categoryName = data.categoryName
-    local subcategoryName = data.subcategoryName
-    local displayedCategoryName = subcategoryName and subcategoryName or categoryName
+    local categoryData = data:GetCategoryData()
 
     --use a formatter for when there's more information?
-    local hasMoreInfo = GetCollectibleHelpIndices(data.collectibleId) ~= nil
-    local message = self:GetMessage(hasMoreInfo, ZO_SELECTED_TEXT:Colorize(displayedCategoryName), ZO_SELECTED_TEXT:Colorize(collectibleName))
+    local hasMoreInfo = GetCollectibleHelpIndices(data:GetId()) ~= nil
+    local message = self:GetMessage(hasMoreInfo, ZO_SELECTED_TEXT:Colorize(categoryData:GetName()), ZO_SELECTED_TEXT:Colorize(data:GetName()))
     self:AddNotification(message, data, hasMoreInfo)
 end
 
 function ZO_CollectionsUpdateProvider:AddNotification(message, data, hasMoreInfo)
+    local categoryData = data:GetCategoryData()
+
     local newListEntry = {
         dataType = NOTIFICATIONS_COLLECTIBLE_DATA,
         notificationType = NOTIFICATION_TYPE_COLLECTIONS,
-        shortDisplayText = data.subcategoryIndex and data.subcategoryName or data.categoryName,
+        shortDisplayText = categoryData:GetName(),
 
         message = message,
         data = data,
@@ -959,50 +963,19 @@ function ZO_CollectionsUpdateProvider:AddNotification(message, data, hasMoreInfo
 
         --For sorting
         displayName = message,
-        secsSinceRequest = 0,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
     }
 
     table.insert(self.list, newListEntry)
 end
 
 function ZO_CollectionsUpdateProvider:Accept(entryData)
-    --this function should be overriden to open the right scene.  We don't clear the notification here
+    RemoveCollectibleNotification(entryData.data:GetNotificationId())
+    --this function should be overriden to open the right scene
 end
 
 function ZO_CollectionsUpdateProvider:Decline(entryData)
-    RemoveCollectibleNotification(entryData.data.notificationId)
-end
-
-function ZO_CollectionsUpdateProvider:GetNotificationIdForCollectible(collectibleId)
-    for _, entry in ipairs(self.list) do
-        if entry.data.collectibleId == collectibleId then
-            return entry.data.notificationId
-        end
-    end
-    return nil
-end
-
-function ZO_CollectionsUpdateProvider:HasAnyNotifications(optionalCategoryIndexFilter, optionalSubcategoryIndexFilter)
-    for _, entry in ipairs(self.list) do
-        if optionalCategoryIndexFilter then
-            local entryData = entry.data
-            if optionalCategoryIndexFilter == entryData.categoryIndex then
-                if optionalSubcategoryIndexFilter then
-                    --When there are subcategories, we generate a fake subcategory that covers everything not in an explicit subcategory
-                    --ZO_JOURNAL_PROGRESS_FAKED_SUBCATEGORY_INDEX is how we know we're asking about the general subcategory and not the entire category
-                    local isFakedGeneralSubcategoryCategory = optionalSubcategoryIndexFilter == ZO_JOURNAL_PROGRESS_FAKED_SUBCATEGORY_INDEX and entryData.subcategoryIndex == nil
-                    if optionalSubcategoryIndexFilter == entryData.subcategoryIndex or isFakedGeneralSubcategoryCategory then
-                        return true
-                    end
-                else
-                    return true
-                end
-            end
-        else
-            return true
-        end
-    end
-    return false
+    RemoveCollectibleNotification(entryData.data:GetNotificationId())
 end
 
 --LFG Update Provider
@@ -1014,8 +987,6 @@ function ZO_LFGUpdateProvider:New(notificationManager)
     local provider = ZO_NotificationProvider.New(self, notificationManager)
     provider:SetHasTimer(true)
 
-    provider:RegisterUpdateEvent(EVENT_GROUPING_TOOLS_JUMP_DUNGEON_NOTIFICATION_NEW)
-    provider:RegisterUpdateEvent(EVENT_GROUPING_TOOLS_JUMP_DUNGEON_NOTIFICATION_REMOVED)
     provider:RegisterUpdateEvent(EVENT_GROUPING_TOOLS_READY_CHECK_UPDATED)
     provider:RegisterUpdateEvent(EVENT_GROUPING_TOOLS_READY_CHECK_CANCELLED)
     provider:RegisterUpdateEvent(EVENT_GROUPING_TOOLS_FIND_REPLACEMENT_NOTIFICATION_NEW)
@@ -1029,105 +1000,49 @@ end
 function ZO_LFGUpdateProvider:BuildNotificationList()
     ZO_ClearNumericallyIndexedTable(self.list)
 
-    if HasLFGJumpNotification() then
-        local activityType, activityIndex, timeRemainingSeconds = GetLFGJumpNotificationInfo()
-        local role = GetGroupMemberAssignedRole("player")
-
-        --No notification for AVA types
-        if activityType == LFG_ACTIVITY_AVA then
-            return
-        end
-
-        local activityName = GetLFGOption(activityType, activityIndex)
-
-        self:AddJumpNotification(
-            {
-                activityType = activityType,
-                activityIndex = activityIndex,
-                role = role,
-                timeRemainingSeconds = timeRemainingSeconds,
-                activityName = activityName,
-            }
-        )
-    end
-
     if HasLFGReadyCheckNotification() then
         local activityType, role, timeRemainingSeconds = GetLFGReadyCheckNotificationInfo()
         
         self:AddReadyCheckNotification(
             {
                 activityType = activityType,
-                activityIndex = activityIndex,
                 role = role,
                 timeRemainingSeconds = timeRemainingSeconds,
             }
         )
     end
 
-    if HasLFGFindReplacementNotification() then
-        local activityType, activityIndex = GetLFGFindReplacementNotificationInfo()
-        local activityName = GetLFGOption(activityType, activityIndex)
+    if HasActivityFindReplacementNotification() then
+        local activityId = GetActivityFindReplacementNotificationInfo()
+        local activityName = GetActivityName(activityId)
         self:AddFindReplacementNotification(
             {
-                activityType = activityType,
-                activityIndex = activityIndex,
+                activityId = activityId,
                 activityName = activityName,
             }
         )
     end
 end
 
-function ZO_LFGUpdateProvider:AddJumpNotification(data)
-    local role = data.role
-    local activityName = data.activityName
-
-    local messageFormat, messageParams
-    if role == LFG_ROLE_INVALID then
-        messageFormat = SI_LFG_JUMP_TO_DUNGEON_NO_ROLE_TEXT
-        messageParams = { activityName }
-    else
-        messageFormat = SI_LFG_JUMP_TO_DUNGEON_TEXT
-        messageParams = { activityName, zo_iconFormat(GetRoleIcon(role), "100%", "100%"), GetString("SI_LFGROLE", role) }
-    end
-
-    local newListEntry =
-    {
-        notificationType = NOTIFICATION_TYPE_LFG,
-        dataType = NOTIFICATIONS_LFG_JUMP_DUNGEON_DATA,
-        shortDisplayText = activityName,
-        data = data,
-
-        expiresAt = GetFrameTimeSeconds() + data.timeRemainingSeconds,
-        expirationCallback = ClearLFGJumpNotification,
-        messageFormat = messageFormat,
-        messageParams = messageParams,
-
-        --For sorting
-        displayName = activityName,
-        secsSinceRequest = 0,
-    }
-
-    table.insert(self.list, newListEntry)
-end
-
 function ZO_LFGUpdateProvider:AddReadyCheckNotification(data)
     local role = data.role
-    local activityTypeString = GetString("SI_LFGACTIVITY", data.activityType)
+    local activityTypeText = GetString("SI_LFGACTIVITY", data.activityType)
+    local generalActivityText = ZO_ACTIVITY_FINDER_GENERALIZED_ACTIVITY_DESCRIPTORS[data.activityType]
 
     local messageFormat, messageParams
     if role == LFG_ROLE_INVALID then
         messageFormat = SI_LFG_READY_CHECK_NO_ROLE_TEXT
-        messageParams = { activityTypeString }
+        messageParams = { activityTypeText, generalActivityText }
     else
         messageFormat = SI_LFG_READY_CHECK_TEXT
-        messageParams = { activityTypeString, zo_iconFormat(GetRoleIcon(role), "100%", "100%"), GetString("SI_LFGROLE", role) }
+        messageParams = { activityTypeText, generalActivityText, zo_iconFormat(GetRoleIcon(role), "100%", "100%"), GetString("SI_LFGROLE", role) }
     end
 
     local newListEntry =
     {
         notificationType = NOTIFICATION_TYPE_LFG,
         dataType = NOTIFICATIONS_LFG_READY_CHECK_DATA,
-        shortDisplayText = activityTypeString,
+        shortDisplayText = generalActivityText,
         data = data,
 
         expiresAt = GetFrameTimeSeconds() + data.timeRemainingSeconds,
@@ -1136,8 +1051,8 @@ function ZO_LFGUpdateProvider:AddReadyCheckNotification(data)
         messageParams = messageParams,
 
         --For sorting
-        displayName = activityTypeString,
-        secsSinceRequest = 0,
+        displayName = generalActivityText,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
     }
 
     table.insert(self.list, newListEntry)
@@ -1154,19 +1069,17 @@ function ZO_LFGUpdateProvider:AddFindReplacementNotification(data)
 
         --For sorting
         displayName = data.activityName,
-        secsSinceRequest = 0,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
     }
 
     table.insert(self.list, newListEntry)
 end
 
 function ZO_LFGUpdateProvider:Accept(entryData)
-    if entryData.dataType == NOTIFICATIONS_LFG_JUMP_DUNGEON_DATA then
-        AcceptLFGJumpNotification()
-    elseif entryData.dataType == NOTIFICATIONS_LFG_READY_CHECK_DATA then
+    if entryData.dataType == NOTIFICATIONS_LFG_READY_CHECK_DATA then
         AcceptLFGReadyCheckNotification()
     elseif entryData.dataType == NOTIFICATIONS_LFG_FIND_REPLACEMENT_DATA then
-        AcceptLFGFindReplacementNotification()
+        AcceptActivityFindReplacementNotification()
     end
 end
 
@@ -1174,7 +1087,7 @@ function ZO_LFGUpdateProvider:Decline(entryData)
     if entryData.dataType == NOTIFICATIONS_LFG_READY_CHECK_DATA then
         DeclineLFGReadyCheckNotification()
     elseif entryData.dataType == NOTIFICATIONS_LFG_FIND_REPLACEMENT_DATA then
-        DeclineLFGFindReplacementNotification()
+        DeclineAcceptFindReplacementNotification()
     end
 end
 
@@ -1210,7 +1123,7 @@ function ZO_CraftBagAutoTransferProvider:AddNotification()
 
         --For sorting
         displayName = notificationTypeString,
-        secsSinceRequest = 0,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
     }
     table.insert(self.list, newListEntry)
 end
@@ -1247,6 +1160,7 @@ function ZO_DuelInviteProvider:BuildNotificationList()
             message = zo_strformat(SI_DUEL_INVITE_MESSAGE, formattedInviterNames),
             shortDisplayText = zo_strformat(SI_NOTIFICATIONS_LIST_ENTRY, userFacingInviterName),
             characterNameForGamercard = ZO_StripGrammarMarkupFromCharacterName(duelPartnerCharacterName),
+            secsSinceRequest = ZO_NormalizeSecondsSince(0),
         })
     end
 end
@@ -1259,12 +1173,489 @@ function ZO_DuelInviteProvider:Decline(data, button, openedFromKeybind)
     DeclineDuel()
 end
 
+-- ZO_EsoPlusSubscriptionStatusProvider
+-------------------------
+
+ZO_EsoPlusSubscriptionStatusProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_EsoPlusSubscriptionStatusProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_ESO_PLUS_FREE_TRIAL_STATUS_CHANGED)
+    provider:RegisterUpdateEvent(EVENT_ESO_PLUS_FREE_TRIAL_NOTIFICATION_CLEARED)
+
+    return provider
+end
+
+function ZO_EsoPlusSubscriptionStatusProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    if HasEsoPlusFreeTrialNotification() then
+        self:AddNotification()
+    end
+end
+
+function ZO_EsoPlusSubscriptionStatusProvider:AddNotification()
+    local notificationTypeString = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_ESO_PLUS_SUBSCRIPTION)
+
+    local isSubscriber = IsESOPlusSubscriber()
+    local message
+    local helpCategoryIndex
+    local helpIndex
+    if isSubscriber then
+        message = GetString(SI_NOTIFICATIONS_ESO_PLUS_TRIAL_STARTED)
+        helpCategoryIndex, helpIndex = GetEsoPlusSubscriptionBenefitsInfoHelpIndices()
+    else
+        message = GetString(SI_NOTIFICATIONS_ESO_PLUS_TRIAL_ENDED)
+        helpCategoryIndex, helpIndex = GetEsoPlusSubscriptionLapsedBenefitsInfoHelpIndices()
+    end
+
+    local hasMoreInfo = helpCategoryIndex ~= nil
+
+    local newListEntry = {
+        notificationType = NOTIFICATION_TYPE_ESO_PLUS_SUBSCRIPTION,
+        dataType = NOTIFICATIONS_ESO_PLUS_SUBSCRIPTION_DATA,
+        shortDisplayText = notificationTypeString,
+        message = message,
+        moreInfo = hasMoreInfo,
+
+        helpCategoryIndex = helpCategoryIndex,
+        helpIndex = helpIndex,
+
+        --For sorting
+        displayName = notificationTypeString,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_EsoPlusSubscriptionStatusProvider:Accept()
+    ShowEsoPlusPage(MARKET_OPEN_OPERATION_NOTIFICATION)
+    ClearEsoPlusFreeTrialNotification()
+end
+
+function ZO_EsoPlusSubscriptionStatusProvider:Decline()
+    ClearEsoPlusFreeTrialNotification()
+end
+
+-- Gift Inventory Provider
+-------------------------
+
+ZO_GiftInventoryProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_GiftInventoryProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_GIFTS_UPDATED)
+
+    provider:BuildNotificationList()
+
+    return provider
+end
+
+function ZO_GiftInventoryProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    local function AddGiftNotifications(giftState, notificationType, messageStringFormatterId, dataType)
+        local giftList = GIFT_INVENTORY_MANAGER:GetGiftList(giftState)
+        for _, gift in ipairs(giftList) do
+            if not gift:HasBeenSeen() then
+                local message = zo_strformat(messageStringFormatterId, ZO_SELECTED_TEXT:Colorize(gift:GetUserFacingPlayerName()))
+                self:AddGiftNotification(gift, notificationType, dataType, message)
+            end
+        end
+    end
+
+    AddGiftNotifications(GIFT_STATE_RECEIVED, NOTIFICATION_TYPE_GIFT_RECEIVED, SI_NOTIFICATIONS_GIFT_RECEIVED, NOTIFICATIONS_GIFT_RECEIVED_DATA)
+    AddGiftNotifications(GIFT_STATE_RETURNED, NOTIFICATION_TYPE_GIFT_RETURNED, SI_NOTIFICATIONS_GIFT_RETURNED, NOTIFICATIONS_GIFT_RETURNED_DATA)
+    AddGiftNotifications(GIFT_STATE_THANKED, NOTIFICATION_TYPE_GIFT_CLAIMED, SI_NOTIFICATIONS_GIFT_CLAIMED, NOTIFICATIONS_GIFT_CLAIMED_DATA)
+end
+
+function ZO_GiftInventoryProvider:AddGiftNotification(gift, notificationType, dataType, message)
+    local newListEntry = {
+        notificationType = notificationType,
+        dataType = dataType,
+        shortDisplayText = GetString("SI_NOTIFICATIONTYPE", notificationType),
+        message = message,
+
+        gift = gift,
+
+        --For sorting
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_GiftInventoryProvider:Accept(entryData)
+    local gift = entryData.gift
+    if gift:IsState(GIFT_STATE_RETURNED) or (gift:IsState(GIFT_STATE_THANKED) and gift:GetNote() == "") then
+        gift:View()
+        GIFT_INVENTORY_MANAGER.ShowGiftInventory(gift:GetState())
+    else
+        local giftInventoryView = SYSTEMS:GetObject("giftInventoryView")
+        giftInventoryView:SetupAndShowGift(gift)
+    end
+end
+
+function ZO_GiftInventoryProvider:Decline(entryData)
+    entryData.gift:View()
+end
+
+-- Gifting Grace Period Started Provider
+-------------------------
+
+ZO_GiftingGracePeriodStartedProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_GiftingGracePeriodStartedProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_GIFTING_GRACE_PERIOD_STARTED)
+    provider:RegisterUpdateEvent(EVENT_GIFTING_GRACE_PERIOD_STARTED_NOTIFICATION_CLEARED)
+
+    return provider
+end
+
+function ZO_GiftingGracePeriodStartedProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    if HasGiftingGracePeriodStartedNotification() then
+        self:AddNotification()
+    end
+end
+
+function ZO_GiftingGracePeriodStartedProvider:AddNotification()
+    local timeLeftS = GetGiftingGracePeriodTime()
+    local timeLeftString
+    if timeLeftS >= ZO_ONE_DAY_IN_SECONDS then
+        timeLeftString = ZO_FormatTime(timeLeftS, TIME_FORMAT_STYLE_SHOW_LARGEST_UNIT_DESCRIPTIVE, TIME_FORMAT_PRECISION_SECONDS)
+    else
+        timeLeftString = GetString(SI_NOTIFICATIONS_GIFTING_GRACE_PERIOD_ENDS_LESS_THAN_A_DAY)
+    end
+    local message = zo_strformat(GetString(SI_NOTIFICATIONS_GIFTING_GRACE_PERIOD_STARTED), timeLeftString)
+
+    local helpCategoryIndex, helpIndex = GetGiftingGraceStartedHelpIndices()
+    local hasMoreInfo = helpCategoryIndex ~= nil
+    local newListEntry = {
+        notificationType = NOTIFICATION_TYPE_GIFT_GRACE_STARTED,
+        dataType = NOTIFICATIONS_GIFTING_GRACE_PERIOD_STARTED_DATA,
+        shortDisplayText = GetString(SI_NOTIFICATIONS_GIFTING_GRACE_PERIOD_UNLOCK_PERIOD),
+        message = message,
+
+        moreInfo = hasMoreInfo,
+        helpCategoryIndex = helpCategoryIndex,
+        helpIndex = helpIndex,
+
+        --For sorting
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_GiftingGracePeriodStartedProvider:Accept(entryData)
+    ShowMarketAndSearch("", MARKET_OPEN_OPERATION_NOTIFICATION)
+    ClearGiftingGracePeriodStartedNotification()
+end
+
+function ZO_GiftingGracePeriodStartedProvider:Decline(entryData)
+    ClearGiftingGracePeriodStartedNotification()
+end
+
+-- Gifting Unlocked Provider
+-------------------------
+
+ZO_GiftingUnlockedProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_GiftingUnlockedProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_GIFTING_UNLOCKED_STATUS_CHANGED)
+    provider:RegisterUpdateEvent(EVENT_GIFTING_UNLOCKED_NOTIFICATION_CLEARED)
+
+    return provider
+end
+
+function ZO_GiftingUnlockedProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    if HasGiftingUnlockedNotification() then
+        self:AddNotification()
+    end
+end
+
+function ZO_GiftingUnlockedProvider:AddNotification()
+    local helpCategoryIndex, helpIndex = GetGiftingUnlockedHelpIndices()
+    local hasMoreInfo = helpCategoryIndex ~= nil
+    local newListEntry = {
+        notificationType = NOTIFICATION_TYPE_GIFTING_UNLOCKED,
+        dataType = NOTIFICATIONS_GIFTING_UNLOCKED_DATA,
+        shortDisplayText = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_GIFTING_UNLOCKED),
+        message = GetString(SI_NOTIFICATIONS_GIFTING_UNLOCKED_MESSAGE),
+
+        moreInfo = hasMoreInfo,
+        helpCategoryIndex = helpCategoryIndex,
+        helpIndex = helpIndex,
+
+        --For sorting
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_GiftingUnlockedProvider:Accept(entryData)
+    ShowMarketAndSearch("", MARKET_OPEN_OPERATION_NOTIFICATION)
+    ClearGiftingUnlockedNotification()
+end
+
+function ZO_GiftingUnlockedProvider:Decline(entryData)
+    ClearGiftingUnlockedNotification()
+end
+
+-- Daily Login Rewards Claim Provider
+--------------------------------------
+
+ZO_DailyLoginRewardsClaimProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_DailyLoginRewardsClaimProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_NEW_DAILY_LOGIN_REWARD_AVAILABLE)
+    provider:RegisterUpdateEvent(EVENT_DAILY_LOGIN_REWARDS_CLAIMED)
+
+    return provider
+end
+
+function ZO_DailyLoginRewardsClaimProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    if GetDailyLoginClaimableRewardIndex() then
+        self:AddNotification()
+    end
+end
+
+function ZO_DailyLoginRewardsClaimProvider:AddNotification()
+    local notificationTypeString = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_NEW_DAILY_LOGIN_REWARD)
+
+    local newListEntry =
+    {
+        notificationType = NOTIFICATION_TYPE_NEW_DAILY_LOGIN_REWARD,
+        dataType = NOTIFICATIONS_NEW_DAILY_LOGIN_REWARD_DATA,
+        shortDisplayText = GetString(SI_NOTIFICATIONS_NEW_DAILY_LOGIN_REWARDS),
+        message = GetString(SI_NOTIFICATIONS_NEW_DAILY_LOGIN_REWARDS_MESSAGE),
+
+        --For sorting
+        displayName = notificationTypeString,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_DailyLoginRewardsClaimProvider:Accept(entryData)
+    ZO_DAILYLOGINREWARDS_MANAGER:ShowDailyLoginRewardsScene()
+end
+
+function ZO_DailyLoginRewardsClaimProvider:Decline(entryData)
+    
+end
+
+-- Guild Finder Guild New Applications Provider
+------------------------------------------------
+
+ZO_GuildNewApplicationsProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_GuildNewApplicationsProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_GUILD_FINDER_GUILD_APPLICATIONS_VIEWED)
+    provider:RegisterUpdateEvent(EVENT_GUILD_FINDER_GUILD_NEW_APPLICATIONS)
+
+    return provider
+end
+
+function ZO_GuildNewApplicationsProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    for i = 1, GetNumGuilds() do
+        local guildId = GetGuildId(i)
+        if DoesGuildHaveNewApplicationsNotification(guildId) then
+            self:AddNotification(guildId, i)
+        end
+    end
+end
+
+function ZO_GuildNewApplicationsProvider:GetAllianceIconNameText(guildAlliance, guildName)
+    return ZO_AllianceIconNameFormatter(guildAlliance, guildName)
+end
+
+function ZO_GuildNewApplicationsProvider:AddNotification(guildId, guildIndex)
+    local notificationTypeString = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_GUILD_NEW_APPLICATIONS)
+    local numGuildApplications = GetGuildFinderNumGuildApplications(guildId)
+    local guildName = GetGuildName(guildId)
+    local guildAlliance = GetGuildAlliance(guildId)
+    local guildInfo = self:GetAllianceIconNameText(guildAlliance, guildName)
+
+    local newListEntry =
+    {
+        notificationType = NOTIFICATION_TYPE_GUILD_NEW_APPLICATIONS,
+        dataType = NOTIFICATIONS_GUILD_NEW_APPLICATIONS,
+        shortDisplayText = GetString(SI_NOTIFICATIONS_GUILD_NEW_APPLICATIONS),
+        message = zo_strformat(SI_NOTIFICATIONS_GUILD_NEW_APPLICATIONS_MESSAGE, numGuildApplications, ZO_WHITE:Colorize(guildInfo)),
+        guildId = guildId,
+        guildIndex = guildIndex,
+
+        --For sorting
+        displayName = notificationTypeString,
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_GuildNewApplicationsProvider:Accept(entryData)
+    ClearGuildHasNewApplicationsNotification(entryData.guildId)
+    -- Show the guild's application page in overridden function
+end
+
+function ZO_GuildNewApplicationsProvider:Decline(entryData)
+    ClearGuildHasNewApplicationsNotification(entryData.guildId)
+end
+
+-- Guild Finder Player Applications Provider
+------------------------------------------------
+
+ZO_PlayerApplicationsProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_PlayerApplicationsProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_GUILD_FINDER_PLAYER_APPLICATIONS_CHANGED)
+
+    return provider
+end
+
+function ZO_PlayerApplicationsProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    for i = 1, GetNumPlayerApplicationNotifications() do
+        self:AddNotification(i)
+    end
+end
+
+do
+    -- These application states should never generate a notification
+    local noNotificationStatusList =
+    {
+        [GUILD_APPLICATION_STATUS_NONE] = true,
+        [GUILD_APPLICATION_STATUS_PENDING] = true,
+        [GUILD_APPLICATION_STATUS_RESCINDED] = true,
+    }
+
+    function ZO_PlayerApplicationsProvider:AddNotification(index)
+        local notificationTypeString = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_PLAYER_APPLICATIONS)
+        local declineText, guildName, guildAlliance, reason = GetPlayerApplicationNotificationInfo(index)
+        local guildInfo = ZO_AllianceIconNameFormatter(guildAlliance, guildName)
+
+        if noNotificationStatusList[reason] == true then
+            return
+        end
+
+        local newListEntry =
+        {
+            notificationType = NOTIFICATION_TYPE_PLAYER_APPLICATIONS,
+            dataType = NOTIFICATIONS_ALERT_DATA,
+            shortDisplayText = GetString(SI_NOTIFICATIONS_PLAYER_APPLICATIONS),
+            message = zo_strformat(GetString("SI_GUILDAPPLICATIONSTATUS", reason), ZO_WHITE:Colorize(guildInfo)),
+            index = index,
+            note = declineText,
+            guildName = guildName,
+            showReportKeybind = reason == GUILD_APPLICATION_STATUS_DECLINED and declineText ~= "",
+
+            --For sorting
+            displayName = notificationTypeString,
+            secsSinceRequest = ZO_NormalizeSecondsSince(0),
+        }
+        table.insert(self.list, newListEntry)
+    end
+end
+
+function ZO_PlayerApplicationsProvider:Decline(entryData)
+    ClearPlayerApplicationNotification(entryData.index)
+end
+
+-- Market Product Unlocked Provider
+-------------------------
+
+ZO_MarketProductUnlockedProvider = ZO_NotificationProvider:Subclass()
+
+function ZO_MarketProductUnlockedProvider:New(notificationManager)
+    local provider = ZO_NotificationProvider.New(self, notificationManager)
+
+    provider:RegisterUpdateEvent(EVENT_MARKET_PRODUCTS_UNLOCKED)
+    provider:RegisterUpdateEvent(EVENT_MARKET_PRODUCTS_UNLOCKED_NOTIFICATIONS_CLEARED)
+
+    return provider
+end
+
+function ZO_MarketProductUnlockedProvider:BuildNotificationList()
+    ZO_ClearNumericallyIndexedTable(self.list)
+
+    local numNotifications = GetNumMarketProductUnlockNotifications()
+    if numNotifications > 0 then
+        local multipleProductsUnlocked = numNotifications > 1
+        local firstMarketProductId = GetMarketProductUnlockNotificationProductId(1)
+        self:AddNotification(firstMarketProductId, multipleProductsUnlocked)
+    end
+end
+
+function ZO_MarketProductUnlockedProvider:AddNotification(firstMarketProductId, multipleProductsUnlocked)
+    local message
+    -- in the case of multiple market products getting unlocked, we will use the help info off the first one in the list for simplicity
+    local achievementId, completedAchievement, helpCategoryIndex, helpIndex = GetMarketProductUnlockedByAchievementInfo(firstMarketProductId)
+    if multipleProductsUnlocked then
+        message = GetString(SI_NOTIFICATIONS_MULTIPLE_MARKET_PRODUCTS_UNLOCKED_MESSAGE)
+    else
+        local marketProductName = GetMarketProductDisplayName(firstMarketProductId)
+        message = zo_strformat(SI_NOTIFICATIONS_MARKET_PRODUCT_UNLOCKED_BY_ACHIEVEMENT_MESSAGE, ZO_WHITE:Colorize(marketProductName))
+    end
+
+    local hasMoreInfo = helpCategoryIndex ~= nil
+
+    local newListEntry =
+    {
+        notificationType = NOTIFICATION_TYPE_MARKET_PRODUCT_AVAILABLE,
+        dataType = NOTIFICATIONS_MARKET_PRODUCT_UNLOCKED_DATA,
+        shortDisplayText = GetString("SI_NOTIFICATIONTYPE", NOTIFICATION_TYPE_MARKET_PRODUCT_AVAILABLE),
+        message = message,
+        moreInfo = hasMoreInfo,
+
+        marketProductId = marketProductId,
+        helpCategoryIndex = helpCategoryIndex,
+        helpIndex = helpIndex,
+
+        --For sorting
+        secsSinceRequest = ZO_NormalizeSecondsSince(0),
+    }
+    table.insert(self.list, newListEntry)
+end
+
+function ZO_MarketProductUnlockedProvider:Accept(entryData)
+    if IsInGamepadPreferredMode() then
+        ZO_Dialogs_ShowGamepadDialog("GAMEPAD_LOG_OUT")
+    else
+        ZO_Dialogs_ShowDialog("LOG_OUT")
+    end
+
+    ClearMarketProductUnlockNotifications()
+end
+
+function ZO_MarketProductUnlockedProvider:Decline(entryData)
+    ClearMarketProductUnlockNotifications()
+end
+
 -- Sort List
 -------------------------
 local ENTRY_SORT_KEYS =
 {
-    ["displayName"] = { },
-    ["secsSinceRequest"] = { isNumeric = true, tiebreaker = "displayName" },
+    ["secsSinceRequest"] = { isNumeric = true, tiebreaker = "dataType" },
+    ["dataType"] = { isNumeric = true },
 }
 
 ZO_NotificationList = ZO_SortFilterList:Subclass()
@@ -1300,7 +1691,6 @@ end
 ZO_NotificationManager = ZO_Object:Subclass()
 
 function ZO_NotificationManager:New(control)
-    
     local notificationManager = ZO_Object.New(self)
     notificationManager:Initialize(control)
     return notificationManager
@@ -1349,9 +1739,11 @@ function ZO_NotificationManager:BuildNotificationList()
 
         self.allowUpdate = hasTimer
 
+        local lastNotificationType = nil
         for listIndex = 1, numNotifications do
-            local isHeader = listIndex == 1
-            provider:AddDataEntry(self.list, listIndex, isHeader)
+            local isHeader = provider.list[listIndex].notificationType ~= lastNotificationType
+            provider:AddDataEntry(listIndex, isHeader)
+            lastNotificationType = provider.list[listIndex].notificationType
         end
     end
 
@@ -1420,14 +1812,6 @@ end
 
 function ZO_NotificationManager:GetNumNotifications()
     return self.totalNumNotifications
-end
-
-function ZO_NotificationManager:GetNumCollectionsNotifications()
-    return self.collectionsProvider:GetNumNotifications()
-end
-
-function ZO_NotificationManager:GetCollectionsProvider()
-    return self.collectionsProvider
 end
 
 function ZO_NotificationManager:SuppressNotificationsByEvent(eventId)

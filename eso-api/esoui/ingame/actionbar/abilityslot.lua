@@ -3,9 +3,6 @@
 ABILITY_SLOT_TYPE_ACTIONBAR = 1
 ABILITY_SLOT_TYPE_QUICKSLOT = 2
 
-local BUTTON_LEFT = 1
-local BUTTON_RIGHT = 2
-
 local USE_BASE_ABILITY = true
 
 function ZO_ActionSlot_SetupSlot(iconControl, buttonControl, icon, normalFrame, downFrame, cooldownIconControl)
@@ -66,8 +63,12 @@ local function TryPlaceQuickslotAction(abilitySlot)
 end
 
 local function TryPickupAction(abilitySlot)
-    if not IsActionBarSlottingAllowed() then
-        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, SI_SKILLS_DISABLED_SPECIAL_ABILITIES)
+    local lockedReason = GetActionBarLockedReason()
+    if lockedReason == ACTION_BAR_LOCKED_REASON_COMBAT then
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, GetString("SI_RESPECRESULT", RESPEC_RESULT_IS_IN_COMBAT))
+        return false
+    elseif lockedReason == ACTION_BAR_LOCKED_REASON_NOT_RESPECCABLE then
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, GetString("SI_RESPECRESULT", RESPEC_RESULT_ACTIVE_HOTBAR_NOT_RESPECCABLE))
         return false
     end
 
@@ -123,31 +124,30 @@ local AbilityClicked =
 {
     [ABILITY_SLOT_TYPE_ACTIONBAR] =
     {
-        [BUTTON_LEFT] =
+        [MOUSE_BUTTON_INDEX_LEFT] =
         {
             function(abilitySlot) 
                 return TryPlaceAction(abilitySlot)
             end,
         },
 
-        [BUTTON_RIGHT] =
+        [MOUSE_BUTTON_INDEX_RIGHT] =
         {
             function(abilitySlot)
                 return TryShowActionMenu(abilitySlot)
             end,
         },
-
     },
     [ABILITY_SLOT_TYPE_QUICKSLOT] =
     {
-        [BUTTON_LEFT] =
+        [MOUSE_BUTTON_INDEX_LEFT] =
         {
             function(abilitySlot)
                 return TryPlaceQuickslotAction(abilitySlot)
             end,
         },
 
-        [BUTTON_RIGHT] =
+        [MOUSE_BUTTON_INDEX_RIGHT] =
         {
             function(abilitySlot)
                 return TryShowQuickslotActionMenu(abilitySlot)
@@ -161,8 +161,7 @@ function ZO_AbilitySlot_OnSlotClicked(abilitySlot, buttonId)
 end
 
 local function TryClearQuickslot(abilitySlot)
-    if IsSlotUsed(abilitySlot.slotNum) and not IsSlotLocked(abilitySlot.slotNum)
-    then
+    if IsSlotUsed(abilitySlot.slotNum) and not IsSlotLocked(abilitySlot.slotNum) then
         ClearSlot(abilitySlot.slotNum)
         return true
     end
@@ -172,7 +171,7 @@ local AbilityDoubleClicked =
 {
     [ABILITY_SLOT_TYPE_QUICKSLOT] =
     {
-        [BUTTON_LEFT] =
+        [MOUSE_BUTTON_INDEX_LEFT] =
         {
             function(abilitySlot)
                 return TryClearQuickslot(abilitySlot)
@@ -252,30 +251,51 @@ function ZO_AbilitySlot_OnReceiveDrag(abilitySlot, button)
 end
 
 local function AbilitySlotTooltipBaseInitialize(abilitySlot, tooltip, owner)
-    abilitySlotWithTooltipShowing = abilitySlot
     abilitySlot.activeTooltip = tooltip
     InitializeTooltip(tooltip, owner, BOTTOM, 0, -5, TOP)
-
-    EVENT_MANAGER:AddFilterForEvent("ZO_AbilitySlot_CooldownUpdated", EVENT_ABILITY_COOLDOWN_UPDATED, REGISTER_FILTER_ABILITY_ID, abilitySlot.actionId)
 end
 
-local function TryShowActionBarTooltip(abilitySlot, tooltip, owner)
+local function SetTooltipToActionBarSlot(tooltip, slot)
+    local slotType = GetSlotType(slot)
+
+    if slotType ~= ACTION_TYPE_NOTHING then
+        tooltip:SetAction(slot)
+        return true
+    end
+    return false
+end
+
+local function TryShowActionBarTooltip(abilitySlot)
     local button = ZO_ActionBar_GetButton(abilitySlot.slotNum)
     if button then
-        local slotNum = button:GetSlot()
-        if(GetSlotType(slotNum) ~= ACTION_TYPE_NOTHING) 
-        then
-            AbilitySlotTooltipBaseInitialize(abilitySlot, tooltip, owner)
-            return SetTooltipToActionBarSlot(tooltip, slotNum)
+        local actionSlotIndex = button:GetSlot()
+        local slotData = ACTION_BAR_ASSIGNMENT_MANAGER:GetCurrentHotbar():GetSlotData(actionSlotIndex)
+        if slotData then
+            -- This is an ability, use the slotData tooltip
+            if abilitySlot.activeTooltip then
+                ClearTooltip(abilitySlot.activeTooltip)
+                abilitySlot.activeTooltip = nil
+            end
+
+            local tooltip = slotData:GetKeyboardTooltipControl()
+            if tooltip then
+                AbilitySlotTooltipBaseInitialize(abilitySlot, tooltip, abilitySlot)
+                slotData:SetKeyboardTooltip(tooltip)
+            end
         else
-            ClearTooltip(tooltip)
+            -- this is a quickslot, use the quickslot path
+            if GetSlotType(actionSlotIndex) ~= ACTION_TYPE_NOTHING then
+                AbilitySlotTooltipBaseInitialize(abilitySlot, ItemTooltip, abilitySlot)
+                return SetTooltipToActionBarSlot(ItemTooltip, actionSlotIndex)
+            else
+                ClearTooltip(ItemTooltip)
+            end
         end
     end
 end
 
 local function TryShowQuickslotTooltip(abilitySlot, tooltip, owner)
-    if(GetSlotType(abilitySlot.slotNum) ~= ACTION_TYPE_NOTHING) 
-    then
+    if GetSlotType(abilitySlot.slotNum) ~= ACTION_TYPE_NOTHING then
         AbilitySlotTooltipBaseInitialize(abilitySlot, tooltip, owner)
         return SetTooltipToActionBarSlot(tooltip, abilitySlot.slotNum)
     else
@@ -288,7 +308,7 @@ local AbilityEnter =
     [ABILITY_SLOT_TYPE_ACTIONBAR] =
     {
         function(abilitySlot)
-            return TryShowActionBarTooltip(abilitySlot, abilitySlot.tooltip, abilitySlot)
+            return TryShowActionBarTooltip(abilitySlot)
         end,
     },
     [ABILITY_SLOT_TYPE_QUICKSLOT] =
@@ -299,8 +319,6 @@ local AbilityEnter =
         end,
     },
 }
-
-abilitySlotWithTooltipShowing = nil
 
 function ZO_AbilitySlot_OnMouseEnter(abilitySlot)
     RunHandlers(AbilityEnter, abilitySlot)
@@ -322,16 +340,6 @@ function ZO_AbilitySlot_OnMouseExit(abilitySlot)
     end
 
     abilitySlot.activeTooltip = nil
-    abilitySlotWithTooltipShowing = nil
 
     RunHandlers(AbilityExit, abilitySlot)
 end
-
-local function OnAbilityCooldownUpdated(event, abilityId)
-    if(abilitySlotWithTooltipShowing and abilitySlotWithTooltipShowing.actionId == abilityId)
-    then
-        ZO_AbilitySlot_OnMouseEnter(abilitySlotWithTooltipShowing)
-    end
-end
-
-EVENT_MANAGER:RegisterForEvent("ZO_AbilitySlot_CooldownUpdated", EVENT_ABILITY_COOLDOWN_UPDATED, OnAbilityCooldownUpdated)

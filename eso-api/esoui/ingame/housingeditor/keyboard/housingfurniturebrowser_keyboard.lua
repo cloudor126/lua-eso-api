@@ -14,7 +14,7 @@ function ZO_HousingFurnitureBrowser_Keyboard:Initialize(control)
 
     local function OnListMostRecentlySelectedDataChanged(data)
         -- selecting the list data will preview the furniture, so we will need to show/hide the house info as appropriate
-        if data then
+        if data and IsCharacterPreviewingAvailable() then
             SCENE_MANAGER:RemoveFragmentGroup(self.houseInfoFragmentGroup)
         else
             SCENE_MANAGER:AddFragmentGroup(self.houseInfoFragmentGroup)
@@ -57,10 +57,14 @@ function ZO_HousingFurnitureBrowser_Keyboard:OnDeferredInitialization()
     self.houseInfoFragmentGroup = 
     {
         HOUSE_INFORMATION_FRAGMENT,
-        MEDIUM_LEFT_PANEL_BG_FRAGMENT,
+        MEDIUM_SHORT_LEFT_PANEL_BG_FRAGMENT,
     }
 
     self.isInitialized = true
+end
+
+function ZO_HousingFurnitureBrowser_Keyboard:IsShowing()
+    return KEYBOARD_HOUSING_FURNITURE_BROWSER_SCENE:IsShowing()
 end
 
 function ZO_HousingFurnitureBrowser_Keyboard:OnShowing()
@@ -128,10 +132,10 @@ function ZO_HousingFurnitureBrowser_Keyboard.SetupFurnitureRow(rowControl, furni
         statusControl:AddIcon("EsoUI/Art/Inventory/inventory_stolenItem_icon.dds")
     end
     if furnitureObject:IsGemmable() then
-        statusControl:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(UI_ONLY_CURRENCY_CROWN_GEMS))
+        statusControl:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(CURT_CROWN_GEMS))
     end
     if furnitureObject:IsFromCrownStore() then
-        statusControl:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(UI_ONLY_CURRENCY_CROWNS))
+        statusControl:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(CURT_CROWNS))
     end
 
     statusControl:Show()
@@ -191,5 +195,4 @@ end
 
 function ZO_HousingFurnitureBrowser_Keyboard_OnInitialize(control)
     KEYBOARD_HOUSING_FURNITURE_BROWSER = ZO_HousingFurnitureBrowser_Keyboard:New(control)
-    SYSTEMS:RegisterKeyboardObject("housing_furniture_browser", keyboardBrowser)
 end

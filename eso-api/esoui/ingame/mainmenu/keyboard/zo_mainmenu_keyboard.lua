@@ -17,51 +17,61 @@ local CATEGORY_LAYOUT_INFO =
         overrideNormalSize = 102,
         overrideDownSize = 128,
 
-        onInitializeCallback =  function(button)
-                                    local animationTexture = button:GetNamedChild("ImageAnimation")
-                                    animationTexture:SetTexture("EsoUI/Art/MainMenu/menuBar_market_animation.dds")
-                                    animationTexture:SetHidden(false)
-                                    animationTexture:SetBlendMode(TEX_BLEND_MODE_ADD)
-                                    button.animationTexture = animationTexture
+        onInitializeCallback = function(button)
+            local animationTexture = button:GetNamedChild("ImageAnimation")
+            animationTexture:SetTexture("EsoUI/Art/MainMenu/menuBar_market_animation.dds")
+            animationTexture:SetHidden(false)
+            animationTexture:SetBlendMode(TEX_BLEND_MODE_ADD)
+            button.animationTexture = animationTexture
 
-                                    button.timeline = ANIMATION_MANAGER:CreateTimelineFromVirtual("ZO_CrownStoreShineAnimation", animationTexture)
-                                    button.timeline:PlayFromStart()
+            button.timeline = ANIMATION_MANAGER:CreateTimelineFromVirtual("ZO_CrownStoreShineAnimation", animationTexture)
+            button.timeline:PlayFromStart()
 
-                                    local isSubscriber = IsESOPlusSubscriber()
-                                    local membershipControl = button:GetNamedChild("Membership")
-                                    local remainingCrownsControl = button:GetNamedChild("RemainingCrowns")
-                                    membershipControl:SetHidden(not isSubscriber)
-                                    membershipControl:SetText(GetString(SI_ESO_PLUS_TITLE))
-                                    remainingCrownsControl:SetHidden(false)
-                                    local currentBalance = GetPlayerCrowns()
-                                    remainingCrownsControl:SetText(ZO_CommaDelimitNumber(currentBalance))
-                                    button:RegisterForEvent(EVENT_CROWN_UPDATE, function(currencyAmount)
-                                                                                                    local currentBalance = GetPlayerCrowns()
-                                                                                                    remainingCrownsControl:SetText(ZO_CommaDelimitNumber(currentBalance))
-                                                                                                 end)
-                                end,
-        onResetCallback =   function(button)
-                                button.animationTexture:SetHidden(true)
-                                button.timeline:PlayInstantlyToStart()
-                                button.timeline:Stop()
-                                button:UnregisterForEvent(EVENT_CROWN_UPDATE)
-                                button:GetNamedChild("Membership"):SetHidden(true)
-                                button:GetNamedChild("RemainingCrowns"):SetHidden(true)
-                            end,
-        onButtonStatePressed =  function(button)
-                                    button.animationTexture:SetHidden(true)
-                                    button.timeline:PlayInstantlyToStart()
-                                button.timeline:Stop()
-                                end,
-        onButtonStateNormal =   function(button)
-                                    button.animationTexture:SetHidden(false)
-                                    button.timeline:PlayFromStart()
-                                end,
+            local isSubscriber = IsESOPlusSubscriber()
+            local membershipControl = button:GetNamedChild("Membership")
+            local remainingCrownsControl = button:GetNamedChild("RemainingCrowns")
+            membershipControl:SetHidden(not isSubscriber)
+            local esoPlusString = zo_iconTextFormatNoSpace("EsoUI/Art/Market/Keyboard/ESOPlus_Chalice_GOLD_32.dds", 28, 28, GetString(SI_ESO_PLUS_TITLE))
+            membershipControl:SetText(esoPlusString)
+            remainingCrownsControl:SetHidden(false)
+            local currentCrownBalance = GetPlayerCrowns()
+            remainingCrownsControl:SetText(zo_strformat(SI_NUMBER_FORMAT, ZO_CommaDelimitNumber(currentCrownBalance)))
+            button:RegisterForEvent(EVENT_CROWN_UPDATE, function(currencyAmount)
+                local playerCrownBalance = GetPlayerCrowns()
+                remainingCrownsControl:SetText(zo_strformat(SI_NUMBER_FORMAT, ZO_CommaDelimitNumber(playerCrownBalance)))
+            end)
+        end,
+        onResetCallback = function(button)
+            button.animationTexture:SetHidden(true)
+            button.timeline:PlayInstantlyToStart()
+            button.timeline:Stop()
+            button:UnregisterForEvent(EVENT_CROWN_UPDATE)
+            button:GetNamedChild("Membership"):SetHidden(true)
+            button:GetNamedChild("RemainingCrowns"):SetHidden(true)
+        end,
+        onButtonStatePressed = function(button)
+            button.animationTexture:SetHidden(true)
+            button.timeline:PlayInstantlyToStart()
+            button.timeline:Stop()
+        end,
+        onButtonStateNormal = function(button)
+            button.animationTexture:SetHidden(false)
+            button.timeline:PlayFromStart()
+        end,
         onButtonStateDisabled = function(button)
-                                    button.animationTexture:SetHidden(true)
-                                    button.timeline:PlayInstantlyToStart()
-                                    button.timeline:Stop()
-                                end,
+            button.animationTexture:SetHidden(true)
+            button.timeline:PlayInstantlyToStart()
+            button.timeline:Stop()
+        end,
+        indicators = function()
+            if GIFT_INVENTORY_MANAGER and GIFT_INVENTORY_MANAGER:HasAnyUnseenGifts() then
+                return { ZO_KEYBOARD_NEW_ICON }
+            end
+
+            if GetDailyLoginClaimableRewardIndex() then
+                return { ZO_KEYBOARD_NEW_ICON }
+            end
+        end,
     },
     [MENU_CATEGORY_CROWN_CRATES] =
     {
@@ -126,6 +136,11 @@ local CATEGORY_LAYOUT_INFO =
         pressed = "EsoUI/Art/MainMenu/menuBar_character_down.dds",
         disabled = "EsoUI/Art/MainMenu/menuBar_character_disabled.dds",
         highlight = "EsoUI/Art/MainMenu/menuBar_character_over.dds",
+        indicators = function()
+            if HasPendingLevelUpReward() or GetAttributeUnspentPoints() > 0 then
+                return { ZO_KEYBOARD_NEW_ICON }
+            end
+        end,
     },
     [MENU_CATEGORY_SKILLS] =
     {
@@ -137,6 +152,12 @@ local CATEGORY_LAYOUT_INFO =
         pressed = "EsoUI/Art/MainMenu/menuBar_skills_down.dds",
         disabled = "EsoUI/Art/MainMenu/menuBar_skills_disabled.dds",
         highlight = "EsoUI/Art/MainMenu/menuBar_skills_over.dds",
+
+        indicators = function()
+            if SKILLS_DATA_MANAGER and SKILLS_DATA_MANAGER:AreAnySkillLinesNew() then
+                return { ZO_KEYBOARD_NEW_ICON }
+            end
+        end,
     },
     [MENU_CATEGORY_CHAMPION] =
     {
@@ -187,7 +208,7 @@ local CATEGORY_LAYOUT_INFO =
         highlight = "EsoUI/Art/MainMenu/menuBar_collections_over.dds",
 
         indicators = function()
-            if (COLLECTIONS_BOOK and COLLECTIONS_BOOK:HasAnyNewCollectibles()) or (COLLECTIONS_BOOK_SINGLETON and COLLECTIONS_BOOK_SINGLETON:DoesAnyDLCHaveQuestPending()) then
+            if ZO_COLLECTIBLE_DATA_MANAGER and ZO_COLLECTIBLE_DATA_MANAGER:HasAnyNewCollectibles() then
                 return { ZO_KEYBOARD_NEW_ICON }
             end
         end,
@@ -246,6 +267,11 @@ local CATEGORY_LAYOUT_INFO =
         pressed = "EsoUI/Art/MainMenu/menuBar_ava_down.dds",
         disabled = "EsoUI/Art/MainMenu/menuBar_ava_disabled.dds",
         highlight = "EsoUI/Art/MainMenu/menuBar_ava_over.dds",
+
+        visible = function()
+            local currentLevel = GetUnitLevel("player")
+            return currentLevel >= GetMinLevelForCampaignTutorial()
+        end,
     },
     [MENU_CATEGORY_MAIL] =
     {
@@ -293,9 +319,6 @@ local CATEGORY_LAYOUT_INFO =
     },
 }
 
-
-local ENABLE_CATEGORY = true
-local DISABLE_CATEGORY = false
 function MainMenu_Keyboard:SetCategoriesEnabled(categoryFilterFunction, shouldBeEnabled)
     for i = 1, #CATEGORY_LAYOUT_INFO do
         local categoryInfo = CATEGORY_LAYOUT_INFO[i]
@@ -326,18 +349,9 @@ function MainMenu_Keyboard:Initialize(control)
     self.sceneGroupBar = GetControl(self.control, "SceneGroupBar")
     self.sceneGroupBarLabel = GetControl(self.control, "SceneGroupBarLabel")
 
-    self.tabPressedCallback =   function(control)
-                                    if control.sceneGroupName then
-                                        self:OnSceneGroupTabClicked(control.sceneGroupName)
-                                    end
-                                end
-
-    self.sceneShowCallback =   function(oldState, newState)
-                                    if(newState == SCENE_SHOWING) then
-                                        local sceneGroupInfo = self.sceneGroupInfo[self.sceneShowGroupName] 
-                                        self:SetupSceneGroupBar(sceneGroupInfo.category, self.sceneShowGroupName)
-                                        local scene = SCENE_MANAGER:GetCurrentScene()
-                                        scene:UnregisterCallback("StateChange", self.sceneShowCallback)
+    self.tabPressedCallback =   function(tabControl)
+                                    if tabControl.sceneGroupName then
+                                        self:OnSceneGroupTabClicked(tabControl.sceneGroupName)
                                     end
                                 end
 
@@ -372,6 +386,14 @@ function MainMenu_Keyboard:Initialize(control)
     MAIN_MENU_MANAGER:RegisterCallback("OnPlayerStateUpdate", function() self:UpdateCategories() end)
     MAIN_MENU_MANAGER:RegisterCallback("OnBlockingSceneActivated", OnBlockingSceneActivated)
     MAIN_MENU_MANAGER:RegisterCallback("OnBlockingSceneCleared", OnBlockingSceneCleared)
+
+    local function UpdateCategoryBar()
+        self:RefreshCategoryBar()
+    end
+    control:RegisterForEvent(EVENT_LEVEL_UP_REWARD_UPDATED, UpdateCategoryBar)
+    control:RegisterForEvent(EVENT_ATTRIBUTE_UPGRADE_UPDATED, UpdateCategoryBar)
+    control:RegisterForEvent(EVENT_LEVEL_UPDATE, UpdateCategoryBar)
+    control:AddFilterForEvent(EVENT_LEVEL_UPDATE, REGISTER_FILTER_UNIT_TAG, "player")
 
     self:UpdateCategories()
 end
@@ -436,6 +458,30 @@ function MainMenu_Keyboard:AddRawScene(sceneName, category, categoryInfo, sceneG
     }
     self.sceneInfo[sceneName] = sceneInfo
 
+    scene:RegisterCallback("StateChange", function(oldState, newState)
+        if newState == SCENE_SHOWING then
+            self.ignoreCallbacks = true
+
+            local skipAnimation = not self:IsShowing()
+            ZO_MenuBar_SelectDescriptor(self.categoryBar, category, skipAnimation)
+            self.lastCategory = category
+
+            if sceneGroupName == nil then
+                -- don't set the last scene name if this scene is part of a scene group
+                -- when we toggle a category we will default to showing the last scene name
+                -- however for scene groups we want to show the active scene not necessarily the last shown scene
+                self:SetLastSceneName(categoryInfo, sceneName)
+            else
+                -- if we are part of a scene group, when we show the scene, make sure to
+                -- flag this scene as the active one
+                local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
+                sceneGroup:SetActiveScene(sceneName)
+            end
+
+            self.ignoreCallbacks = false
+        end
+    end)
+
     return scene
 end
 
@@ -485,22 +531,38 @@ function MainMenu_Keyboard:SetSceneEnabled(sceneName, enabled)
     end
 end
 
-function MainMenu_Keyboard:AddSceneGroup(category, sceneGroupName, menuBarIconData, sceneGroupPreferredSceneFunction)
+function MainMenu_Keyboard:AddSceneGroup(category, sceneGroupName, menuBarIconData, sceneGroupPreferredSceneFunction, sceneGroupBarTutorialTrigger)
     local categoryInfo = self.categoryInfo[category]
 
     local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
-    
-    for i=1, sceneGroup:GetNumScenes() do
+    sceneGroup:RegisterCallback("StateChange", function(oldState, newState)
+        if newState == SCENE_GROUP_SHOWING then
+            self.sceneShowGroupName = sceneGroupName
+            local nextScene = SCENE_MANAGER:GetNextScene():GetName()
+            -- this update can be called before the scene itself is set to showing,
+            -- so make sure to set the active scene here so we can update the scene group bar correctly
+            sceneGroup:SetActiveScene(nextScene)
+            self:SetLastSceneGroupName(categoryInfo, sceneGroupName)
+            self:SetupSceneGroupBar(category, sceneGroupName)
+        elseif newState == SCENE_GROUP_SHOWN then
+            local sceneGroupBarTutorialTrigger = self.sceneGroupInfo[sceneGroupName].sceneGroupBarTutorialTrigger
+            if sceneGroupBarTutorialTrigger then
+                TriggerTutorial(sceneGroupBarTutorialTrigger)
+            end
+        end
+    end)
+
+    for i = 1, sceneGroup:GetNumScenes() do
         local sceneName = sceneGroup:GetSceneName(i)
-        local scene = self:AddRawScene(sceneName, category, categoryInfo, sceneGroupName)
+        self:AddRawScene(sceneName, category, categoryInfo, sceneGroupName)
     end
 
-    if(not self:HasLast(categoryInfo)) then
+    if not self:HasLast(categoryInfo) then
         self:SetLastSceneGroupName(categoryInfo, sceneGroupName)
     end
 
     local sceneGroupBarFragment = ZO_FadeSceneFragment:New(self.sceneGroupBar)
-    for i=1, #menuBarIconData do
+    for i = 1, #menuBarIconData do
         local sceneName = menuBarIconData[i].descriptor
         local scene = SCENE_MANAGER:GetScene(sceneName)
         scene:AddFragment(sceneGroupBarFragment)
@@ -512,6 +574,7 @@ function MainMenu_Keyboard:AddSceneGroup(category, sceneGroupName, menuBarIconDa
         category = category,
         sceneGroupPreferredSceneFunction = sceneGroupPreferredSceneFunction,
         sceneGroupBarFragment = sceneGroupBarFragment,
+        sceneGroupBarTutorialTrigger = sceneGroupBarTutorialTrigger,
     }
 end
 
@@ -617,16 +680,25 @@ function MainMenu_Keyboard:UpdateSceneGroupButtons(groupName)
 end
 
 function MainMenu_Keyboard:SetupSceneGroupBar(category, sceneGroupName)
-    if self.sceneGroupInfo[sceneGroupName] then
+    local sceneGroupInfo = self.sceneGroupInfo[sceneGroupName]
+    if sceneGroupInfo then
         -- This is a scene group
         ZO_MenuBar_ClearButtons(self.sceneGroupBar)
 
+        local sceneGroupBarTutorialTrigger = sceneGroupInfo.sceneGroupBarTutorialTrigger
+        if sceneGroupBarTutorialTrigger then
+            local tutorialAnchor = ZO_Anchor:New(RIGHT, self.sceneGroupBarLabel, LEFT, -10, 0)
+            TUTORIAL_SYSTEM:RegisterTriggerLayoutInfo(TUTORIAL_TYPE_POINTER_BOX, sceneGroupBarTutorialTrigger, self.control, sceneGroupInfo.sceneGroupBarFragment, tutorialAnchor)
+        end
+
         local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
-        local menuBarIconData = self.sceneGroupInfo[sceneGroupName].menuBarIconData
+        local menuBarIconData = sceneGroupInfo.menuBarIconData
         for i, layoutData in ipairs(menuBarIconData) do
             local sceneName = layoutData.descriptor
             layoutData.callback = function()
                 if not self.ignoreCallbacks then
+                    self.sceneGroupBarLabel:SetText(GetString(layoutData.categoryName))
+
                     if MAIN_MENU_MANAGER:HasBlockingScene() then
                         local CLICKED_BY_MOUSE = true
                         local sceneData = {
@@ -636,10 +708,13 @@ function MainMenu_Keyboard:SetupSceneGroupBar(category, sceneGroupName)
                         }
                         MAIN_MENU_MANAGER:ActivatedBlockingScene_Scene(sceneData, CLICKED_BY_MOUSE)
                     else
-                        sceneGroup:SetActiveScene(sceneName)
-                        self:Update(category, sceneName)
+                        SCENE_MANAGER:Show(sceneName)
                     end
-                end 
+
+                    if sceneGroupBarTutorialTrigger then
+                        TUTORIAL_SYSTEM:RemoveTutorialByTrigger(TUTORIAL_TYPE_POINTER_BOX, sceneGroupBarTutorialTrigger)
+                    end
+                end
             end
             ZO_MenuBar_AddButton(self.sceneGroupBar, layoutData)
             ZO_MenuBar_SetDescriptorEnabled(self.sceneGroupBar, layoutData.descriptor, (layoutData.enabled == nil or layoutData.enabled == true))
@@ -647,16 +722,16 @@ function MainMenu_Keyboard:SetupSceneGroupBar(category, sceneGroupName)
 
         local activeSceneName = sceneGroup:GetActiveScene()
         local layoutData
-        for i = 1, #menuBarIconData do
-            if(menuBarIconData[i].descriptor == activeSceneName) then
-                layoutData = menuBarIconData[i]
+        for i, iconData in ipairs(menuBarIconData) do
+            if iconData.descriptor == activeSceneName then
+                layoutData = iconData
                 break
             end
         end
 
         self.ignoreCallbacks = true
 
-        if(layoutData) then
+        if layoutData then
             if not ZO_MenuBar_SelectDescriptor(self.sceneGroupBar, activeSceneName) then
                 self.ignoreCallbacks = false
                 ZO_MenuBar_SelectFirstVisibleButton(self.sceneGroupBar, true)
@@ -671,31 +746,7 @@ function MainMenu_Keyboard:SetupSceneGroupBar(category, sceneGroupName)
 end
 
 function MainMenu_Keyboard:Update(category, sceneName)
-    self.ignoreCallbacks = true
-
-    local categoryInfo = self.categoryInfo[category]
-    
-    -- This is a scene
-    local sceneInfo = self.sceneInfo[sceneName]
-    local skipAnimation = not self:IsShowing()
-    ZO_MenuBar_SelectDescriptor(self.categoryBar, category, skipAnimation)
-    self.lastCategory = category
-
-    self:SetLastSceneName(categoryInfo, sceneName)
-    
-    if sceneInfo.sceneGroupName then
-        -- This scene is part of a scene group, need to update the selected
-        local scene = SCENE_MANAGER:GetScene(sceneName)
-        self.sceneShowGroupName = sceneInfo.sceneGroupName
-        scene:RegisterCallback("StateChange", self.sceneShowCallback)
-        local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneInfo.sceneGroupName)
-        sceneGroup:SetActiveScene(sceneName)
-        self:SetLastSceneGroupName(categoryInfo, sceneInfo.sceneGroupName)
-    end
-
     SCENE_MANAGER:Show(sceneName)
-
-    self.ignoreCallbacks = false
 end
 
 function MainMenu_Keyboard:ShowScene(sceneName)
@@ -708,8 +759,7 @@ function MainMenu_Keyboard:ShowScene(sceneName)
 end
 
 function MainMenu_Keyboard:ToggleScene(sceneName)
-    local sceneInfo = self.sceneInfo[sceneName]
-    if(SCENE_MANAGER:IsShowing(sceneName)) then
+    if SCENE_MANAGER:IsShowing(sceneName) then
         SCENE_MANAGER:ShowBaseScene()
     else
         self:RefreshCategoryBar()
@@ -727,28 +777,38 @@ function MainMenu_Keyboard:SetPreferredActiveScene(sceneGroupInfo, sceneGroup)
 end
 
 function MainMenu_Keyboard:ShowSceneGroup(sceneGroupName, specificScene)
-    local sceneGroupInfo = self.sceneGroupInfo[sceneGroupName]
-    if(not specificScene) then
-        local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
+    local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
+    if not specificScene then
+        local sceneGroupInfo = self.sceneGroupInfo[sceneGroupName]
         self:SetPreferredActiveScene(sceneGroupInfo, sceneGroup)
         specificScene = sceneGroup:GetActiveScene()
     end
 
-    self:Update(sceneGroupInfo.category, specificScene)
+    if sceneGroup:IsShowing() then
+        -- if the scene group is already showing then we can just select the
+        -- descriptor on the scene group bar that matches the scene we want to
+        -- show. If we just show the scene, the scene bar won't update correctly.
+        local skipAnimation = not self:IsShowing()
+        local RESELECT_IF_SELECTED = true -- Necessary if we are showing a scene group scene that doesn't have a descriptor and we want to switch back to the selected descriptor scene
+        if not ZO_MenuBar_SelectDescriptor(self.sceneGroupBar, specificScene, skipAnimation, RESELECT_IF_SELECTED) then
+            -- we didn't select the descriptor successfully, which means there is no
+            -- matching descriptor for the specificScene
+            -- To support GuildSelector_Keyboard, which has a scene in its scene group
+            -- that doesn't have a descriptor, we will simply call to show the requested
+            -- scene
+            SCENE_MANAGER:Show(specificScene)
+        end
+    else
+        SCENE_MANAGER:Show(specificScene)
+    end
 end
 
 function MainMenu_Keyboard:ToggleSceneGroup(sceneGroupName, specificScene)
     local sceneGroupInfo = self.sceneGroupInfo[sceneGroupName]
-    if(not specificScene) then
-        local sceneGroup = SCENE_MANAGER:GetSceneGroup(sceneGroupName)
-        self:SetPreferredActiveScene(sceneGroupInfo, sceneGroup)
-        specificScene = sceneGroup:GetActiveScene()
-    end
-    
     if self:IsShowing() and self.lastCategory == sceneGroupInfo.category then
         SCENE_MANAGER:ShowBaseScene()
     else
-        self:Update(sceneGroupInfo.category, specificScene)
+        self:ShowSceneGroup(sceneGroupName, specificScene)
     end
 end
 
@@ -868,6 +928,11 @@ function MainMenu_Keyboard:OnCategoryClicked(category)
             }
             MAIN_MENU_MANAGER:ActivatedBlockingScene_Scene(sceneData, CLICKED_BY_MOUSE)
         else
+            --If the scene will need confirmation to hide then go back to the previous button. We'll select the button for this category on the scene or scene group showing (if it is allowed).
+            if SCENE_MANAGER:WillCurrentSceneConfirmHide() then
+                local SKIP_ANIMATION = true
+                ZO_MenuBar_RestoreLastClickedButton(self.categoryBar, SKIP_ANIMATION)
+            end
             self:ShowCategory(category)
         end
     end
@@ -880,7 +945,7 @@ function MainMenu_Keyboard:OnSceneGroupTabClicked(sceneGroupName)
 end
 
 function MainMenu_Keyboard:OnSceneGroupBarLabelTextChanged()
-    -- SetText will get called before self.sceneGroupBar refrshes its anchors, so the position of the label needs
+    -- SetText will get called before self.sceneGroupBar refreshes its anchors, so the position of the label needs
     -- to let that update before it notifies anyone of it's new rectangle
     zo_callLater(function() MAIN_MENU_KEYBOARD:FireCallbacks("OnSceneGroupBarLabelTextChanged", self.sceneGroupBarLabel) end, 10)
 end

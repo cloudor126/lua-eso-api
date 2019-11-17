@@ -82,11 +82,13 @@ function ZO_GamepadStoreListComponent:SetupEntry(control, data, selected, select
 end
 
 function ZO_GamepadStoreListComponent:SetupStoreItem(control, data, selected, selectedDuringRebuild, enabled, activated, price, forceValid, mode)
+    data:SetIgnoreTraitInformation(ZO_StoreManager_IsInventoryStoreMode(mode) == false)
+
     ZO_SharedGamepadEntry_OnSetup(control, data, selected, selectedDuringRebuild, enabled, activated)
     control:SetHidden(selected and self.confirmationMode)
 
     -- Default to CURT_MONEY
-    local useDefaultCurrency = (not data.currencyType1) or (data.currencyType1 == 0)
+    local useDefaultCurrency = (not data.currencyType1) or (data.currencyType1 == CURT_NONE)
     local currencyType = CURT_MONEY
 
     if not useDefaultCurrency then
@@ -98,19 +100,9 @@ end
 
 function ZO_GamepadStoreListComponent:SetupPrice(control, price, forceValid, mode, currencyType)
     local options = self:GetCurrencyOptions()
-    local invalidPrice = not forceValid and price > GetCarriedCurrencyAmount(currencyType) or false
+    local playerStoredLocation = GetCurrencyPlayerStoredLocation(currencyType)
+    local invalidPrice = not forceValid and price > GetCurrencyAmount(currencyType, playerStoredLocation) or false
     local priceControl = control:GetNamedChild("Price")
-
-	if mode == ZO_MODE_STORE_BUY then 
-		local storeUsesAP, storeUsesTelvarStones, storeUsesWritVouchers = select(2, GetStoreCurrencyTypes())
-		if storeUsesAP and currencyType == CURT_ALLIANCE_POINTS then
-			invalidPrice = not forceValid and price > GetCarriedCurrencyAmount(CURT_ALLIANCE_POINTS) or false
-		elseif storeUsesTelvarStones and currencyType == CURT_TELVAR_STONES then
-			invalidPrice = not forceValid and price > GetCarriedCurrencyAmount(CURT_TELVAR_STONES) or false
-		elseif storeUsesWritVouchers and currencyType == CURT_WRIT_VOUCHERS then
-			invalidPrice = not forceValid and price > GetCarriedCurrencyAmount(CURT_WRIT_VOUCHERS) or false
-		end
-	end
 
     ZO_CurrencyControl_SetSimpleCurrency(priceControl, currencyType, price, options, CURRENCY_SHOW_ALL, invalidPrice)
 end

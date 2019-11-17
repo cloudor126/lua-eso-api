@@ -16,9 +16,9 @@ function ZO_HousingBrowserList:Initialize(control, owner)
 
     self.contents = control:GetNamedChild("Contents")
 
-    self.parentCategoryTemplate = "ZO_IconHeader"
-    self.childlessCategoryTemplate = "ZO_IconChildlessHeader"
-    self.subCategoryTemplate = "ZO_HousingFurnitureBrowserSubCategory"
+    self.parentCategoryTemplate = "ZO_FurnitureBrowserCategory"
+    self.childlessCategoryTemplate = "ZO_FurnitureBrowserChildless"
+    self.subCategoryTemplate = "ZO_FurnitureBrowserSubCategory"
 
     self:InitializeCategories(self.contents)
 
@@ -59,7 +59,8 @@ function ZO_HousingBrowserList:GetCategoryInfo(categoryId, categoryObject)
     else
         normalIcon, pressedIcon, mouseoverIcon = GetFurnitureCategoryKeyboardIcons(categoryId)
     end
-    local formattedName = zo_strformat(SI_HOUSING_FURNITURE_CATEGORY_FORMAT, categoryObject:GetName(), categoryObject:GetNumEntryItemsRecursive())
+    -- Avoiding zo_strformat for performance, this will get run for every category every time the number of entries could have changed
+    local formattedName = string.format("%s (%d)", categoryObject:GetName(), categoryObject:GetNumEntryItemsRecursive())
     return formattedName, normalIcon, pressedIcon, mouseoverIcon, isFakedSubcategory
 end
 
@@ -103,8 +104,7 @@ do
             mouseoverIcon = mouseoverIcon,
         }
 
-        local soundId = parent and SOUNDS.JOURNAL_PROGRESS_SUB_CATEGORY_SELECTED or SOUNDS.JOURNAL_PROGRESS_CATEGORY_SELECTED
-        local node = tree:AddNode(nodeTemplate, entryData, parent, soundId)
+        local node = tree:AddNode(nodeTemplate, entryData, parent)
         AddNodeLookup(self.nodeLookupData, node, parent, categoryId)
         entryData.node = node
         categoryObject.node = node
@@ -172,7 +172,6 @@ end
 
 function ZO_HousingBrowserList:AddTopLevelCategory(categoryObject)
     local categoryId = categoryObject:GetCategoryId()
-    local parent
     local tree = self.categoryTree
     local nodeTemplate = self.childlessCategoryTemplate
     local hasChildren = categoryObject:GetHasSubcategories()
@@ -196,7 +195,7 @@ end
 
 function ZO_HousingBrowserList:InitializeCategories(control)
     self.categories = control:GetNamedChild("CategoryList")
-    self.categoryTree = ZO_Tree:New(self.categories:GetNamedChild("ScrollChild"), 60, -10, 300)
+    self.categoryTree = ZO_Tree:New(self.categories:GetNamedChild("ScrollChild"), 60, -10, ZO_HOUSING_FURNITURE_BROWSER_CATEGORY_LIST_WIDTH)
     self.noMatchMessageLabel = control:GetNamedChild("NoMatchMessage")
 
     local function BaseTreeHeaderIconSetup(control, data, open)
@@ -210,7 +209,6 @@ function ZO_HousingBrowserList:InitializeCategories(control)
     end
 
     local function BaseTreeHeaderSetup(node, control, data, open)
-        control.text:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
         control.text:SetText(data.name)
         BaseTreeHeaderIconSetup(control, data, open)
     end
@@ -241,11 +239,14 @@ function ZO_HousingBrowserList:InitializeCategories(control)
     end
 
     local function TreeEntrySetup(node, control, data, open)
-        control:SetSelected(false)
+        control:SetSelected(node:IsSelected())
         control:SetText(data.name)
     end
 
-    self.categoryTree:AddTemplate(self.parentCategoryTemplate, TreeHeaderSetup_Child, nil, nil, 60, 0)
+    local NO_SELECTION_FUNCTION = nil
+    local NO_EQUALITY_FUNCTION = nil
+    local childSpacing = 0
+    self.categoryTree:AddTemplate(self.parentCategoryTemplate, TreeHeaderSetup_Child, NO_SELECTION_FUNCTION, NO_EQUALITY_FUNCTION, ZO_HOUSING_FURNITURE_BROWSER_SUBCATEGORY_INDENT, childSpacing)
     self.categoryTree:AddTemplate(self.childlessCategoryTemplate, TreeHeaderSetup_Childless, TreeEntryOnSelected_Childless)
     self.categoryTree:AddTemplate(self.subCategoryTemplate, TreeEntrySetup, TreeEntryOnSelected)
 
@@ -302,6 +303,8 @@ function ZO_HousingFurnitureList:Initialize(...)
     end
 
     self.freeSlotsLabel = self.contents:GetNamedChild("InfoBarFreeSlots")
+
+    self:InitializeThemeSelector()
 end
 
 function ZO_HousingFurnitureList:InitializeList()
@@ -406,14 +409,15 @@ end
 
 function ZO_HousingFurnitureList:SetMostRecentlySelectedData(data)
     self.mostRecentlySelectedData = data
-    if self.keybindStripDescriptor then
-        KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
-    end
 
     if self.mostRecentlySelectedData then
         ZO_HousingFurnitureBrowser_Base.PreviewFurniture(self.mostRecentlySelectedData)
     else
         ITEM_PREVIEW_KEYBOARD:EndCurrentPreview()
+    end
+
+    if self.keybindStripDescriptor then
+        KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
     end
 
     self:FireCallbacks("OnMostRecentlySelectedDataChanged", data)
@@ -453,6 +457,10 @@ function ZO_HousingFurnitureList:UpdateFreeSlots()
             self.freeSlotsLabel:SetText(zo_strformat(SI_INVENTORY_BACKPACK_COMPLETELY_FULL, numUsedSlots, numSlots))
         end
     end
+end
+
+function ZO_HousingFurnitureList:InitializeThemeSelector()
+    --Override
 end
 
 --
@@ -543,6 +551,24 @@ function ZO_HousingSettingsList_CreateScrollData(displayName, currentHouse, user
            }
 end
 
+function ZO_HousingSettingsTheme_SetupDropdown(dropdown, callback)
+    local comboBox = ZO_ComboBox_ObjectFromContainer(dropdown)
+    comboBox:SetSortsItems(false)
+    comboBox:SetFont("ZoFontWinT1")
+    comboBox:SetSpacing(4)
+
+    for furnitureTheme = FURNITURE_THEME_TYPE_ITERATION_BEGIN, FURNITURE_THEME_TYPE_ITERATION_END do
+        if DoesFurnitureThemeShowInBrowser(furnitureTheme) then
+            local themeName = GetString("SI_FURNITURETHEMETYPE", furnitureTheme)
+            local entry = comboBox:CreateItemEntry(themeName, callback)
+            entry.furnitureTheme = furnitureTheme
+            comboBox:AddItem(entry)
+        end
+    end
+
+    comboBox:SelectItemByIndex(1)
+end
+
 --
 --[[ ZO_HousingSettingsVisitorList_Keyboard ]]--
 --
@@ -553,7 +579,7 @@ function ZO_HousingSettingsVisitorList_Keyboard:New(...)
 end
 
 function ZO_HousingSettingsVisitorList_Keyboard:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_INDIVIDUAL)
     ZO_HousingSettings_BuildMasterList_Visitor(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_CreateScrollData)
 end
@@ -573,7 +599,7 @@ function ZO_HousingSettingsBanList_Keyboard:New(...)
 end
 
 function ZO_HousingSettingsBanList_Keyboard:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_INDIVIDUAL)
     ZO_HousingSettings_BuildMasterList_Ban(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_CreateScrollData)
 end
@@ -593,7 +619,7 @@ function ZO_HousingSettingsGuildVisitorList_Keyboard:New(...)
 end
 
 function ZO_HousingSettingsGuildVisitorList_Keyboard:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_GUILD)
     ZO_HousingSettings_BuildMasterList_Visitor(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_CreateScrollData)
 end
@@ -613,7 +639,7 @@ function ZO_HousingSettingsGuildBanList_Keyboard:New(...)
 end
 
 function ZO_HousingSettingsGuildBanList_Keyboard:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_GUILD)
     ZO_HousingSettings_BuildMasterList_Ban(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_CreateScrollData)
 end

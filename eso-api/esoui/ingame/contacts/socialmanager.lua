@@ -44,16 +44,19 @@ function ZO_SocialManager:SetupEntry(control, data, selected)
 end
 
 function ZO_SocialManager:RefreshSort()
-    self:CallFunctionOnLists("RefreshSort")
+    -- dirty will only refresh when visible, or it will refresh next time it's visible
+    self:CallFunctionOnLists("DirtySort")
 end
 
 function ZO_SocialManager:RefreshFilters()
-    self:CallFunctionOnLists("RefreshFilters")
+    -- dirty will only refresh when visible, or it will refresh next time it's visible
+    self:CallFunctionOnLists("DirtyFilters")
 end
 
 function ZO_SocialManager:RefreshData()
     self:BuildMasterList()
-    self:CallFunctionOnLists("RefreshData")
+    -- dirty will only refresh when visible, or it will refresh next time it's visible
+    self:CallFunctionOnLists("DirtyData")
 end
 
 function ZO_SocialManager:RefreshVisible()
@@ -73,18 +76,5 @@ function ZO_SocialManager:ProcessDisplayName(stringSearch, data, searchTerm, cac
 
     if(data.characterName ~= nil and zo_plainstrfind(data.characterName:lower(), lowerSearchTerm)) then
         return true
-    end
-end
-
-do
-    local FORMATTED_ALLIANCE_NAMES = {}
-
-    function ZO_SocialManager_GetFormattedAllianceName(alliance)
-        local formattedName = FORMATTED_ALLIANCE_NAMES[alliance]
-        if not formattedName then
-            formattedName = zo_strformat(SI_SOCIAL_LIST_ALLIANCE_FORMAT, GetAllianceName(alliance))
-            FORMATTED_ALLIANCE_NAMES[alliance] = formattedName
-        end
-        return formattedName
     end
 end

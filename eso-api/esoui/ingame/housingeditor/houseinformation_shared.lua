@@ -6,10 +6,11 @@ function ZO_HouseInformation_Shared:New(...)
     return houseInformation
 end
 
-function ZO_HouseInformation_Shared:Initialize(control, fragment, rowTemplate, verticalPadding)
+function ZO_HouseInformation_Shared:Initialize(control, fragment, rowTemplate, childVerticalPadding, sectionVerticalPadding)
     self.control = control
     self.rowTemplate = rowTemplate
-    self.verticalPadding = verticalPadding
+    self.childVerticalPadding = childVerticalPadding
+    self.sectionVerticalPadding = sectionVerticalPadding
 
     self:SetupControls()
     
@@ -56,6 +57,7 @@ do
     function ZO_HouseInformation_Shared:SetupControls()
         self.nameRow = SetupRow(self.control, "NameRow")
         self.locationRow = SetupRow(self.control, "LocationRow")
+        self.ownerRow = SetupRow(self.control, "OwnerRow")
         self.infoSection = SetupRow(self.control, "InfoSection")
         self.primaryResidenceRow = SetupRow(self.control, "PrimaryResidenceRow")
         self.currentVisitorsRow = SetupRow(self.control, "CurrentVisitorsRow")
@@ -64,13 +66,13 @@ do
         local furnishingLimits = self.infoSection:GetNamedChild("FurnishingLimits")
         local lastRow = nil
         self.limitRows = {}
-        for i = HOUSING_FURNISHING_LIMIT_TYPE_MIN_VALUE, HOUSING_FURNISHING_LIMIT_TYPE_MAX_VALUE do
+        for i = HOUSING_FURNISHING_LIMIT_TYPE_ITERATION_BEGIN, HOUSING_FURNISHING_LIMIT_TYPE_ITERATION_END do
             local furnishingLimitRow = CreateControlFromVirtual(furnishingLimits:GetName().."Row"..i, furnishingLimits, self.rowTemplate)
     
             if not lastRow then
                 furnishingLimitRow:SetAnchor(TOPLEFT)
             else
-                furnishingLimitRow:SetAnchor(TOPLEFT, lastRow, BOTTOMLEFT, 0, self.verticalPadding)
+                furnishingLimitRow:SetAnchor(TOPLEFT, lastRow, BOTTOMLEFT, 0, self.childVerticalPadding)
             end
             lastRow = furnishingLimitRow
             self.limitRows[i] = SetupRow(furnishingLimits, "Row"..i)
@@ -81,14 +83,23 @@ end
 function ZO_HouseInformation_Shared:UpdateHouseInformation()
     local currentHouseId = GetCurrentZoneHouseId()
     local houseCollectibleId = GetCollectibleIdForHouse(currentHouseId)
-    
-    local houseName = zo_strformat(SI_HOUSE_INFORMATION_NAME_FORMAT, GetCollectibleName(houseCollectibleId))
-    local houseLocation = zo_strformat(SI_HOUSE_INFORMATION_LOCATION_FORMAT, GetZoneNameById(GetHouseFoundInZoneId(currentHouseId)))
+    local houseCollectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(houseCollectibleId)
+
     local isPrimaryHouse = IsPrimaryHouse(currentHouseId)
 
-    self.nameRow.valueLabel:SetText(houseName)
-    self.locationRow.valueLabel:SetText(houseLocation)
+    self.nameRow.valueLabel:SetText(houseCollectibleData:GetFormattedName())
+    self.locationRow.valueLabel:SetText(houseCollectibleData:GetFormattedHouseLocation())
     self.primaryResidenceRow.valueLabel:SetText(isPrimaryHouse and GetString(SI_YES) or GetString(SI_NO))
+
+    local ownerDisplayName = GetCurrentHouseOwner()
+    if ownerDisplayName ~= "" then
+        self.ownerRow.valueLabel:SetText(ZO_FormatUserFacingDisplayName(ownerDisplayName))
+        self.ownerRow:SetHidden(false)
+        self.infoSection:SetAnchor(TOPLEFT, self.ownerRow, BOTTOMLEFT, 0, self.sectionVerticalPadding)
+    else
+        self.ownerRow:SetHidden(true)
+        self.infoSection:SetAnchor(TOPLEFT, self.locationRow, BOTTOMLEFT, 0, self.sectionVerticalPadding)
+    end
 end
 
 function ZO_HouseInformation_Shared:UpdateHousePopulation(population)
@@ -109,7 +120,7 @@ do
     function ZO_HouseInformation_Shared:UpdateLimits()
         local currentHouseId = GetCurrentZoneHouseId()
     
-        for i = HOUSING_FURNISHING_LIMIT_TYPE_MIN_VALUE, HOUSING_FURNISHING_LIMIT_TYPE_MAX_VALUE do
+        for i = HOUSING_FURNISHING_LIMIT_TYPE_ITERATION_BEGIN, HOUSING_FURNISHING_LIMIT_TYPE_ITERATION_END do
             local limit = GetHouseFurnishingPlacementLimit(currentHouseId, i)
             local currentlyPlaced = GetNumHouseFurnishingsPlaced(i)
             UpdateRow(self.limitRows[i], GetString("SI_HOUSINGFURNISHINGLIMITTYPE", i), zo_strformat(SI_HOUSE_INFORMATION_COUNT_FORMAT, currentlyPlaced, limit))

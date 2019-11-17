@@ -94,11 +94,13 @@ function ZO_GamepadTabBarScrollList:New(control, leftIcon, rightIcon, onActivate
     list.leftIcon = leftIcon or CreateButtonIcon("$(parent)LeftIcon", control, KEY_GAMEPAD_LEFT_SHOULDER, LEFT)
     list.rightIcon = rightIcon or CreateButtonIcon("$(parent)RightIcon", control, KEY_GAMEPAD_RIGHT_SHOULDER, RIGHT)
 
-    list.entryAnchors = { BOTTOM, BOTTOM }
+    list:SetEntryAnchors({ BOTTOM, BOTTOM })
 
     list:InitializeKeybindStripDescriptors()
     list.control = control
     list:SetPlaySoundFunction(GamepadParametricScrollListPlaySound)
+
+    control:SetHandler("OnEffectivelyHidden", ZO_ConveyorSceneFragment_ResetMovement)
 
     return list
 end
@@ -114,9 +116,16 @@ function ZO_GamepadTabBarScrollList:Deactivate()
 end
 
 function ZO_GamepadTabBarScrollList:InitializeKeybindStripDescriptors()
+    local control = self:GetControl()
+    local debugName = "Gamepad Tab Bar"
+    if control then
+        debugName = debugName .. " " .. control:GetName()
+    end
     self.keybindStripDescriptor =
     {
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = debugName .. " Left Shoulder",
             keybind = "UI_SHORTCUT_LEFT_SHOULDER",
             ethereal = true,
             callback = function()
@@ -127,6 +136,8 @@ function ZO_GamepadTabBarScrollList:InitializeKeybindStripDescriptors()
         },
 
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = debugName .. " Right Shoulder",
             keybind = "UI_SHORTCUT_RIGHT_SHOULDER",
             ethereal = true,
             callback = function()
@@ -199,8 +210,10 @@ function ZO_GamepadTabBarScrollList:SetSelectedIndex(selectedIndex, allowEvenIfD
 end
 
 function ZO_GamepadTabBarScrollList:MovePrevious(allowWrapping, suppressFailSound)
-    local succeeded = ZO_ConveyorSceneFragment_ReverseAnimationDirectionForBehavior(ZO_ParametricScrollList.MovePrevious, self)
+    ZO_ConveyorSceneFragment_SetMovingBackward()
+    local succeeded = ZO_ParametricScrollList.MovePrevious(self)
     if not succeeded and allowWrapping then
+        ZO_ConveyorSceneFragment_SetMovingForward()
         self:SetLastIndexSelected() --Wrap
         succeeded = true
     end
@@ -215,9 +228,11 @@ function ZO_GamepadTabBarScrollList:MovePrevious(allowWrapping, suppressFailSoun
 end
 
 function ZO_GamepadTabBarScrollList:MoveNext(allowWrapping, suppressFailSound)
+    ZO_ConveyorSceneFragment_SetMovingForward()
     local succeeded = ZO_ParametricScrollList.MoveNext(self)
     if not succeeded and allowWrapping then
-        ZO_ConveyorSceneFragment_ReverseAnimationDirectionForBehavior(ZO_ParametricScrollList.SetFirstIndexSelected, self) --Wrap
+        ZO_ConveyorSceneFragment_SetMovingBackward()
+        ZO_ParametricScrollList.SetFirstIndexSelected(self)
         succeeded = true
     end
 

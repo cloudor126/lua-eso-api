@@ -8,20 +8,22 @@
         <Texture name="ZO_MapOverlay" virtual="true" level="1" />
         <Label name="ZO_MapLocation" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" horizontalAlignment="CENTER" layer="BACKGROUND" level="3" virtual="true" />
         <Texture name="ZO_MapBlob" virtual="true" level="2" blendMode="ADD" pixelRoundingEnabled="false"/>
-        <Texture name="ZO_PinBlob" virtual="true" level="6" pixelRoundingEnabled="false"/>
+        <!-- High tier to show over top of the gamepad ragged edge border-->
+        <Texture name="ZO_PinBlob" tier="HIGH" virtual="true" level="6" pixelRoundingEnabled="false" shaderEffectType="HALO"/>
 
-        <Control name="ZO_MapPin" mouseEnabled="true" hidden="true" virtual="true">
+        <!-- Higher tier than ZO_PinBlob since the pin icon should always draw above the area circle -->
+        <Control name="ZO_MapPin" mouseEnabled="true" tier="HIGH" level="10" hidden="true" virtual="true">
             <Dimensions x="22" y="22" />
 
             <OnMouseDown>
-                if(not ZO_WorldMap_WouldPinHandleClick(self, button, ctrl, alt, shift)) then
+                if not ZO_WorldMap_WouldPinHandleClick(self, button, ctrl, alt, shift) then
                     ZO_WorldMap_MouseDown(button, ctrl, alt, shift)
                 end
             </OnMouseDown>
 
             <OnMouseUp>
-                if(ZO_WorldMap_WouldPinHandleClick(self, button)) then
-                    if(upInside) then
+                if ZO_WorldMap_WouldPinHandleClick(self, button) then
+                    if upInside then
                         ZO_WorldMap_HandlePinClicked(self, button, ctrl, alt, shift)
                     end
                 else
@@ -38,8 +40,9 @@
             </OnMouseExit>
 
             <Controls>
-                <Texture name="$(parent)Highlight" textureFile="EsoUI/Art/MapPins/UI-WorldMapPinHighlight.dds" pixelRoundingEnabled="false">
-                    <AnchorFill />
+                <Texture name="$(parent)Highlight" textureFile="$(MAP_PIN_PATH)UI-WorldMapPinHighlight.dds" pixelRoundingEnabled="false">
+                    <Anchor point="TOPLEFT" offsetX ="-5" offsetY ="-5" />
+                    <Anchor point="BOTTOMRIGHT" offsetX ="5" offsetY ="5" />
                 </Texture>
 
                 <Texture name="$(parent)Background" pixelRoundingEnabled="false">
@@ -66,6 +69,25 @@
             </OnMouseExit>
         </Button>
 
+        <Control name="ZO_MapLevelNavigation" virtual="true">
+            <Anchor point="TOPRIGHT" relativePoint="BOTTOMRIGHT" offsetY="10"/>
+            <Controls>
+                <Label name="$(parent)Text" text="SI_GAMEPAD_WORLD_MAP_SWITCH_LEVEL_KEYBIND" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" font="ZoFontGamepad34" modifyTextType="UPPERCASE" hidden="false">
+                    <Anchor point="TOPRIGHT" />
+                </Label>
+
+                <Button name="$(parent)Down" mouseEnabled="false">
+                    <Dimensions x="42" y="42" />
+                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Text" relativePoint="TOPLEFT" offsetX ="-5" />
+                </Button>
+
+                <Button name="$(parent)Up" mouseEnabled="false">
+                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Down" relativePoint="TOPLEFT" />
+                    <Dimensions x="42" y="42" />
+                </Button>
+            </Controls>
+        </Control>
+
         <Control name="ZO_DungeonFloorNavigation_Keyboard_Template" virtual="true">
             <Anchor point="TOPRIGHT" offsetX="-11" offsetY="1"/>
             <Controls>
@@ -86,7 +108,7 @@
         <Control name="ZO_DungeonFloorNavigation_Gamepad_Template" virtual="true">
             <Anchor point="TOPRIGHT" relativePoint="BOTTOMRIGHT" offsetY="10"/>
             <Controls>
-                <Label name="$(parent)Text" text="SI_GAMEPAD_WORLD_MAP_SWITCH_ELEVATION_KEYBIND" hidden="false" />
+                <Label name="$(parent)Text" text="SI_GAMEPAD_WORLD_MAP_SWITCH_ELEVATION_KEYBIND" font="ZoFontGamepad34" hidden="false" />
 
                 <Button name="$(parent)Down" mouseEnabled="false">
                     <Dimensions x="42" y="42" />
@@ -102,7 +124,7 @@
 
         <Control name="ZO_DungeonFloorNavigation" virtual="true">
             <Controls>
-                <Label name="$(parent)Text" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" font="ZoFontGamepad34" modifyTextType="UPPERCASE">
+                <Label name="$(parent)Text" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" modifyTextType="UPPERCASE">
                     <Anchor point="TOPRIGHT" />
                 </Label>
 
@@ -154,6 +176,13 @@
             </Controls>
         </Backdrop>
 
+        <TopLevelControl name="ZO_WorldMapAutoNavigationOverlay" layer="OVERLAY" tier="HIGH" mouseEnabled="true" hidden="true">
+            <AnchorFill />
+
+            <!-- Make sure to consume the mouse wheel input -->
+            <OnMouseWheel />
+        </TopLevelControl>
+
         <TopLevelControl name="ZO_WorldMapZoom" level="1" resizeToFitDescendents="true" hidden="true">
             <OnInitialized>
                 ZO_WorldMapZoom_OnInitialized(self)
@@ -182,6 +211,18 @@
                     <Dimensions x="472"/>
                     <Anchor point="BOTTOM" relativePoint="TOP"/>
                 </Texture>
+            </Controls>
+        </TopLevelControl>
+
+        <TopLevelControl name="ZO_WorldMapRespawnTimer" resizeToFitDescendents="true" hidden="true" tier="HIGH">
+            <Anchor point="BOTTOMLEFT" relativeTo="GuiRoot" offsetX="12" offsetY="-12"/>
+            <Controls>
+                <Label name="$(parent)Stat" text="SI_MAP_FORWARD_CAMP_RESPAWN_COOLDOWN" font="ZoFontKeybindStripDescription" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                    <Anchor point="LEFT"/>
+                </Label>
+                <Label name="$(parent)Value" font="ZoFontKeybindStripDescription">
+                    <Anchor point="LEFT" relativeTo="$(parent)Stat" relativePoint="RIGHT" offsetX="10"/>
+                </Label>
             </Controls>
         </TopLevelControl>
 
@@ -235,7 +276,7 @@
                 </Control>
 
                 <Label name="$(parent)Title" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" font="ZoFontHeader3">
-                    <Anchor point="TOP"/>
+                    <Anchor point="BOTTOM"/>
                 </Label>
 
                 <Scroll name="$(parent)Scroll" mouseEnabled="true">
@@ -254,6 +295,14 @@
                             <OnMouseWheel>
                                 ZO_WorldMap_MouseWheel(delta)
                             </OnMouseWheel>
+
+                            <OnMouseEnter>
+                                ZO_WorldMap_MouseEnter(self)
+                            </OnMouseEnter>
+
+                            <OnMouseExit>
+                                ZO_WorldMap_MouseExit(self)
+                            </OnMouseExit>
 
                             <Controls>
                                 <Control name="$(parent)KeepLinks">
@@ -392,18 +441,7 @@
                         </Slider>
 
                         <Control name="$(parent)Floors" inherits="ZO_DungeonFloorNavigation" resizeToFitDescendents="true" />
-                    </Controls>
-                </Control>
-
-                <Control name="$(parent)RespawnTimer" resizeToFitDescendents="true" hidden="true">
-                    <Anchor point="BOTTOMLEFT" relativeTo="GuiRoot" offsetX="12" offsetY="-12"/>
-                    <Controls>
-                        <Label name="$(parent)Stat" text="SI_MAP_FORWARD_CAMP_RESPAWN_COOLDOWN" font="ZoFontKeybindStripDescription" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
-                            <Anchor point="LEFT"/>
-                        </Label>
-                        <Label name="$(parent)Value" font="ZoFontKeybindStripDescription">
-                            <Anchor point="LEFT" relativeTo="$(parent)Stat" relativePoint="RIGHT" offsetX="10"/>
-                        </Label>
+                        <Control name="$(parent)Levels" inherits="ZO_MapLevelNavigation" resizeToFitDescendents="true" />
                     </Controls>
                 </Control>
 
@@ -411,6 +449,9 @@
                     <Anchor point="TOP" relativePoint="CENTER" offsetY="40" />
                 </Label>
 
+                <Label name="$(parent)PinPointerBoxContents" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" hidden="true" >
+                    <DimensionConstraints maxX="290"/>
+                </Label>
             </Controls>
         </TopLevelControl>
 
@@ -461,31 +502,5 @@
                 </Label>
             </Controls>
         </TopLevelControl>
-
-        <TopLevelControl name="ZO_WorldMapChoice_Gamepad" inherits="ZO_GamepadGrid_NavQuadrant_1_Anchors" hidden="true">
-            <OnInitialized>
-                ZO_WorldMapChoice_Gamepad_Initialize(self)
-            </OnInitialized>
-
-            <Controls>
-                <!-- This uses non-standard positioning to fit with the worldmap -->
-                <Control name="$(parent)Bg" inherits="ZO_SharedGamepadNavQuadrant_1_Background_Template"/>
-
-                <Control name="$(parent)Container" inherits="ZO_GamepadGrid_NavQuadrant_ContainerAnchors">
-                    <Controls>
-                        <Control name="$(parent)HeaderContainer" inherits="ZO_GamepadScreenHeaderContainer">
-                            <Anchor point="TOPLEFT"/>
-                            <Anchor point="TOPRIGHT"/>
-                        </Control>
-
-                        <Control name="$(parent)List" inherits="ZO_VerticalParametricScrollListTemplate">
-                            <Anchor point="TOPLEFT" relativeTo="$(parent)HeaderContainerHeader" relativePoint="BOTTOMLEFT" />
-                            <Anchor point="BOTTOMRIGHT"/>
-                        </Control>
-                    </Controls>
-                </Control>
-            </Controls>
-        </TopLevelControl>
-
     </Controls>
 </GuiXml>

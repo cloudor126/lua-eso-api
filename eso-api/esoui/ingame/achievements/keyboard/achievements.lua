@@ -1,8 +1,6 @@
-local CATEGORY_LIST_HEIGHT = 335
-
-local MAX_SUMMARY_CATEGORIES = 12
 local SUMMARY_CATEGORY_BAR_HEIGHT = 16
 local SUMMARY_CATEGORY_PADDING = 50
+local SUMMARY_STATUS_BAR_WIDTH = 240
 
 local ACHIEVEMENT_PADDING = 0
 local ACHIEVEMENT_ICON_STYLE_PADDING = 20
@@ -17,6 +15,7 @@ local ACHIEVEMENT_CRITERIA_PADDING = 10
 local ACHIEVEMENT_REWARD_PADDING = 5
 local ACHIEVEMENT_LINE_THUMB_WIDTH = 45
 local ACHIEVEMENT_LINE_THUMB_HEIGHT = 68
+local ACHIEVEMENT_STATUS_BAR_WIDTH = 345
 local ACHIEVEMENT_STATUS_BAR_HEIGHT = 20
 local ACHIEVEMENT_REWARD_LABEL_WIDTH = 230
 local ACHIEVEMENT_REWARD_LABEL_HEIGHT = 20
@@ -27,29 +26,24 @@ local ACHIEVEMENT_DATE_LABEL_EXPECTED_WIDTH = 60
 local NUM_RECENT_ACHIEVEMENTS_TO_SHOW = 6
 
 local SAVE_EXPANDED = true
-local DONT_REBUILD_CONTENT_LIST = true
 
 local PREFIX_LABEL = 1
 local HEADER_LABEL = 2
 
 local FORCE_HIDE_PROGRESS_TEXT = true
 
+ZO_ACHIEVEMENT_DISABLED_COLOR = ZO_ColorDef:New(0.6, 0.6, 0.6)
+ZO_ACHIEVEMENT_DISABLED_DESATURATION = 0.5
+
 local function GetTextColor(enabled, normalColor, disabledColor)
     if enabled then
         return (normalColor or ZO_NORMAL_TEXT):UnpackRGBA()
     end
-    return (disabledColor or ZO_DISABLED_TEXT):UnpackRGBA()
+    return (disabledColor or ZO_ACHIEVEMENT_DISABLED_COLOR):UnpackRGBA()
 end
 
-local function ApplyTextColorToLabel(label, ...)
+function ZO_Achievements_ApplyTextColorToLabel(label, ...)
     label:SetColor(GetTextColor(...))
-end
-
-local function ApplyColorToAchievementIcon(base, color)
-    local r, g, b, a = color:UnpackRGBA()
-
-    base.icon:SetColor(r, g, b, a)
-    base.icon:GetNamedChild("EmergencyBG"):SetColor(r, g, b, a)
 end
 
 local function GetLastCompletedAchievementInLine(achievementId)
@@ -111,7 +105,7 @@ function Achievement:Initialize(control, checkPool, statusBarPool, rewardLabelPo
     self.anchoredToAchievement = nil
     self.dependentAnchoredAchievement = nil
 
-    if(self.highlight) then
+    if self.highlight then
         self.highlight:SetHeight(ACHIEVEMENT_COLLAPSED_HEIGHT)
     end
 end
@@ -124,10 +118,18 @@ function Achievement:GetAchievementInfo(achievementId)
     return GetAchievementInfo(achievementId)
 end
 
+function Achievement:GetIndex()
+    return self.index
+end
+
+function Achievement:SetIndex(index)
+    self.index = index
+end
+
 function Achievement:Show(achievementId)
     self.achievementId = achievementId
     local name, description, points, icon, completed, date, time = self:GetAchievementInfo(achievementId)
-    
+
     self.title:SetText(zo_strformat(name))
     self.description:SetText(zo_strformat(description))
     self.icon:SetTexture(icon)
@@ -135,25 +137,38 @@ function Achievement:Show(achievementId)
     self.points:SetHidden(points == ACHIEVEMENT_POINT_LEGENDARY_DEED)
     self.points:SetText(tostring(points))
 
-    ApplyTextColorToLabel(self.points, completed, ZO_SELECTED_TEXT, ZO_DISABLED_TEXT)
-    ApplyTextColorToLabel(self.title, completed, ZO_SELECTED_TEXT, ZO_DISABLED_TEXT)
-    ApplyTextColorToLabel(self.description, completed, ZO_NORMAL_TEXT, ZO_DISABLED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(self.points, completed, ZO_SELECTED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(self.title, completed, ZO_SELECTED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(self.description, completed)
+
+    if self.highlight then
+        local highlightColor
+        if completed then
+            highlightColor = ZO_DEFAULT_ENABLED_COLOR
+        else
+            highlightColor = ZO_ACHIEVEMENT_DISABLED_COLOR
+        end
+        self.highlight:GetNamedChild("Top"):SetColor(highlightColor:UnpackRGBA())
+        self.highlight:GetNamedChild("Middle"):SetColor(highlightColor:UnpackRGBA())
+        self.highlight:GetNamedChild("Bottom"):SetColor(highlightColor:UnpackRGBA())
+    end
     
     self.completed = completed
-    self.isExpandable = self:IsExpandable()
-    
-    if completed then
-        self.date:SetHidden(false)        
-        self.date:SetText(date)
 
-        ApplyColorToAchievementIcon(self, ZO_DEFAULT_ENABLED_COLOR)
+    if completed then
+        self.date:SetHidden(false)
+        self.date:SetText(date)
+        self.icon:SetDesaturation(0)
     else
         self.date:SetHidden(true)
-        ApplyColorToAchievementIcon(self, ZO_DEFAULT_DISABLED_COLOR)
+        self.icon:SetDesaturation(ZO_ACHIEVEMENT_DISABLED_DESATURATION)
     end
     
     -- Date strings might overlap the description, so apply dimension constraints after setting the completion date
     self:ApplyCollapsedDescriptionConstraints()
+
+    --Whether we need to expand partly depends on if the description will be truncated in collapsed mode which depends on its constraints being set above.
+    self.isExpandable = self:IsExpandable()
 
     self:SetRewardThumb(achievementId)
     self:UpdateExpandedStateIcon()
@@ -177,7 +192,7 @@ end
 do
     local function LayoutLineSection(controls, yOffset, parent, controlWidth, controlHeight)
         local numControls = #controls
-        if numControls > 0 then            
+        if numControls > 0 then
             local previous
             for i = 1, numControls do
                 if previous then
@@ -199,7 +214,7 @@ do
     local function LayoutCriteriaSection(controls, yOffset, parent, controlHeight)
         local useFunctionToGetHeight = type(controlHeight) == "function"
         local numControls = #controls
-        if numControls > 0 then            
+        if numControls > 0 then
             for i, control in ipairs(controls) do
                 yOffset = yOffset + (control.additionalVerticalPadding or 0)
                 control:SetAnchor(TOPLEFT, parent, TOPLEFT, 90, yOffset)
@@ -220,7 +235,7 @@ do
     local function LayoutRewardSection(controls, yOffset, parent, controlHeight)
         local numControls = #controls
         if numControls > 0 then
-            local numRewards = 0          
+            local numRewards = 0
             for i, control in ipairs(controls) do
                 if not control.isHeader then
                     if control.prefix then
@@ -261,7 +276,6 @@ do
     end
 
     function Achievement:PerformExpandedLayout()
-        local drawnHeight = select(2, self.description:GetTextDimensions())
         local controlTop = self.control:GetTop()
         local yOffset = self.description:GetBottom() - controlTop -- always try to start right after the bottom of the description
         local footerPad = self.title:GetTop() - controlTop
@@ -276,7 +290,7 @@ do
         end
         
         yOffset = LayoutCriteriaSection(self.progressBars, yOffset, self.control, ACHIEVEMENT_STATUS_BAR_HEIGHT)
-        yOffset = AddSectionPadding(self.progressBars, yOffset, ACHIEVEMENT_CRITERIA_PADDING)        
+        yOffset = AddSectionPadding(self.progressBars, yOffset, ACHIEVEMENT_CRITERIA_PADDING)
         yOffset = LayoutCriteriaSection(self.checkBoxes, yOffset, self.control, GetCriteriaHeightCheckBox)
         yOffset = LayoutLineSection(self.lineThumbs, yOffset, self.control, ACHIEVEMENT_LINE_THUMB_WIDTH, ACHIEVEMENT_LINE_THUMB_HEIGHT)
 
@@ -300,7 +314,7 @@ function Achievement:AddProgressBar(description, numCompleted, numRequired, show
     bar.key = key
 
     bar.label:SetText(showBarDescription and zo_strformat(SI_ACHIEVEMENT_CRITERION_FORMAT, description) or "")
-    ApplyTextColorToLabel(bar.label, numCompleted == numRequired, ZO_SELECTED_TEXT, ZO_DISABLED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(bar.label, numCompleted == numRequired, ZO_SELECTED_TEXT)
 
     local numCompletedAsString = ZO_CommaDelimitNumber(numCompleted)
     local numRequiredAsString = ZO_CommaDelimitNumber(numRequired)
@@ -320,7 +334,7 @@ function Achievement:AddCheckBox(description, checked)
     local check, key = self.checkPool:AcquireObject()
     check.key = key
     
-    ApplyTextColorToLabel(check.label, checked, ZO_SELECTED_TEXT, ZO_DISABLED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(check.label, checked, ZO_SELECTED_TEXT)
     check.label:SetText(zo_strformat(SI_ACHIEVEMENT_CRITERION_FORMAT, description))
     check:SetParent(self.control)
     check:SetAlpha(checked and 1 or 0)
@@ -357,7 +371,7 @@ function Achievement:GetPooledLabel(labelType, completed)
         label:SetDimensions(0, ACHIEVEMENT_REWARD_LABEL_HEIGHT)
     end
 
-    ApplyTextColorToLabel(label, completed, ZO_NORMAL_TEXT, ZO_DISABLED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(label, completed)
 
     label.prefix = nil
     label.isHeader = labelType == HEADER_LABEL
@@ -393,7 +407,7 @@ function Achievement:AddDyeReward(dyeId, completed)
     dyeSwatch:SetParent(self.control)
     
     dyeSwatch.label:SetText(zo_strformat(SI_DYEING_SWATCH_TOOLTIP_TITLE, dyeName))
-    ApplyTextColorToLabel(dyeSwatch.label, completed, ZO_NORMAL_TEXT, ZO_DISABLED_TEXT)
+    ZO_Achievements_ApplyTextColorToLabel(dyeSwatch.label, completed)
     
     self.dyeSwatches[#self.dyeSwatches + 1] = dyeSwatch
 end
@@ -401,11 +415,12 @@ end
 function Achievement:AddCollectibleReward(collectibleId, completed)
     local collectibleNameLabel = self:GetPooledLabel(nil, completed)
 
-    local collectibleName, _, _, _, _, _, _, categoryType = GetCollectibleInfo(collectibleId)
-    collectibleNameLabel:SetText(zo_strformat(SI_COLLECTIBLE_NAME_FORMATTER, collectibleName))
+    local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+
+    collectibleNameLabel:SetText(collectibleData:GetFormattedName())
 
     local collectiblePrefixLabel = self:GetPooledLabel(PREFIX_LABEL, completed)
-    collectiblePrefixLabel:SetText(zo_strformat(SI_ACHIEVEMENTS_COLLECTIBLE_CATEGORY, GetString("SI_COLLECTIBLECATEGORYTYPE", categoryType)))
+    collectiblePrefixLabel:SetText(zo_strformat(SI_ACHIEVEMENTS_COLLECTIBLE_CATEGORY, collectibleData:GetCategoryTypeDisplayName()))
     collectibleNameLabel.prefix = collectiblePrefixLabel
 end
 
@@ -416,10 +431,10 @@ do
     local function AddAchievementLineThumb(owner, achievementId, lineThumbPool, lineThumbs, queryFunction, order)
         if achievementId == 0 then return end
 
-        if(order == ORDER_PREFIX) then        
+        if(order == ORDER_PREFIX) then
             AddAchievementLineThumb(owner, queryFunction(achievementId), lineThumbPool, lineThumbs, queryFunction, order)
         end
-        
+
         local points, icon, completed = select(3, GetAchievementInfo(achievementId))
     
         local lineThumb, key = lineThumbPool:AcquireObject()
@@ -431,11 +446,11 @@ do
         lineThumb.owner = owner
 
         if(completed) then
-            ApplyColorToAchievementIcon(lineThumb, ZO_DEFAULT_ENABLED_COLOR)
+            lineThumb.icon:SetDesaturation(0)
             lineThumb.label:SetColor(ZO_DEFAULT_ENABLED_COLOR:UnpackRGBA())
         else
-            ApplyColorToAchievementIcon(lineThumb, ZO_DEFAULT_DISABLED_COLOR)
-            lineThumb.label:SetColor(ZO_DEFAULT_DISABLED_COLOR:UnpackRGBA())
+            lineThumb.icon:SetDesaturation(ZO_ACHIEVEMENT_DISABLED_DESATURATION)
+            lineThumb.label:SetColor(ZO_ACHIEVEMENT_DISABLED_COLOR:UnpackRGBA())
         end
         
         lineThumb:SetHidden(false)
@@ -623,7 +638,7 @@ function Achievement:Expand()
     if self.collapsed then
         self.collapsed = false
 
-        self.description:SetDimensionConstraints(0, 0, self:CalculateDescriptionWidth(), 0)
+        self:RemoveCollapsedDescriptionConstraints()
         self:RefreshExpandedView()
         self:UpdateExpandedStateIcon()
         self:PlayExpandCollapseSound()
@@ -638,11 +653,15 @@ function Achievement:ApplyCollapsedDescriptionConstraints()
     end
 end
 
+function Achievement:RemoveCollapsedDescriptionConstraints()
+    self.description:SetDimensionConstraints(0, 0, self:CalculateDescriptionWidth(), 0)
+end
+
 function Achievement:Collapse()
     if not self.collapsed then
         self.collapsed = true
 
-        if(self.rewardThumb) then
+        if self.rewardThumb then
             self.rewardThumb:ClearAnchors()
             self.rewardThumb:SetAnchor(TOPLEFT, self.control, TOPLEFT, 42, 58)
         end
@@ -674,13 +693,14 @@ do
     end
 end
 
-function Achievement:SetAnchor(previous)
+function Achievement:SetAnchoredToAchievement(previous)
     self.control:ClearAnchors()
 
     -- This ensures that we can't have orphans, but it also means that we must do things in the proper order
     -- So whenever moving an achievement in the list, you must move the achievement to its new spot BEFORE closing the gap
     if self.anchoredToAchievement then
         self.anchoredToAchievement:SetDependentAnchoredAchievement(nil)
+        self.anchoredToAchievement = nil
     end
 
     if previous then
@@ -689,7 +709,6 @@ function Achievement:SetAnchor(previous)
         self.anchoredToAchievement = previous
     else
         self.control:SetAnchor(TOPLEFT, nil, TOPLEFT)
-        self.anchoredToAchievement = nil
     end
 end
 
@@ -717,11 +736,15 @@ function Achievement:ToggleCollapse()
     end
 end
 
-function Achievement:Destroy()
+function Achievement:Reset()
     self.control:SetHidden(true)
     self:SetHighlightHidden(true)
     self:Collapse()
     self.rewardLabel = nil
+    self:SetIndex(nil)
+
+    self.anchoredToAchievement = nil
+    self:SetDependentAnchoredAchievement(nil)
 end
 
 function Achievement:SetHighlightHidden(hidden)
@@ -729,7 +752,7 @@ function Achievement:SetHighlightHidden(hidden)
         self.highlight:SetHidden(false) -- let alpha take care of the actual hiding
 
         if not self.highlightAnimation then
-            self.highlightAnimation = ANIMATION_MANAGER:CreateTimelineFromVirtual("JournalProgressHighlightAnimation", self.highlight)
+            self.highlightAnimation = ANIMATION_MANAGER:CreateTimelineFromVirtual("AchievementHighlightAnimation_Keyboard", self.highlight)
         end
 
         if(hidden) then
@@ -758,21 +781,58 @@ function Achievement:OnClicked(button)
     end
 end
 
---[[ Popup Achievement ]]--
+--[[ Achievement Container ]]--
 
-local PopupAchievement = Achievement:Subclass()
+local AchievementContainer = Achievement:Subclass()
 
-function PopupAchievement:New(...)
+function AchievementContainer:New(...)
     local achievement = Achievement.New(self, ...)
     
     return achievement
 end
 
-function PopupAchievement:Initialize(parentControl, ...)
+function AchievementContainer:Initialize(parentControl, ...)
     self.parentControl = parentControl
     local achievementControl = parentControl:GetNamedChild("Achievement")
     Achievement.Initialize(self, achievementControl, ...)
     self.highlight = nil --don't want any highlights on the popup 
+end
+
+function AchievementContainer:PerformExpandedLayout()
+    Achievement.PerformExpandedLayout(self)
+    self.parentControl:SetHeight(self.control:GetDesiredHeight())
+end
+
+function AchievementContainer:Show(id, progress, timestamp)
+    self.parentControl:SetHidden(false)
+    self.parentControl:BringWindowToTop()
+    self.progress = progress
+    self.timestamp = timestamp
+
+    Achievement.Show(self, id)
+
+    if self.collapsed then
+        self:Expand()
+    else
+        self:RefreshExpandedView()
+    end
+end
+
+function AchievementContainer:Hide()
+    self.parentControl:SetHidden(true)
+    self:Reset()
+end
+
+--[[ Popup Achievement ]]--
+
+local PopupAchievement = AchievementContainer:Subclass()
+
+function PopupAchievement:New(...)
+    return AchievementContainer.New(self, ...)
+end
+
+function PopupAchievement:Initialize(parentControl, ...)
+    AchievementContainer.Initialize(self, parentControl, ...)
 
     self.parentControl:SetHandler("OnHide", function()
         self.lastShownLink = nil
@@ -780,11 +840,11 @@ function PopupAchievement:Initialize(parentControl, ...)
 end
 
 function PopupAchievement:GetAchievementInfo(achievementId)
-    local name, description, points, icon, completed, date, time = GetAchievementInfo(achievementId)
+    local name, description, points, icon = GetAchievementInfo(achievementId)
 
     --use the data from the link instead
-    completed = tonumber(self.timestamp) ~= 0
-    date, time = FormatAchievementLinkTimestamp(self.timestamp)
+    local completed = tonumber(self.timestamp) ~= 0
+    local date, time = FormatAchievementLinkTimestamp(self.timestamp)
 
     return name, description, points, icon, completed, date, time
 end
@@ -814,29 +874,11 @@ function PopupAchievement:RefreshExpandedLineView()
     --Do nothing, popup achievements don't show their line information
 end
 
-function PopupAchievement:PerformExpandedLayout()
-    Achievement.PerformExpandedLayout(self)
-    self.parentControl:SetHeight(self.control:GetDesiredHeight())
-end
+function PopupAchievement:HasTangibleReward()
+    local hasReward = GetAchievementNumRewards(self.achievementId) > 1
+    local hasCompleted = self.completed
 
-function PopupAchievement:Show(id, progress, timestamp)
-    self.parentControl:SetHidden(false)
-    self.parentControl:BringWindowToTop()
-    self.progress = progress
-    self.timestamp = timestamp
-
-    Achievement.Show(self, id)
-
-    if self.collapsed then
-        self:Expand()
-    else
-        self:RefreshExpandedView()
-    end
-end
-
-function PopupAchievement:Hide()
-    self.parentControl:SetHidden(true)
-    self:Destroy()
+    return hasReward, hasCompleted
 end
 
 --[[ Icon Achievement ]]--
@@ -863,7 +905,7 @@ function IconAchievement:Show(achievementId)
     self.control:SetHidden(false)
 end
 
-function IconAchievement:Destroy()
+function IconAchievement:Reset()
     self.control:SetHidden(true)
     self.achievementId = nil
     self.name = nil
@@ -874,7 +916,7 @@ function IconAchievement:SetAnchor(previous)
     if previous then
         self.control:SetAnchor(TOPLEFT, previous.control, TOPRIGHT, ACHIEVEMENT_ICON_STYLE_PADDING, 0)
     else
-        self.control:SetAnchor(BOTTOMLEFT, nil, BOTTOMLEFT, 0, -42)
+        self.control:SetAnchor(BOTTOMLEFT, nil, BOTTOMLEFT, 0, -32)
     end
 end
 
@@ -890,9 +932,9 @@ function IconAchievement:OnMouseExit()
 end
 
 function IconAchievement:OnClicked(button)
-    if(button == MOUSE_BUTTON_INDEX_LEFT) then
-        self.control.owner:ShowAchievement(GetLastCompletedAchievementInLine(self:GetId()))
-    elseif(button == MOUSE_BUTTON_INDEX_RIGHT) then
+    if button == MOUSE_BUTTON_INDEX_LEFT then
+        self.control.owner:ShowAchievement(self:GetId())
+    elseif button == MOUSE_BUTTON_INDEX_RIGHT then
         Achievement.OnClicked(self, button)
     end
 end
@@ -902,10 +944,12 @@ function IconAchievement:GetId()
 end
 
 --[[ Achievements ]]--
-local Achievements = ZO_JournalProgressBook_Common:Subclass()
+local Achievements = ZO_Object:Subclass()
 
 function Achievements:New(...)
-    return ZO_JournalProgressBook_Common.New(self, ...)
+    local object = ZO_Object.New(self)
+    object:Initialize(...)
+    return object
 end
 
 do
@@ -917,25 +961,27 @@ do
     }
 
     function Achievements:Initialize(control)
-        ZO_JournalProgressBook_Common.Initialize(self, control)
-    
-        self:InitializeSummary(control)
+        self.control = control
+
+        self:InitializeControls()
+        self:InitializeCategories()
+        self:InitializeSummary()
         self:InitializeFilters(filterData)
         self:InitializeAchievementList(control)
 
-        local achievementsScene = ZO_Scene:New("achievements", SCENE_MANAGER)
-        SYSTEMS:RegisterKeyboardRootScene("achievements", achievementsScene)
-        achievementsScene:RegisterCallback("StateChange", function(oldState, newState)
+        self.scene = ZO_Scene:New("achievements", SCENE_MANAGER)
+        SYSTEMS:RegisterKeyboardRootScene("achievements", self.scene)
+        self.scene:RegisterCallback("StateChange", function(oldState, newState)
             if newState == SCENE_SHOWING then
                 self.refreshGroups:UpdateRefreshGroups()
 
                 self.queuedScrollToAchievement = nil
                 if self.queuedShowAchievement then
-                    local queuedShowAchievement = self.queuedShowAchievement
                     if not self:ShowAchievement(self.queuedShowAchievement) then
                         self.queuedScrollToAchievement = nil
-                    end 
+                    end
                 end
+                ACHIEVEMENTS_MANAGER:SetSearchString(self.contentSearchEditBox:GetText())
             elseif newState == SCENE_SHOWN then
                 if self.achievementsById and self.achievementsById[self.queuedScrollToAchievement] then
                     ZO_Scroll_ScrollControlIntoCentralView(self.contentList, self.achievementsById[self.queuedScrollToAchievement]:GetControl())
@@ -943,47 +989,120 @@ do
             end
         end)
 
-        LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, self.OnLinkClicked, self)
-        LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_MOUSE_UP_EVENT, self.OnLinkClicked, self)
+        self:InitializeEvents()
 
         self:OnAchievementsUpdated()
     end
 end
 
 function Achievements:InitializeControls()
-    ZO_JournalProgressBook_Common.InitializeControls(self)
+    self.contents = self.control:GetNamedChild("Contents")
+    self.contentList = self.contents:GetNamedChild("ContentList")
+    self.contentListScrollChild = self.contentList:GetNamedChild("ScrollChild")
+    self.categoryInset = self.control:GetNamedChild("Category")
+    self.categoryLabel = self.categoryInset:GetNamedChild("Title")
+    self.categoryProgress = self.categoryInset:GetNamedChild("Progress")
+    self.categoryFilter = self.categoryInset:GetNamedChild("Filter")
+    self.contentSearchEditBox = self.contents:GetNamedChild("SearchBox")
+    ZO_StatusBar_SetGradientColor(self.categoryProgress, ZO_XP_BAR_GRADIENT_COLORS)
+end
 
-    self.pointsDisplay = self.contents:GetNamedChild("Points")
+function Achievements:InitializeCategories()
+    self.categories = self.control:GetNamedChild("ContentsCategories")
+    self.categoryTree = ZO_Tree:New(self.categories:GetNamedChild("ScrollChild"), 60, -10, 300)
+    self.nodeLookupData = {}
+
+    local function BaseTreeHeaderIconSetup(control, data, open)
+        local iconTexture = (open and data.pressedIcon or data.normalIcon) or ZO_NO_TEXTURE_FILE
+        local mouseoverTexture = data.mouseoverIcon or ZO_NO_TEXTURE_FILE
+        
+        control.icon:SetTexture(iconTexture)
+        control.iconHighlight:SetTexture(mouseoverTexture)
+
+        ZO_IconHeader_Setup(control, open)
+    end
+
+    local function BaseTreeHeaderSetup(node, control, data, open)
+        control.text:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
+        control.text:SetText(data.name)
+        BaseTreeHeaderIconSetup(control, data, open)
+    end
+
+    local function TreeHeaderSetup_Child(node, control, data, open, userRequested)
+        BaseTreeHeaderSetup(node, control, data, open)
+
+        if(open and userRequested) then
+            self.categoryTree:SelectFirstChild(node)
+        end
+    end
+
+    local function TreeHeaderSetup_Childless(node, control, data, open)
+        BaseTreeHeaderSetup(node, control, data, open)
+    end
+
+    local function TreeEntryOnSelected(control, data, selected, reselectingDuringRebuild)
+        control:SetSelected(selected)
+
+        if selected and (not reselectingDuringRebuild or self.forceUpdateContentOnCategoryReselect) then
+            local saveExpanded = reselectingDuringRebuild
+            self:OnCategorySelected(data, saveExpanded)
+        end
+    end
+
+    local function TreeEntryOnSelected_Childless(control, data, selected, reselectingDuringRebuild)
+        TreeEntryOnSelected(control, data, selected, reselectingDuringRebuild)
+        BaseTreeHeaderIconSetup(control, data, selected)
+    end
+
+    local function TreeEntrySetup(node, control, data, open)
+        control:SetSelected(false)
+        control:SetText(data.name)
+    end
+
+    local function TreeEqualityFunction(left, right)
+        if left.categoryIndex == right.categoryIndex then
+            if left.parentData and right.parentData then
+                return left.parentData.categoryIndex == right.parentData.categoryIndex
+            elseif not (left.parentData or right.parentData) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local CHILD_INDENT = 60
+    local CHILD_SPACING = 0
+    self.categoryTree:AddTemplate("ZO_IconHeader", TreeHeaderSetup_Child, nil, TreeEqualityFunction, CHILD_INDENT, CHILD_SPACING)
+    self.categoryTree:AddTemplate("ZO_IconChildlessHeader", TreeHeaderSetup_Childless, TreeEntryOnSelected_Childless, TreeEqualityFunction)
+    self.categoryTree:AddTemplate("ZO_TreeLabelSubCategory", TreeEntrySetup, TreeEntryOnSelected, TreeEqualityFunction)
+
+    self.categoryTree:SetExclusive(true)
+    self.categoryTree:SetOpenAnimation("ZO_TreeOpenAnimation")
 end
 
 function Achievements:InitializeEvents()
     local function OnAchievementsUpdated()
-        if self.control:IsHidden() then
-            self.refreshGroups:RefreshAll("FullUpdate")
-        else
-            self:OnAchievementsUpdated()
-        end
+        self.refreshGroups:RefreshAll("FullUpdate")
     end
-    
+
     local function OnAchievementUpdated(event, id)
-        if self.control:IsHidden() then
-            self.refreshGroups:RefreshSingle("AchievementUpdated", id)
-        else
-            self:OnAchievementUpdated(id)
-        end
+        self.refreshGroups:RefreshSingle("AchievementUpdated", id)
     end
-    
+
     local function OnAchievementAwarded(event, name, points, id)
-        if self.control:IsHidden() then
-            self.refreshGroups:RefreshSingle("AchievementAwarded", id)
-        else
-            self:OnAchievementAwarded(id)
+        self.refreshGroups:RefreshSingle("AchievementAwarded", id)
+    end
+
+    local function OnUpdate()
+        if not self.control:IsHidden() then
+            self.refreshGroups:UpdateRefreshGroups()
         end
     end
-    
+
     self.control:RegisterForEvent(EVENT_ACHIEVEMENTS_UPDATED, OnAchievementsUpdated)
     self.control:RegisterForEvent(EVENT_ACHIEVEMENT_UPDATED, OnAchievementUpdated)
     self.control:RegisterForEvent(EVENT_ACHIEVEMENT_AWARDED, OnAchievementAwarded)
+    self.control:SetHandler("OnUpdate", OnUpdate)
 
     self.refreshGroups = ZO_Refresh:New()
     self.refreshGroups:AddRefreshGroup("FullUpdate",
@@ -1006,6 +1125,50 @@ function Achievements:InitializeEvents()
             self:OnAchievementAwarded(achievementId)
         end,
     })
+
+    LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, self.OnLinkClicked, self)
+    LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_MOUSE_UP_EVENT, self.OnLinkClicked, self)
+
+    local function OnUpdateSearchResults()
+        if self.scene:IsShowing() then
+            self.forceUpdateContentOnCategoryReselect = true
+            self:BuildCategories()
+            self.forceUpdateContentOnCategoryReselect = false
+        end
+    end
+
+    ACHIEVEMENTS_MANAGER:RegisterCallback("UpdateSearchResults", OnUpdateSearchResults)
+end
+
+function Achievements:InitializeFilters(filterData)
+    local comboBox = ZO_ComboBox_ObjectFromContainer(self.categoryFilter)
+    comboBox:SetSortsItems(false)
+    comboBox:SetFont("ZoFontWinT1")
+    comboBox:SetSpacing(4)
+    
+    local function OnFilterChanged(comboBox, entryText, entry)
+        self.categoryFilter.filterType = entry.filterType
+        self:RefreshVisibleCategoryFilter()
+    end
+
+    for i, stringId in ipairs(filterData) do
+        local entry = comboBox:CreateItemEntry(GetString(stringId), OnFilterChanged)
+        entry.filterType = stringId
+        comboBox:AddItem(entry)
+    end
+
+    comboBox:SelectFirstItem()
+end
+
+function Achievements:ResetFilters() 
+    ZO_ComboBox_ObjectFromContainer(self.categoryFilter):SelectFirstItem()
+end
+
+function Achievements:RefreshVisibleCategoryFilter()
+    local data = self.categoryTree:GetSelectedData()
+    if(data ~= nil) then
+        self:OnCategorySelected(data)
+    end
 end
 
 function Achievements:OnAchievementAwarded(achievementId)
@@ -1014,34 +1177,87 @@ function Achievements:OnAchievementAwarded(achievementId)
     --Move up to the top of the list
     if updatedAchievement then
         local categoryIndex, subCategoryIndex, achievementIndex = GetCategoryInfoFromAchievementId(achievementId)
-        local oldIndex = updatedAchievement.index
+        local oldIndex = updatedAchievement:GetIndex()
 
-        updatedAchievement.index = achievementIndex
-
-        if achievementIndex >= oldIndex then
-            -- there's no way for us to move down in the list, unless there's an update pending after this
-            -- that will insert before this entry and push it down
+        if oldIndex and achievementIndex == oldIndex then
+            -- if the old index of the achievement matches our target index,
+            -- then we should already be in the right position
             return
         end
+
+        updatedAchievement:SetIndex(achievementIndex)
 
         local oldPrevious = updatedAchievement:GetAnchoredToAchievement()
         local oldNext = updatedAchievement:GetDependentAnchoredAchievement()
 
-        local nextAchievementId = GetAchievementId(categoryIndex, subCategoryIndex, achievementIndex + 1)
-        local newNext = self.achievementsById[self:GetBaseAchievementId(nextAchievementId)]
-        local newPrevious = newNext:GetAnchoredToAchievement()
+        -- find the achievement that comes after this one
+        -- since we may have a filter applied, it might not be the very next one in the category
+        -- so we'll have to search until we find one that is in self.achievementsById (i.e. currently showing)
+        local newNext
+        local nextAchievementIndex = achievementIndex
+        local nextAchievementId = achievementId
+        while nextAchievementId ~= 0 do
+            nextAchievementIndex = nextAchievementIndex + 1
+            nextAchievementId = GetAchievementId(categoryIndex, subCategoryIndex, nextAchievementIndex)
+            if nextAchievementId == 0 then
+                -- It's possible there is no next achievement, so we'll just bail here since we should be at
+                -- the bottom of the list
+                break
+            end
+
+            -- see if the next achievement id is in self.achievementsById and therefor being shown
+            -- if this comes back as nil, then it's probably been filtered out
+            newNext = self.achievementsById[self:GetBaseAchievementId(nextAchievementId)]
+            if newNext then
+                if newNext == updatedAchievement then
+                    -- nextAchievementId could be the next achievement in the same line, so newNext could be
+                    -- the same achievement as updatedAchievement, in which case we don't need to move
+                    return
+                else
+                    break
+                end
+            end
+        end
+
+        -- Get the achievement that should come before our updated achievement
+        -- if we didn't find a newNext then our achievement should be at the end of the list
+        local newPrevious
+        if newNext then
+            newPrevious = newNext:GetAnchoredToAchievement()
+        else
+            newPrevious = self.achievementsById[#self.achievementsById]
+        end
+
+        if newPrevious == updatedAchievement then
+            -- If the achievement that is the very next one happens to be anchored to
+            -- updatedAchievement then newPrevious would be the same achievement as updatedAchievement
+            -- and we don't need to move
+            return
+        end
 
         --Update anchors
+
+        -- first we need to remove the updated achievement from the current chain of achievements
+
+        -- clear the linkage between this updated achievement and the previous one (clear updatedAchievement's parent)
+        updatedAchievement:SetAnchoredToAchievement(nil)
+
         if oldNext then
-            oldNext:SetAnchor(oldPrevious)
+            -- if we have an achievement after the updated achievement then we need
+            -- to put it beneath the updated achievement's previous achievement, if any
+            -- this will also clear the linkage from oldNext to updatedAchievement (clear updatedAchievement's child)
+            oldNext:SetAnchoredToAchievement(oldPrevious)
         elseif oldPrevious then
+            -- if there isn't an achievement after the updated achievement
+            -- then the updated achievement's previous achievement doesn't have a child achievement now
             oldPrevious:SetDependentAnchoredAchievement(nil)
         end
 
-        updatedAchievement:SetAnchor(newPrevious)
+        -- insert the updated achievement back into the chain
+        updatedAchievement:SetAnchoredToAchievement(newPrevious)
 
         if newNext then
-            newNext:SetAnchor(updatedAchievement)
+            newNext:SetAnchoredToAchievement(updatedAchievement)
         end
     end
 end
@@ -1058,44 +1274,36 @@ function Achievements:OnAchievementUpdated(achievementId)
             -- Only update if the achievement is in the category you're currently viewing
             -- An achievement can only be in one category, and switching categories does a full refresh anyway
             if categoryIndex == selectedCategoryIndex and subCategoryIndex == selectedSubCategoryIndex then
-                self:UpdateCategoryLabels(data, SAVE_EXPANDED, DONT_REBUILD_CONTENT_LIST)
-                local baseAchievementId = self:GetBaseAchievementId(achievementId)
-                local updatedAchievement = self.achievementsById[baseAchievementId]
+                -- We might have filtered the achievement list we are viewing, and since an achievement has updated
+                -- it's possible we need to remove it from the list, so we'll just rebuild the whole list
+                local dontRebuildContentList = ZO_ShouldShowAchievement(self.categoryFilter.filterType, achievementId)
+                self:UpdateCategoryLabels(data, SAVE_EXPANDED, dontRebuildContentList)
+                if dontRebuildContentList then
+                    local baseAchievementId = self:GetBaseAchievementId(achievementId)
 
-                if not updatedAchievement then
-                    updatedAchievement = self.achievementPool:AcquireObject()
-                    self.achievementsById[baseAchievementId] = updatedAchievement
+                    -- Must use base here because in a line, all of the remaining achievements get an update,
+                    -- but you only want the lowest one that hasn't been completed
+                    -- e.g.: Ids 1, 2, 3.  1 complete, 2 and 3 in progress.  2 and 3 both get updates.
+                    -- 2 calls ZO_GetNextInProgressAchievementInLine, returns 2 as next in progress (good).
+                    -- 3 calls ZO_GetNextInProgressAchievementInLine, returns 3 as next in progress (bad).
+                    -- 1 (base for 2 AND 3) calls ZO_GetNextInProgressAchievementInLine, returns 2 as next in progress (best).
+                    if ZO_GetNextInProgressAchievementInLine(baseAchievementId) == achievementId then
+                        local updatedAchievement = self.achievementsById[baseAchievementId]
+
+                        if not updatedAchievement then
+                            updatedAchievement = self.achievementPool:AcquireObject()
+                            self.achievementsById[baseAchievementId] = updatedAchievement
+                        end
+
+                        updatedAchievement:Show(achievementId)
+                        updatedAchievement:RefreshExpandedView()
+
+                        return updatedAchievement
+                    end
                 end
-
-                -- Must use base here because in a line, all of the remaining achievements get an update,
-                -- but you only want the lowest one that hasn't been completed
-                -- e.g.: Ids 1, 2, 3.  1 complete, 2 and 3 in progress.  2 and 3 both get updates.
-                -- 2 calls ZO_GetNextInProgressAchievementInLine, returns 2 as next in progress (good).
-                -- 3 calls ZO_GetNextInProgressAchievementInLine, returns 3 as next in progress (bad).
-                -- 1 (base for 2 AND 3) calls ZO_GetNextInProgressAchievementInLine, returns 2 as next in progress (best).
-                updatedAchievement:Show(ZO_GetNextInProgressAchievementInLine(baseAchievementId))
-                updatedAchievement:RefreshExpandedView()
-
-                return updatedAchievement
             end
         end
     end
-end
-
-function Achievements:GetNumCategories()
-    return GetNumAchievementCategories()
-end
-
-function Achievements:GetCategoryInfo(categoryIndex)
-    return GetAchievementCategoryInfo(categoryIndex)
-end
-
-function Achievements:GetCategoryIcons(categoryIndex)
-    return GetAchievementCategoryKeyboardIcons(categoryIndex)
-end
-
-function Achievements:GetSubCategoryInfo(categoryIndex, i)
-    return GetAchievementSubCategoryInfo(categoryIndex, i)
 end
 
 function Achievements:LookupTreeNodeForData(categoryIndex, subCategoryIndex)
@@ -1117,7 +1325,7 @@ end
 
 function Achievements:OpenCategory(categoryIndex, subCategoryIndex)
     local node = self:LookupTreeNodeForData(categoryIndex, subCategoryIndex)
-    if(node) then
+    if node then
         self.categoryTree:SelectNode(node, ZO_TREE_AUTO_SELECT)
         return true
     end
@@ -1125,19 +1333,24 @@ function Achievements:OpenCategory(categoryIndex, subCategoryIndex)
 end
 
 function Achievements:ShowAchievement(achievementId)
+    if self.contentSearchEditBox:GetText() ~= "" then
+        self.contentSearchEditBox:SetText("")
+        local REFRESH_IMMEDIATELY = true
+        ACHIEVEMENTS_MANAGER:ClearSearch(REFRESH_IMMEDIATELY)
+    end
+
     if not SCENE_MANAGER:IsShowing("achievements") then
         self.queuedShowAchievement = achievementId
         MAIN_MENU_KEYBOARD:ShowScene("achievements")
-
     else
         self.queuedShowAchievement = nil
-
-        local categoryIndex, subCategoryIndex, achievementIndex = GetCategoryInfoFromAchievementId(achievementId)
+        local lastAchievementIdInLine = GetLastCompletedAchievementInLine(achievementId)
+        local categoryIndex, subCategoryIndex, achievementIndex = GetCategoryInfoFromAchievementId(lastAchievementIdInLine)
 
         if self:OpenCategory(categoryIndex, subCategoryIndex) then
             -- convert the given achievement id into one that exists in the list of achievements
             -- this is mostly for achievements in a line
-            local baseAchievementId = self:GetBaseAchievementId(achievementId)
+            local baseAchievementId = self:GetBaseAchievementId(lastAchievementIdInLine)
 
             -- Reset filters if this achievement isn't showing
             if not self.achievementsById[baseAchievementId] then
@@ -1156,52 +1369,55 @@ function Achievements:InitializeAchievementList(control)
     self.achievementsById = {}
 
     local sharedCheckPool = ZO_ControlPool:New("ZO_AchievementCheckbox", self.contentListScrollChild)
-    sharedCheckPool:SetCustomFactoryBehavior(   function(control)
-                                                    control.label = control:GetNamedChild("Label")
+    sharedCheckPool:SetCustomFactoryBehavior(   function(checkControl)
+                                                    checkControl.label = checkControl:GetNamedChild("Label")
                                                 end)
-    
-    local sharedStatusBarPool = ZO_ControlPool:New("ZO_AchievementsAchievementStatusBar", self.contentListScrollChild)
-    sharedStatusBarPool:SetCustomFactoryBehavior(   function(control)
-                                                        control.label = control:GetNamedChild("Label")
-                                                        control.progress = control:GetNamedChild("Progress")
-                                                        ZO_StatusBar_SetGradientColor(control, ZO_XP_BAR_GRADIENT_COLORS)
 
-                                                        control:GetNamedChild("BGLeft"):SetDrawLevel(2)
-                                                        control:GetNamedChild("BGRight"):SetDrawLevel(2)
-                                                        control:GetNamedChild("BGMiddle"):SetDrawLevel(2)
+    local sharedStatusBarPool = ZO_ControlPool:New("ZO_AchievementsStatusBar", self.contentListScrollChild)
+    sharedStatusBarPool:SetCustomFactoryBehavior(   function(statusBarControl)
+                                                        statusBarControl:SetWidth(ACHIEVEMENT_STATUS_BAR_WIDTH)
+                                                        statusBarControl.label = statusBarControl:GetNamedChild("Label")
+                                                        statusBarControl.progress = statusBarControl:GetNamedChild("Progress")
+                                                        ZO_StatusBar_SetGradientColor(statusBarControl, ZO_XP_BAR_GRADIENT_COLORS)
+
+                                                        statusBarControl:GetNamedChild("BGLeft"):SetDrawLevel(2)
+                                                        statusBarControl:GetNamedChild("BGRight"):SetDrawLevel(2)
+                                                        statusBarControl:GetNamedChild("BGMiddle"):SetDrawLevel(2)
                                                     end)
-    
+
     local sharedRewardLabelPool = ZO_ControlPool:New("ZO_AchievementRewardLabel", self.contentListScrollChild)
-  
+
     local sharedRewardIconPool = ZO_ControlPool:New("ZO_AchievementRewardItem", self.contentListScrollChild)
-    sharedRewardIconPool:SetCustomFactoryBehavior(  function(control)
-                                                        control.label = control:GetNamedChild("Label")
-                                                        control.icon = control:GetNamedChild("Icon")
+    sharedRewardIconPool:SetCustomFactoryBehavior(  function(rewardIconControl)
+                                                        rewardIconControl.label = rewardIconControl:GetNamedChild("Label")
+                                                        rewardIconControl.icon = rewardIconControl:GetNamedChild("Icon")
                                                     end)
-  
+
     local sharedLineThumbPool = ZO_ControlPool:New("ZO_AchievementLineThumb", self.contentListScrollChild)
-    sharedLineThumbPool:SetCustomFactoryBehavior(  function(control)
-                                                        control.label = control:GetNamedChild("Label")
-                                                        control.icon = control:GetNamedChild("Icon")
+    sharedLineThumbPool:SetCustomFactoryBehavior(  function(thumbControl)
+                                                        thumbControl.label = thumbControl:GetNamedChild("Label")
+                                                        thumbControl.icon = thumbControl:GetNamedChild("Icon")
                                                     end)
 
     local sharedDyeSwatchPool = ZO_ControlPool:New("ZO_AchievementDyeSwatch", self.contentListScrollChild)
-                                                    
-    
+
     local function CreateAchievement(objectPool)
         local achievement = ZO_ObjectPool_CreateControl("ZO_Achievement", objectPool, self.contentListScrollChild)
         achievement.owner = self
         return Achievement:New(achievement, sharedCheckPool, sharedStatusBarPool, sharedRewardLabelPool, sharedRewardIconPool, sharedLineThumbPool, sharedDyeSwatchPool)
     end
-    
-    local function DestroyAchievement(achievement)
-        achievement:Destroy()
+
+    local function ResetAchievement(achievement)
+        achievement:Reset()
     end
 
-    self.achievementPool = ZO_ObjectPool:New(CreateAchievement, DestroyAchievement)
+    self.achievementPool = ZO_ObjectPool:New(CreateAchievement, ResetAchievement)
 
     ZO_AchievementPopup.owner = self
     self.popup = PopupAchievement:New(ZO_AchievementPopup, sharedCheckPool, sharedStatusBarPool, sharedRewardLabelPool, sharedRewardIconPool, sharedLineThumbPool, sharedDyeSwatchPool)
+
+    ZO_AchievementTooltip.owner = self
+    self.tooltip = AchievementContainer:New(ZO_AchievementTooltip, sharedCheckPool, sharedStatusBarPool, sharedRewardLabelPool, sharedRewardIconPool, sharedLineThumbPool, sharedDyeSwatchPool)
 end
 
 do
@@ -1217,9 +1433,9 @@ do
         end
         return expandedAchievements
     end
-    
+
     local function ExpandAchievements(achievements, achievementsToExpand)
-         for i=1, #achievementsToExpand do
+         for i = 1, #achievementsToExpand do
             local achievementId = achievementsToExpand[i]
             if achievements[achievementId] then
                 achievements[achievementId]:Expand()
@@ -1231,11 +1447,12 @@ do
         local parentData = data.parentData
         local categoryIndex, subCategoryIndex = self:GetCategoryIndicesFromData(data)
         local numAchievements = self:GetCategoryInfoFromData(data, parentData)
-        
+
         local expandedAchievements = keepExpanded and SaveExpandedAchievements(self.achievementsById)
-        
-        self:LayoutAchievements(ZO_GetAchievementIds(categoryIndex, subCategoryIndex, numAchievements))
-        
+
+        local CONSIDER_SEARCH_RESULTS = true
+        self:LayoutAchievements(ZO_GetAchievementIds(categoryIndex, subCategoryIndex, numAchievements, CONSIDER_SEARCH_RESULTS))
+
         if expandedAchievements then
             ExpandAchievements(self.achievementsById, expandedAchievements)
         end
@@ -1243,8 +1460,15 @@ do
 end
 
 function Achievements:UpdateCategoryLabels(data, saveExpanded, dontRebuildContentList)
-    ZO_JournalProgressBook_Common.UpdateCategoryLabels(self, data)
     local parentData = data.parentData
+
+    if parentData then
+        self.categoryLabel:SetText(zo_strformat(SI_JOURNAL_PROGRESS_CATEGORY_SUBCATEGORY, parentData.name, data.name))
+    else
+        self.categoryLabel:SetText(zo_strformat(SI_JOURNAL_PROGRESS_CATEGORY, data.name))
+    end
+
+    self.categoryFilter:SetHidden(false)
 
     local numEntries, earnedPoints, totalPoints, hidesEarned = self:GetCategoryInfoFromData(data, parentData)
 
@@ -1257,6 +1481,15 @@ function Achievements:UpdateCategoryLabels(data, saveExpanded, dontRebuildConten
 
     if not dontRebuildContentList then
         self:BuildContentList(data, saveExpanded)
+    end
+end
+
+function Achievements:OnCategorySelected(data, saveExpanded)
+    if data.summary then
+        self:ShowSummary()
+    else
+        self:HideSummary()
+        self:UpdateCategoryLabels(data, saveExpanded)
     end
 end
 
@@ -1276,17 +1509,18 @@ function Achievements:LayoutAchievements(achievements)
     ZO_Scroll_ResetToTop(self.contentList)
 
     local previous
-    for i=1, #achievements do
+    for i = 1, #achievements do
         local id = achievements[i]
-        if(ZO_ShouldShowAchievement(self.categoryFilter.filterType, id)) then
+        if ZO_ShouldShowAchievement(self.categoryFilter.filterType, id) then
             local achievement = self.achievementPool:AcquireObject()
             local baseAchievementId = self:GetBaseAchievementId(id)
             self.achievementsById[baseAchievementId] = achievement
-            achievement.index = i
+            -- i here is the same as the achievementIndex for the achievement
+            achievement:SetIndex(i)
 
             achievement:Show(ZO_GetNextInProgressAchievementInLine(id))
 
-            achievement:SetAnchor(previous)
+            achievement:SetAnchoredToAchievement(previous)
             previous = achievement
         end
     end
@@ -1306,8 +1540,26 @@ function Achievements:LayoutAchievementsIconStyle(...)
     end
 end
 
-function Achievements:InitializeSummary(control)
-    ZO_JournalProgressBook_Common.InitializeSummary(self, control, GetString(SI_ACHIEVEMENTS_OVERALL), GetString(SI_ACHIEVEMENTS_RECENT))
+function Achievements:InitializeSummary()
+    local function InitializeSummaryStatusBar(statusBar)
+        ZO_StatusBar_SetGradientColor(statusBar, ZO_XP_BAR_GRADIENT_COLORS)
+        statusBar.category = statusBar:GetNamedChild("Label")
+        statusBar.progress = statusBar:GetNamedChild("Progress")
+        statusBar:GetNamedChild("BG"):SetDrawLevel(1)
+        statusBar:SetWidth(SUMMARY_STATUS_BAR_WIDTH)
+
+        return statusBar
+    end
+
+    local control = self.control
+    self.summaryInset = control:GetNamedChild("ContentsSummaryInset")
+    self.summaryProgressBarsScrollChild = self.summaryInset:GetNamedChild("ProgressBarsScrollChild")
+    self.summaryTotal = InitializeSummaryStatusBar(self.summaryProgressBarsScrollChild:GetNamedChild("Total"))
+
+    self.summaryStatusBarPool = ZO_ControlPool:New("ZO_AchievementsStatusBar", self.summaryProgressBarsScrollChild)
+    self.summaryStatusBarPool:SetCustomFactoryBehavior( function(statusBarControl)
+                                                            InitializeSummaryStatusBar(statusBarControl)
+                                                        end)
 
     -- Recent achievements as icon displays
     local function CreateIconAchievement(objectPool)
@@ -1317,28 +1569,32 @@ function Achievements:InitializeSummary(control)
     end
 
     local function DestroyIconAchievement(achievement)
-        achievement:Destroy()
+        achievement:Reset()
     end
 
     self.iconAchievementPool = ZO_ObjectPool:New(CreateIconAchievement, DestroyIconAchievement)
+
+    self.pointsDisplay = self.summaryInset:GetNamedChild("Points")
 end
 
 function Achievements:RefreshRecentAchievements()
     self:LayoutAchievementsIconStyle(GetRecentlyCompletedAchievements(NUM_RECENT_ACHIEVEMENTS_TO_SHOW))
 end
 
+
+--[[ Summary ]]--
+-----------------
+
 function Achievements:UpdateSummary()
     self.summaryStatusBarPool:ReleaseAllObjects()
-    
+
     self:UpdateStatusBar(self.summaryTotal, nil, GetEarnedAchievementPoints(), GetTotalAchievementPoints(), 0, nil, FORCE_HIDE_PROGRESS_TEXT)
-    
-    local numCategories = zo_min(self:GetNumCategories(), MAX_SUMMARY_CATEGORIES)
-    local secondColumnStart = zo_ceil(numCategories / 2)
-    
+
+    local numCategories = GetNumAchievementCategories()
     local yOffset = SUMMARY_CATEGORY_PADDING
-    for i=1, numCategories do
-        local name, _, numAchievements, earnedPoints, totalPoints, hidesPoints = self:GetCategoryInfo(i)
-        
+    for i = 1, numCategories do
+        local name, _, numAchievements, earnedPoints, totalPoints, hidesPoints = GetAchievementCategoryInfo(i)
+
         local statusBar = self.summaryStatusBarPool:AcquireObject()
         self:UpdateStatusBar(statusBar, name, earnedPoints, totalPoints, numAchievements, hidesPoints, FORCE_HIDE_PROGRESS_TEXT)
         statusBar:ClearAnchors()
@@ -1353,8 +1609,24 @@ function Achievements:UpdateSummary()
 end
 
 function Achievements:ShowSummary()
-    ZO_JournalProgressBook_Common.ShowSummary(self)
+    self.contentList:SetHidden(true)
+    self.summaryInset:SetHidden(false)
+    self.categoryLabel:SetText(GetString(SI_JOURNAL_PROGRESS_SUMMARY))
+    self.categoryProgress:SetHidden(true)
+    self.categoryFilter:SetHidden(true)
+
     self:RefreshRecentAchievements()
+    self:UpdateSummary()
+end
+
+function Achievements:HideSummary()
+    self.contentList:SetHidden(false)
+    self.summaryInset:SetHidden(true)
+end
+
+function Achievements:IsSummaryOpen()
+    local data = self.categoryTree:GetSelectedData()
+    return data and data.summary
 end
 
 function Achievements:OnAchievementsUpdated()
@@ -1369,6 +1641,32 @@ end
 function Achievements:UpdatePointDisplay()
     local points = zo_strformat(SI_ACHIEVEMENTS_POINTS_LABEL, GetEarnedAchievementPoints(), GetTotalAchievementPoints())
     self.pointsDisplay:SetText(points)
+end
+
+function Achievements:UpdateStatusBar(statusBar, category, earned, total, numEntries, hidesUnearned, hideProgressText)
+    if category then
+        statusBar.category:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
+        statusBar.category:SetText(category)
+    end
+
+    statusBar:SetMinMax(0, zo_max(hidesUnearned and 1 or total, 1))
+    statusBar:SetValue(earned)
+
+    if hideProgressText then
+        if hidesUnearned then
+            if numEntries > 0 then
+                statusBar.progress:SetText(numEntries)
+            else
+                statusBar.progress:SetHidden(true)
+            end
+        else
+            statusBar.progress:SetText(zo_strformat(SI_JOURNAL_PROGRESS_BAR_PROGRESS, ZO_CommaDelimitNumber(earned), ZO_CommaDelimitNumber(total)))
+        end
+    else
+        statusBar.progress:SetHidden(true)
+    end    
+
+    statusBar:SetHidden(false)
 end
 
 function Achievements:ShowAchievementPopup(id, progress, timestamp)
@@ -1391,10 +1689,203 @@ function Achievements:OnLinkClicked(link, button, text, color, linkType, ...)
     end
 end
 
+function Achievements:ShowAchievementDetailedTooltip(id, anchor)
+    self.tooltip.parentControl:ClearAnchors()
+    anchor:Set(self.tooltip.parentControl)
+
+    local progress = GetAchievementProgress(id)
+    local timestamp = GetAchievementTimestamp(id)
+    self.tooltip:Show(id, progress, timestamp)
+end
+
+function Achievements:HideAchievementDetailedTooltip()
+    self.tooltip:Hide()
+end
+
+function Achievements:GetAchievementDetailedTooltipControl()
+    return self.tooltip.parentControl
+end
+
+--[[ Categories ]]--
+--------------------
+
+function Achievements:GetCategoryIndicesFromData(data)
+    if not data.isFakedSubcategory and data.parentData then
+        return data.parentData.categoryIndex, data.categoryIndex
+    end
+        
+    return data.categoryIndex
+end
+
+function Achievements:GetCategoryInfoFromData(data, parentData)
+    if not data.isFakedSubcategory and parentData then
+        return select(2, GetAchievementSubCategoryInfo(parentData.categoryIndex, data.categoryIndex))
+    else
+        --The general category includes all achievements that aren't assigned a specific subcategory. We get the total number of points
+        --under the top level level category then subtracts all of the points that are attributed to a specific subcategory to get the stats for general.
+        local numSubCategories, numAchievements, earnedPoints, totalPoints, hidesPoints = select(2, GetAchievementCategoryInfo(data.categoryIndex))
+        if parentData then
+            for subCategoryIndex = 1, numSubCategories do
+                local subCategoryEarned, subCategoryTotal = select(3, GetAchievementSubCategoryInfo(parentData.categoryIndex, subCategoryIndex))
+                earnedPoints = earnedPoints - subCategoryEarned
+                totalPoints = totalPoints - subCategoryTotal
+            end
+        end
+        return numAchievements, earnedPoints, totalPoints, hidesPoints
+    end
+end
+
+function Achievements:GetLookupNodeByCategory(categoryIndex, subcategoryIndex)
+    if self.nodeLookupData then
+        local node = self.nodeLookupData[categoryIndex]
+        if node then
+            local subNode = node.subCategories[subcategoryIndex or ZO_ACHIEVEMENTS_ROOT_SUBCATEGORY]
+            return subNode or node.node
+        end
+    end
+    return nil
+end
+
+function Achievements:BuildCategories()
+    self.categoryTree:Reset()
+    ZO_ClearTable(self.nodeLookupData)
+
+    --Special summary blade
+    self:AddTopLevelCategory(nil, GetString(SI_JOURNAL_PROGRESS_SUMMARY), 0)
+
+    local function AddCategoryByCategoryIndex(categoryIndex)
+        local name, numSubCategories, _, _, _, hidesUnearned = GetAchievementCategoryInfo(categoryIndex)
+        local normalIcon, pressedIcon, mouseoverIcon = GetAchievementCategoryKeyboardIcons(categoryIndex)
+        self:AddTopLevelCategory(categoryIndex, name, numSubCategories, hidesUnearned, normalIcon, pressedIcon, mouseoverIcon)
+    end
+
+    local searchResults = ACHIEVEMENTS_MANAGER:GetSearchResults()
+    if searchResults then
+        for categoryIndex, data in pairs(searchResults) do
+            AddCategoryByCategoryIndex(categoryIndex)
+        end
+    else
+        for categoryIndex = 1, GetNumAchievementCategories() do
+            AddCategoryByCategoryIndex(categoryIndex)
+        end
+    end
+
+    self.categoryTree:Commit()
+end
+
+do
+    local function AddNodeLookup(lookup, node, parent, categoryIndex)
+        if(categoryIndex ~= nil) then
+            local parentCategory = categoryIndex
+            local subCategory
+
+            if(parent) then
+                parentCategory = parent.data.categoryIndex
+                subCategory = categoryIndex
+            end
+
+            local categoryTable = lookup[parentCategory]
+            
+            if(categoryTable == nil) then
+                categoryTable = { subCategories = {} }
+                lookup[parentCategory] = categoryTable
+            end
+
+            if(subCategory) then
+                categoryTable.subCategories[subCategory] = node
+            else
+                categoryTable.node = node
+            end
+        end
+    end
+
+    function Achievements:AddCategory(lookup, tree, nodeTemplate, parent, categoryIndex, name, hidesUnearned, normalIcon, pressedIcon, mouseoverIcon, isSummary, isFakedSubcategory)
+        local entryData = 
+        {
+            isFakedSubcategory = isFakedSubcategory,
+            categoryIndex = categoryIndex, 
+            name = name, 
+            hidesUnearned = hidesUnearned,
+            summary = isSummary,
+            parentData = parent and parent.data or nil,
+            normalIcon = normalIcon, 
+            pressedIcon = pressedIcon, 
+            mouseoverIcon = mouseoverIcon,
+        }
+
+        local node = tree:AddNode(nodeTemplate, entryData, parent)
+        entryData.node = node
+        local finalCategoryIndex = isFakedSubcategory and ZO_ACHIEVEMENTS_ROOT_SUBCATEGORY or categoryIndex
+        AddNodeLookup(lookup, node, parent, finalCategoryIndex)
+        return node
+    end
+
+    local SUMMARY_ICONS =
+    {
+        "esoui/art/treeicons/achievements_indexicon_summary_up.dds",
+        "esoui/art/treeicons/achievements_indexicon_summary_down.dds",
+        "esoui/art/treeicons/achievements_indexicon_summary_over.dds",
+    }
+
+    function Achievements:AddTopLevelCategory(categoryIndex, name, numSubCategories, hidesUnearned, normalIcon, pressedIcon, mouseoverIcon)
+        local isSummary = categoryIndex == nil
+        local tree = self.categoryTree
+        local lookup = self.nodeLookupData
+        local searchResults = ACHIEVEMENTS_MANAGER:GetSearchResults()
+
+        local hasChildren = numSubCategories > 0
+        local nodeTemplate = hasChildren and "ZO_IconHeader" or "ZO_IconChildlessHeader"
+        local hasFakedSubcategory = false
+
+        if isSummary then
+            normalIcon, pressedIcon, mouseoverIcon = unpack(SUMMARY_ICONS)
+        elseif searchResults then
+            hasFakedSubcategory = hasChildren and searchResults[categoryIndex][ZO_ACHIEVEMENTS_ROOT_SUBCATEGORY] ~= nil
+        else
+            local numTopLevelAchievements = select(3, GetAchievementCategoryInfo(categoryIndex))
+            hasFakedSubcategory = hasChildren and numTopLevelAchievements > 0
+        end
+
+        local parentNode = self:AddCategory(lookup, tree, nodeTemplate, nil, categoryIndex, name, hidesUnearned, normalIcon, pressedIcon, mouseoverIcon, isSummary)
+
+        -- We only want to add a general subcategory if we have any subcategories and we have any entries in the main category
+        -- Otherwise we'd have an emtpy general category
+        if hasFakedSubcategory then
+            local IS_FAKED_SUBCATEGORY = true
+            local NO_ICONS = nil
+            self:AddCategory(lookup, tree, "ZO_TreeLabelSubCategory", parentNode, categoryIndex, GetString(SI_JOURNAL_PROGRESS_CATEGORY_GENERAL), hidesUnearned, NO_ICONS, NO_ICONS, NO_ICONS, NOT_SUMMARY, IS_FAKED_SUBCATEGORY)
+        end
+
+        if not isSummary then
+            if searchResults then
+                for subcategoryIndex, data in pairs(searchResults[categoryIndex]) do
+                    if subcategoryIndex ~= ZO_COLLECTIONS_SEARCH_ROOT then
+                        local subCategoryName, _, _, _, subcategoryHidesUnearned = GetAchievementSubCategoryInfo(categoryIndex, subcategoryIndex)
+                        self:AddCategory(lookup, tree, "ZO_TreeLabelSubCategory", parentNode, subcategoryIndex, subCategoryName, subcategoryHidesUnearned)
+                    end
+                end
+            else
+                for subcategoryIndex = 1, numSubCategories do
+                    local subCategoryName, _, _, _, subcategoryHidesUnearned = GetAchievementSubCategoryInfo(categoryIndex, subcategoryIndex)
+                    self:AddCategory(lookup, tree, "ZO_TreeLabelSubCategory", parentNode, subcategoryIndex, subCategoryName, subcategoryHidesUnearned)
+                end
+            end
+        end
+
+        return parentNode
+    end
+end
+
 --[[ XML Handlers ]]--
+
 function ZO_Achievements_OnInitialize(self)
     ACHIEVEMENTS = Achievements:New(self)
     SYSTEMS:RegisterKeyboardObject("achievements", ACHIEVEMENTS)
+end
+
+function ZO_Achievements_OnSearchTextChanged(editBox)
+    ZO_EditDefaultText_OnTextChanged(editBox)
+    ACHIEVEMENTS_MANAGER:SetSearchString(editBox:GetText())
 end
 
 function ZO_Achievement_OnMouseEnter(control)

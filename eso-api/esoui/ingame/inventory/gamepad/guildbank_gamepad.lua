@@ -1,6 +1,3 @@
-local ITEM_TEMPLATE = "ZO_GamepadItemSubEntryTemplate"
-local CATEGORY_HEADER_TEMPLATE = "ZO_GamepadMenuEntryHeaderTemplate"
-
 -------------------------------------
 -- Gamepad Guild Bank Inventory List
 -------------------------------------
@@ -10,8 +7,20 @@ function ZO_GamepadGuildBankInventoryList:New(...)
     return ZO_GamepadBankCommonInventoryList.New(self, ...)
 end
 
+function ZO_GamepadGuildBankInventoryList:Initialize(...)
+    ZO_GamepadBankCommonInventoryList.Initialize(self, ...)
+
+    local goldTransferEntryName = self:IsInWithdrawMode() and GetString(SI_GAMEPAD_BANK_WITHDRAW_GOLD_ENTRY_NAME) or GetString(SI_GAMEPAD_BANK_DEPOSIT_GOLD_ENTRY_NAME)
+    local goldTransferEntryIcon = self:IsInWithdrawMode() and "EsoUI/Art/Bank/Gamepad/gp_bank_menuIcon_gold_withdraw.dds" or "EsoUI/Art/Bank/Gamepad/gp_bank_menuIcon_gold_deposit.dds"
+    local entryData = ZO_GamepadEntryData:New(goldTransferEntryName, goldTransferEntryIcon)
+    entryData:SetIconTintOnSelection(true)
+    entryData:SetIconDisabledTintOnSelection(true)
+    entryData.currencyType = CURT_MONEY
+    self.goldTransferEntryData = entryData
+end
+
 do
-    local NO_DEPOSIT_PERMISSIONS_STRING = zo_strformat(GetString(SI_GAMEPAD_GUILD_BANK_NO_DEPOSIT_PERMISSIONS), GetNumGuildMembersRequiredForPrivilege(GUILD_PRIVILEGE_BANK_DEPOSIT))
+    local NO_DEPOSIT_PERMISSIONS_STRING = zo_strformat(SI_GAMEPAD_GUILD_BANK_NO_DEPOSIT_PERMISSIONS, GetNumGuildMembersRequiredForPrivilege(GUILD_PRIVILEGE_BANK_DEPOSIT))
     local NO_WITHDRAW_PERMISSIONS_STRING = GetString(SI_GAMEPAD_GUILD_BANK_NO_WITHDRAW_PERMISSIONS)
     local NO_ITEMS_TO_WITHDRAW_STRING = GetString(SI_GAMEPAD_GUILD_BANK_NO_WITHDRAW_ITEMS)
 
@@ -36,13 +45,13 @@ do
 
             if GAMEPAD_GUILD_BANK:IsLoadingGuildBank() then
                 self:SetNoItemText("")
-            elseif self.mode == BANKING_GAMEPAD_MODE_DEPOSIT then
+            elseif self:IsInDepositMode() then
                 if not guildHasDepositPrivilege then
                     self:SetNoItemText(NO_DEPOSIT_PERMISSIONS_STRING)
                 else
                     shouldShowList = DoesPlayerHaveGuildPermission(guildId, GUILD_PERMISSION_BANK_DEPOSIT)
                 end
-            elseif self.mode == BANKING_GAMEPAD_MODE_WITHDRAW then
+            elseif self:IsInWithdrawMode() then
                 if not (playerCanWithdrawItem or playerCanWithdrawGold) then
                     self:SetNoItemText(NO_WITHDRAW_PERMISSIONS_STRING)
                 else
@@ -62,26 +71,28 @@ do
             local canUse = true
 
             -- Check if there are funds to withdraw or if the player's wallet isn't full, depending on the mode
-            if self.mode == BANKING_GAMEPAD_MODE_WITHDRAW then
-                canUse = GetGuildBankedCurrencyAmount(currencyType) ~= 0 and 
-                            GetCarriedCurrencyAmount(currencyType) ~= GetMaxCarriedCurrencyAmount(currencyType)
-            elseif self.mode == BANKING_GAMEPAD_MODE_DEPOSIT then
-                canUse = GetGuildBankedCurrencyAmount(currencyType) ~= GetMaxGuildBankCurrencyAmount(currencyType) and 
-                          GetCarriedCurrencyAmount(currencyType) ~= 0
+            if self:IsInWithdrawMode() then
+                canUse = DoesPlayerHaveGuildPermission(GetSelectedGuildBankId(), GUILD_PERMISSION_BANK_VIEW_GOLD) and GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) ~= 0 and 
+                            GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) ~= GetMaxPossibleCurrency(currencyType, CURRENCY_LOCATION_CHARACTER)
+            elseif self:IsInDepositMode() then
+                canUse = GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) ~= GetMaxPossibleCurrency(currencyType, CURRENCY_LOCATION_GUILD_BANK) and 
+                          GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) ~= 0
             end
 
             return canUse
         end
 
-        local shouldAddDepositWithdrawEntry = self.mode == BANKING_GAMEPAD_MODE_WITHDRAW and playerCanWithdrawGold or 
-                                              self.mode == BANKING_GAMEPAD_MODE_DEPOSIT and guildHasDepositPrivilege
+        local shouldAddDepositWithdrawEntry = (self:IsInWithdrawMode() and playerCanWithdrawGold) or (self:IsInDepositMode() and guildHasDepositPrivilege)
 
         if shouldAddDepositWithdrawEntry then
-            self:AddDepositWithdrawEntry(CURT_MONEY, CanWithdrawOrDeposit(CURT_MONEY))
+            self.goldTransferEntryData:SetEnabled(CanWithdrawOrDeposit(CURT_MONEY))
+            self.list:AddEntry("ZO_GamepadBankCurrencySelectorTemplate", self.goldTransferEntryData)
         end
 
         if shouldShowList then
-            ZO_ClearTable(self.dataBySlotIndex)
+            for i, bagId in ipairs(self.inventoryTypes) do
+                self.dataByBagAndSlotIndex[bagId] = {}
+            end
 
             local slots = self:GenerateSlotTable()
 
@@ -100,7 +111,7 @@ do
                     self.list:AddEntry(template, entry)
                 end
 
-                self.dataBySlotIndex[itemData.slotIndex] = entry
+                self.dataByBagAndSlotIndex[itemData.bagId][itemData.slotIndex] = entry
             end
         end
 
@@ -139,10 +150,13 @@ function ZO_GuildBank_Gamepad:New(...)
 end
 
 function ZO_GuildBank_Gamepad:Initialize(control)
+    self.withdrawLoadingControlShown = false
+
     GAMEPAD_GUILD_BANK_SCENE = ZO_InteractScene:New(GAMEPAD_GUILD_BANK_SCENE_NAME, SCENE_MANAGER, GUILD_BANKING_INTERACTION)
     ZO_BankingCommon_Gamepad.Initialize(self, control, GAMEPAD_GUILD_BANK_SCENE)
 
-    self:SetBankedBag(BAG_GUILDBANK)
+    self:ClearBankedBags()
+    self:AddBankedBag(BAG_GUILDBANK)
     self:SetCarriedBag(BAG_BACKPACK)
 
     local function OnOpenGuildBank()
@@ -168,7 +182,7 @@ function ZO_GuildBank_Gamepad:RemoveKeybinds()
     KEYBIND_STRIP:RemoveKeybindButtonGroup(self.currentKeybindStripDescriptor)
 end
 
-function ZO_GuildBank_Gamepad:OnSelectionChangedCallback()
+function ZO_GuildBank_Gamepad:OnTargetChangedCallback()
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.currentKeybindStripDescriptor)
 end
 
@@ -181,9 +195,19 @@ function ZO_GuildBank_Gamepad:OnWithdrawDepositStateChanged(oldState, newState)
     end
 end
 
-function ZO_GuildBank_Gamepad:SetWithdrawLoadingControlShown(shouldShow)
-    self.withdrawLoadingControl:SetHidden(not shouldShow)
-    self.withdrawList:GetControl():SetHidden(shouldShow)
+function ZO_GuildBank_Gamepad:SetWithdrawLoadingControlShown(shouldShowLoading)
+    if self.withdrawLoadingControlShown ~= shouldShowLoading then
+        self.withdrawLoadingControlShown = shouldShowLoading
+        self.withdrawLoadingControl:SetHidden(not shouldShowLoading)
+        local shouldShowWithdrawList = not shouldShowLoading
+        if not (self:GetListFragment("withdraw"):GetState() == SCENE_FRAGMENT_HIDING and shouldShowWithdrawList) then
+            --Because we change the active lists by adding and removing fragments, everytime we change tabs we are in a state where two list fragments are showing at the same. This causes problems
+            --when the bank info becomes avaiable as the withdraw fragment is hiding because it will try to activate and adds its list bindings when the deposit list is also active and has added its
+            --binds. The best way to fix this is to have these lists be scenes on a sub-scene manager so they don't overlap times when they are active. However, that means significant changes to the
+            --parametric list screen. So we handle the problem by not showing the withdraw list if the fragment is hiding. We wait until it is hidden to do that in the fragment's state change callback. 
+            self.withdrawList:GetControl():SetHidden(not shouldShowWithdrawList)
+        end
+    end
 end
 
 function ZO_GuildBank_Gamepad:CreateEventTable()
@@ -211,15 +235,9 @@ function ZO_GuildBank_Gamepad:CreateEventTable()
     local function OnInventoryUpdated(eventId, bagId, slotIndex, _, itemSoundCategory)
         self:RefreshHeaderData()
         KEYBIND_STRIP:UpdateKeybindButtonGroup(self.currentKeybindStripDescriptor)
-        self:LayoutInventoryItemTooltip(self.currentItemList:GetTargetData())
+        self:LayoutBankingEntryTooltip(self:GetTargetData())
     end
 
-    local function OnGuildBankTransferError(_, reason)
-        if reason == GUILD_BANK_ITEM_NOT_FOUND or reason == GUILD_BANK_NOT_IN_A_GUILD then
-            GAMEPAD_GUILD_BANK_ERROR:Show(reason)
-        end
-    end
-    
     local function OnGuildBankSelected()
         self.loadingGuildBank = true
         GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_LEFT_TOOLTIP)
@@ -250,19 +268,20 @@ function ZO_GuildBank_Gamepad:CreateEventTable()
         self.withdrawList:RefreshList()
     end
 
-    local function AlertAndRefreshHeader(currencyType, currentCurrency, oldCurrency, reason)       
+    local function AlertAndRefreshHeader(currencyType, currentCurrency, oldCurrency, reason)
         local alertString
         local amount
         local IS_GAMEPAD = true
+        local DONT_USE_SHORT_FORMAT = nil
 
         if reason == CURRENCY_CHANGE_REASON_GUILD_BANK_DEPOSIT then
             amount = oldCurrency - currentCurrency
-            alertString = zo_strformat(SI_GAMEPAD_BANK_GOLD_AMOUNT_DEPOSITED, ZO_CurrencyControl_FormatCurrencyAndAppendIcon(amount, useShortFormat, currencyType, IS_GAMEPAD))
+            alertString = zo_strformat(SI_GAMEPAD_BANK_GOLD_AMOUNT_DEPOSITED, ZO_CurrencyControl_FormatCurrencyAndAppendIcon(amount, DONT_USE_SHORT_FORMAT, currencyType, IS_GAMEPAD))
         elseif CURRENCY_CHANGE_REASON_GUILD_BANK_WITHDRAWAL then
             amount = currentCurrency - oldCurrency
-            alertString = zo_strformat(SI_GAMEPAD_BANK_GOLD_AMOUNT_WITHDRAWN, ZO_CurrencyControl_FormatCurrencyAndAppendIcon(amount, useShortFormat, currencyType, IS_GAMEPAD)) 
+            alertString = zo_strformat(SI_GAMEPAD_BANK_GOLD_AMOUNT_WITHDRAWN, ZO_CurrencyControl_FormatCurrencyAndAppendIcon(amount, DONT_USE_SHORT_FORMAT, currencyType, IS_GAMEPAD)) 
         end
-       
+
         if alertString then
             ZO_AlertNoSuppression(UI_ALERT_CATEGORY_ALERT, nil, alertString)
         end
@@ -274,7 +293,7 @@ function ZO_GuildBank_Gamepad:CreateEventTable()
         AlertAndRefreshHeader(CURT_MONEY, currentMoney, oldMoney, reason)
     end
 
-    local function UpdateGuildBankedMoney()
+    local function UpdateGuildBankedCurrency()
         RefreshLists()
         RefreshHeaderData()
     end
@@ -311,10 +330,9 @@ function ZO_GuildBank_Gamepad:CreateEventTable()
         [EVENT_GUILD_BANK_ITEM_ADDED] = OnGuildBankUpdated,
         [EVENT_GUILD_BANK_ITEM_REMOVED] = OnGuildBankUpdated,
         [EVENT_GUILD_BANK_UPDATED_QUANTITY] = OnGuildBankUpdated,
-        [EVENT_GUILD_BANK_TRANSFER_ERROR] = OnGuildBankTransferError,
 
         [EVENT_MONEY_UPDATE] = UpdateMoney,
-        [EVENT_GUILD_BANKED_MONEY_UPDATE] = UpdateGuildBankedMoney,
+        [EVENT_GUILD_BANKED_MONEY_UPDATE] = UpdateGuildBankedCurrency,
 
         [EVENT_GUILD_RANKS_CHANGED] = OnGuildRanksChanged,
         [EVENT_GUILD_RANK_CHANGED] = OnGuildRanksChanged,
@@ -346,8 +364,6 @@ end
 function ZO_GuildBank_Gamepad:OnDeferredInitialization()
     ZO_SharedInventory_SelectAccessibleGuildBank()
 
-    self.withdrawLoadingControl = self.control:GetNamedChild("Loading")
-
     if self.loadingGuildBank then
         GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_LEFT_TOOLTIP)
         self:SetWithdrawLoadingControlShown(true)
@@ -364,17 +380,45 @@ do
     end
 
     function ZO_GuildBank_Gamepad:InitializeLists()
-        local function OnSelectedDataCallback(...)
-            self:OnSelectionChanged(...)
+        local function OnTargetDataChangedCallback(...)
+            self:OnTargetChanged(...)
         end
 
         local SETUP_LIST_LOCALLY = true
-        local withdrawList = self:AddList("withdraw", SETUP_LIST_LOCALLY, ZO_GamepadGuildBankInventoryList, BANKING_GAMEPAD_MODE_WITHDRAW, self.bankedBag, SLOT_TYPE_GUILD_BANK_ITEM, OnSelectedDataCallback, nil, nil, nil, nil, nil, ZO_SharedGamepadEntry_OnSetup)
+        local NO_ON_SELECTED_DATA_CHANGED_CALLBACK = nil
+        local withdrawList = self:AddList("withdraw", SETUP_LIST_LOCALLY, ZO_GamepadGuildBankInventoryList, BANKING_GAMEPAD_MODE_WITHDRAW, self.bankedBags, SLOT_TYPE_GUILD_BANK_ITEM, NO_ON_SELECTED_DATA_CHANGED_CALLBACK, nil, nil, nil, nil, nil, ZO_SharedGamepadEntry_OnSetup)
+        withdrawList:SetOnTargetDataChangedCallback(OnTargetDataChangedCallback)
         self:SetWithdrawList(withdrawList)
+        local withdrawListFragment = self:GetListFragment("withdraw")
+        withdrawListFragment:RegisterCallback("StateChange", function(oldState, newState)
+            if newState == SCENE_FRAGMENT_SHOWING then
+                --The parametric list screen does not call OnTargetChanged when changing the current list which means anything that updates off of the current
+                --selection is out of date. So we run OnTargetChanged when a list shows to remedy this.
+                self:OnTargetChanged(self:GetCurrentList(), self:GetTargetData())
+            end
+            --See SetWithdrawLoadingControlShown for more info
+            if newState ~= SCENE_FRAGMENT_HIDING then
+                self.withdrawList:GetControl():SetHidden(self.withdrawLoadingControlShown)
+            end
+        end)
+        
+        local withdrawListControl = withdrawList:GetControl()
+        local withdrawContainerControl = withdrawListControl:GetParent()
+        self.withdrawLoadingControl = CreateControlFromVirtual("$(parent)Loading", withdrawContainerControl, "ZO_GamepadCenteredLoadingIconAndLabelTemplate")
+        self.withdrawLoadingControl:GetNamedChild("ContainerText"):SetText(GetString(SI_INVENTORY_RETRIEVING_ITEMS))
 
-        local depositList = self:AddList("deposit", SETUP_LIST_LOCALLY, ZO_GamepadGuildBankInventoryList, BANKING_GAMEPAD_MODE_DEPOSIT, self.carriedBag, SLOT_TYPE_ITEM, OnSelectedDataCallback, nil, nil, nil, nil, nil, ZO_SharedGamepadEntry_OnSetup)
+        local depositList = self:AddList("deposit", SETUP_LIST_LOCALLY, ZO_GamepadGuildBankInventoryList, BANKING_GAMEPAD_MODE_DEPOSIT, self.carriedBag, SLOT_TYPE_ITEM, NO_ON_SELECTED_DATA_CHANGED_CALLBACK, nil, nil, nil, nil, nil, ZO_SharedGamepadEntry_OnSetup)
+        depositList:SetOnTargetDataChangedCallback(OnTargetDataChangedCallback)
         depositList:SetItemFilterFunction(DepositItemFilter)
         self:SetDepositList(depositList)
+        local depositListFragment = self:GetListFragment("deposit")
+        depositListFragment:RegisterCallback("StateChange", function(oldState, newState)
+            if newState == SCENE_FRAGMENT_SHOWING then
+                --The parametric list screen does not call OnTargetChanged when changing the current list which means anything that updates off of the current
+                --selection is out of date. So we run OnTargetChanged when a list shows to remedy this.
+                self:OnTargetChanged(self:GetCurrentList(), self:GetTargetData())
+            end
+        end)
     end
 end
 
@@ -397,6 +441,9 @@ local function DepositItem(list)
     local targetData = list:GetTargetData()
     if targetData then
         if GetNumBagUsedSlots(BAG_GUILDBANK) < GetBagSize(BAG_GUILDBANK) then
+            local soundCategory = GetItemSoundCategory(targetData.itemData.bagId, targetData.itemData.slotIndex)
+            PlayItemSound(soundCategory, ITEM_SOUND_ACTION_PICKUP)
+
             TransferToGuildBank(targetData.itemData.bagId, targetData.itemData.slotIndex)
         else
             NotEnoughSpace(SI_GUILDBANKRESULT5)
@@ -408,6 +455,9 @@ local function WithdrawItem(list)
     local targetData = list:GetTargetData()
     if targetData then
         if GetNumBagFreeSlots(BAG_BACKPACK) > 0 then
+            local soundCategory = GetItemSoundCategory(targetData.itemData.bagId, targetData.itemData.slotIndex)
+            PlayItemSound(soundCategory, ITEM_SOUND_ACTION_PICKUP)
+
             TransferFromGuildBank(targetData.itemData.slotIndex)
         else
             NotEnoughSpace(SI_INVENTORY_ERROR_INVENTORY_FULL)
@@ -448,14 +498,7 @@ function ZO_GuildBank_Gamepad:InitializeKeybindStripDescriptors()
         alignment = KEYBIND_STRIP_ALIGN_LEFT,
         {
             keybind = "UI_SHORTCUT_PRIMARY",
-            name =  function()
-                            local currentDataType = GetCurrentDataType(self.withdrawList)
-                            if currentDataType == CURRENT_DATA_TYPE_GOLD_SELECTOR then
-                                return GetString(SI_BANK_WITHDRAW_GOLD_BIND)
-                            elseif currentDataType == CURRENT_DATA_TYPE_ITEM_DATA then
-                                return GetString(SI_BANK_WITHDRAW)
-                            end
-                        end,
+            name =  GetString(SI_BANK_WITHDRAW_BIND),
             enabled = function() return self:CanWithdraw() end,
             visible =   function()
                             local currentDataType = GetCurrentDataType(self.withdrawList)
@@ -478,14 +521,7 @@ function ZO_GuildBank_Gamepad:InitializeKeybindStripDescriptors()
         alignment = KEYBIND_STRIP_ALIGN_LEFT,
         {
             keybind = "UI_SHORTCUT_PRIMARY",
-            name =  function()
-                            local currentDataType = GetCurrentDataType(self.depositList)
-                            if currentDataType == CURRENT_DATA_TYPE_GOLD_SELECTOR then
-                                return GetString(SI_BANK_DEPOSIT_GOLD_BIND)
-                            elseif currentDataType == CURRENT_DATA_TYPE_ITEM_DATA then
-                                return GetString(SI_BANK_DEPOSIT)
-                            end
-                        end,
+            name =  GetString(SI_BANK_DEPOSIT_BIND),
             enabled = function() return self:CanDeposit() end,
             visible =   function()
                             local currentDataType = GetCurrentDataType(self.depositList)
@@ -504,30 +540,21 @@ function ZO_GuildBank_Gamepad:InitializeKeybindStripDescriptors()
     ZO_Gamepad_AddBackNavigationKeybindDescriptors(self.depositKeybindStripDescriptor, GAME_NAVIGATION_TYPE_BUTTON)
 end
 
-local function CreateModeData(name, mode, itemList, keybind)
-    return {
-        text = GetString(name),
-        mode = mode,
-        itemList = itemList,
-        keybind = keybind,
-    }
-end
-
 function ZO_GuildBank_Gamepad:CanDeposit()
-    local inventoryData = self.currentItemList:GetTargetData()
+    local inventoryData = self:GetTargetData()
     if not inventoryData then
         return false
     end
 
     local currencyType = inventoryData.currencyType
     if currencyType then
-        if self:GetMaxBankedFunds(currencyType) ~= GetGuildBankedMoney() and GetCarriedCurrencyAmount(currencyType) ~= 0 then
+        if self:GetMaxBankedFunds(currencyType) ~= GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) and GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) ~= 0 then
             return true
         else
-            if self:GetMaxBankedFunds(currencyType) == GetGuildBankedMoney() then
+            if self:GetMaxBankedFunds(currencyType) == GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) then
                 return false, GetString("SI_GUILDBANKRESULT", GUILD_BANK_NO_SPACE_LEFT) -- "Your guild bank is full"
-            elseif GetCarriedCurrencyAmount(currencyType) == 0 then
-                return false, GetString(SI_INVENTORY_ERROR_NO_PLAYER_FUNDS) -- "No player funds"
+            elseif GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) == 0 then
+                return false, GetString(SI_GAMEPAD_INVENTORY_ERROR_NO_PLAYER_FUNDS) -- "No player funds"
             end
         end
     elseif GetNumBagFreeSlots(BAG_GUILDBANK) > 0 then
@@ -538,20 +565,22 @@ function ZO_GuildBank_Gamepad:CanDeposit()
 end
 
 function ZO_GuildBank_Gamepad:CanWithdraw()
-    local inventoryData = self.currentItemList:GetTargetData()
+    local inventoryData = self:GetTargetData()
     if not inventoryData then
         return false
     end
 
     local currencyType = inventoryData.currencyType
     if currencyType then
-        if GetGuildBankedMoney() ~= 0 and GetCarriedCurrencyAmount(currencyType) ~= GetMaxCarriedCurrencyAmount(currencyType) then
+        if not DoesPlayerHaveGuildPermission(GetSelectedGuildBankId(), GUILD_PERMISSION_BANK_VIEW_GOLD) then
+            return false
+        elseif GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) ~= 0 and GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) ~= GetMaxPossibleCurrency(currencyType, CURRENCY_LOCATION_CHARACTER) then
             return true
         else
-            if GetCarriedCurrencyAmount(currencyType) == GetMaxCarriedCurrencyAmount(currencyType) then
+            if GetCurrencyAmount(currencyType, CURRENCY_LOCATION_CHARACTER) == GetMaxPossibleCurrency(currencyType, CURRENCY_LOCATION_CHARACTER) then
                 return false, GetString(SI_INVENTORY_ERROR_INVENTORY_FULL) -- "Your inventory is full"
-            elseif GetGuildBankedMoney() == 0 then
-                return false, GetString(SI_INVENTORY_ERROR_NO_BANK_FUNDS) -- "No bank funds"
+            elseif GetCurrencyAmount(currencyType, CURRENCY_LOCATION_GUILD_BANK) == 0 then
+                return false, GetString(SI_GAMEPAD_INVENTORY_ERROR_NO_BANK_FUNDS) -- "No bank funds"
             end
         end
     elseif GetNumBagFreeSlots(BAG_BACKPACK) > 0 then
@@ -562,43 +591,50 @@ function ZO_GuildBank_Gamepad:CanWithdraw()
 end
 
 function ZO_GuildBank_Gamepad:ConfirmDeposit()
-    local inventoryData = self.currentItemList:GetTargetData()
+    local inventoryData = self:GetTargetData()
     if inventoryData.currencyType then
-        self:SetMaxAndShowSelector(GetMaxGuildBankDeposit)
+        self:SetMaxAndShowSelector(function(currencyType) return GetMaxCurrencyTransfer(currencyType, CURRENCY_LOCATION_CHARACTER, CURRENCY_LOCATION_GUILD_BANK) end)
     else
         DepositItem(self.depositList)
     end
 end
 
 function ZO_GuildBank_Gamepad:ConfirmWithdrawal()
-    local inventoryData = self.currentItemList:GetTargetData()
+    local inventoryData = self:GetTargetData()
     if inventoryData.currencyType then
-        self:SetMaxAndShowSelector(GetMaxGuildBankWithdrawal)
+        self:SetMaxAndShowSelector(function(currencyType) return GetMaxCurrencyTransfer(currencyType, CURRENCY_LOCATION_GUILD_BANK, CURRENCY_LOCATION_CHARACTER) end)
     else
         WithdrawItem(self.withdrawList)
     end
 end
 
 function ZO_GuildBank_Gamepad:SetMaxAndShowSelector(maxInputFunction)
-    KEYBIND_STRIP:RemoveKeybindButtonGroup(self.currentKeybindStripDescriptor)
     self:SetMaxInputFunction(maxInputFunction)
     self:ShowSelector()
 end
 
 function ZO_GuildBank_Gamepad:GetWithdrawMoneyAmount()
-    return GetGuildBankedMoney()
+    return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_GUILD_BANK)
+end
+
+function ZO_GuildBank_Gamepad:GetWithdrawMoneyOptions()
+    return ZO_BANKING_CURRENCY_LABEL_OPTIONS
+end
+
+function ZO_GuildBank_Gamepad:DoesObfuscateWithdrawAmount()
+    return not DoesPlayerHaveGuildPermission(GetSelectedGuildBankId(), GUILD_PERMISSION_BANK_VIEW_GOLD)
 end
 
 function ZO_GuildBank_Gamepad:GetMaxBankedFunds(currencyType)
-    return GetMaxGuildBankCurrencyAmount(currencyType)
+    return GetMaxPossibleCurrency(currencyType, CURRENCY_LOCATION_GUILD_BANK)
 end
 
 function ZO_GuildBank_Gamepad:GetDepositMoneyAmount()
-    return GetCarriedCurrencyAmount(CURT_MONEY)
+    return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)
 end
 
 function ZO_GuildBank_Gamepad:DepositFunds(currencyType, amount)
-    DepositCurrencyIntoGuildBank(currencyType, amount)
+    TransferCurrency(currencyType, amount, CURRENCY_LOCATION_CHARACTER, CURRENCY_LOCATION_GUILD_BANK)
 end
 
 function ZO_GuildBank_Gamepad:WithdrawFunds(currencyType, amount)
@@ -638,30 +674,12 @@ function ZO_GuildBank_Gamepad:OnRefreshHeaderData()
     ZO_GUILD_NAME_FOOTER_FRAGMENT:SetGuildName(GetGuildName(GetSelectedGuildBankId()))
 end
 
-local function GuildBankEntryHeaderTemplateSetup(control, data, selected, selectedDuringRebuild, enabled, activated)
-    control:SetText(data.bestGamepadItemCategoryName)
-end
-
-local SORT_KEYS =
-{
-    bestGamepadItemCategoryName = { tiebreaker = "name" },
-    name = { tiebreaker = "requiredLevel" },
-    requiredLevel = { tiebreaker = "requiredChampionPoints", isNumeric = true },
-    requiredChampionPoints = { tiebreaker = "iconFile", isNumeric = true },
-    iconFile = { tiebreaker = "uniqueId" },
-    uniqueId = { isId64 = true },
-}
-
-local function ItemSort(item1, item2)
-    return ZO_TableOrderingFunction(item1, item2, "bestGamepadItemCategoryName", SORT_KEYS, ZO_SORT_ORDER_UP)
-end
-
 function ZO_GuildBank_Gamepad:UpdateGuildBankList()
     self.withdrawList:RefreshList()
 end
 
 function ZO_GuildBank_Gamepad:SetSelectedInventoryData(_, inventoryData)
-    self:LayoutInventoryItemTooltip(inventoryData)
+    self:LayoutBankingEntryTooltip(inventoryData)
 end
 
 function ZO_GuildBank_Gamepad:ClearAllGuildBankItems()

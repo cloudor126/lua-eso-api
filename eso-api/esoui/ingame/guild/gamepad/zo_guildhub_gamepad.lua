@@ -9,10 +9,18 @@ local GAMEPAD_GUILD_LIST_ENTRY = "ZO_GamepadSubMenuEntryTemplate"
 
 local GAMEPAD_CREATE_GUILD_LIST_ENTRY = "ZO_GamepadSubMenuEntryTemplate"
 
-local GUILD_HUB_DISPLAY_MODE = 
-{  
+local GUILD_HUB_DISPLAY_MODE =
+{
     GUILDS_LIST = 1,
     SINGLE_GUILD_LIST = 2,
+}
+
+local GUILD_HUB_SINGLE_GUILD_LIST_OPTION = {
+    ROSTER = 1,
+    RANKS = 2,
+    RECRUITMENT = 3,
+    HERALDRY = 4,
+    HISTORY = 5,
 }
 
 local function SetupRequestEntry(control, data, selected, reselectingDuringRebuild, enabled, active)
@@ -26,7 +34,11 @@ local function SetupRequestEntry(control, data, selected, reselectingDuringRebui
     ZO_SharedGamepadEntry_OnSetup(control, data, selected, reselectingDuringRebuild, isValid, active)
 end
 
-local ZO_GamepadGuildHub = ZO_Gamepad_ParametricList_Screen:Subclass()
+local function EqualityFunction(leftData, rightData)
+    return leftData.optionId == rightData.optionId 
+end
+
+ZO_GamepadGuildHub = ZO_Gamepad_ParametricList_Screen:Subclass()
 
 function ZO_GamepadGuildHub_OnInitialize(control)
     GAMEPAD_GUILD_HUB = ZO_GamepadGuildHub:New(control)
@@ -40,60 +52,18 @@ function ZO_GamepadGuildHub:New(...)
 end
 
 function ZO_GamepadGuildHub:Initialize(control)
-    if not self.initialized then
-        self.initialized = true
+    ZO_Gamepad_ParametricList_Screen.Initialize(self, control)
 
-        self.control = control
-        ZO_Gamepad_ParametricList_Screen.Initialize(self, control)
+    GAMEPAD_GUILD_HUB_SCENE = ZO_Scene:New(GAMEPAD_GUILD_HUB_SCENE_NAME, SCENE_MANAGER)
+    GAMEPAD_GUILD_HUB_SCENE:RegisterCallback("StateChange", function(oldState, newState)
+        if newState == SCENE_SHOWING then
+            self:OnSceneShowing()
+        elseif newState == SCENE_HIDDEN then
+            self:OnSceneHidden()
+        end
 
-        GAMEPAD_GUILD_HUB_SCENE = ZO_Scene:New(GAMEPAD_GUILD_HUB_SCENE_NAME, SCENE_MANAGER)
-        GAMEPAD_GUILD_HUB_SCENE:RegisterCallback("StateChange", function(oldState, newState)
-            if newState == SCENE_SHOWING then
-                self.displayMode = self.enterInSingleGuildList and GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST or GUILD_HUB_DISPLAY_MODE.GUILDS_LIST
-                self.enterInSingleGuildList = false
-
-                self.displayedGuildId = nil
-                self.displayedCreateGuild = nil
-                self.filteredGuildId = nil
-
-                self:PerformDeferredInitializationHub()
-                self:Update()
-
-                local OnRefreshMatchGuildId = function(_, guildId) 
-                    local selectedData = self.guildList:GetTargetData()
-				    if(self.optionsGuildId == guildId) then 
-					    self:Update()
-				    end
-			    end
-
-                self.control:RegisterForEvent(EVENT_GUILD_DATA_LOADED, function() self:Update() end)
-                self.control:RegisterForEvent(EVENT_PLAYER_STATUS_CHANGED, function() self:Update() end)
-                self.control:RegisterForEvent(EVENT_LEVEL_UPDATE, function() self:Update() end)
-                self.control:AddFilterForEvent(EVENT_LEVEL_UPDATE, REGISTER_FILTER_UNIT_TAG, "player")
-                self.control:RegisterForEvent(EVENT_GUILD_MOTD_CHANGED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_DESCRIPTION_CHANGED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_RANK_CHANGED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_RANKS_CHANGED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_MEMBER_RANK_CHANGED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_KEEP_CLAIM_UPDATED, OnRefreshMatchGuildId)
-                self.control:RegisterForEvent(EVENT_GUILD_TRADER_HIRED_UPDATED, OnRefreshMatchGuildId)
-                TriggerTutorial(TUTORIAL_TRIGGER_GUILDS_HOME_OPENED)
-            elseif newState == SCENE_HIDDEN then
-                self.control:UnregisterForEvent(EVENT_GUILD_DATA_LOADED)
-                self.control:UnregisterForEvent(EVENT_PLAYER_STATUS_CHANGED)
-                self.control:UnregisterForEvent(EVENT_LEVEL_UPDATE)
-                self.control:UnregisterForEvent(EVENT_GUILD_MOTD_CHANGED)
-                self.control:UnregisterForEvent(EVENT_GUILD_DESCRIPTION_CHANGED)
-                self.control:UnregisterForEvent(EVENT_GUILD_RANK_CHANGED)
-                self.control:UnregisterForEvent(EVENT_GUILD_RANKS_CHANGED)
-                self.control:UnregisterForEvent(EVENT_GUILD_MEMBER_RANK_CHANGED)
-                self.control:UnregisterForEvent(EVENT_GUILD_KEEP_CLAIM_UPDATED)
-                self.control:UnregisterForEvent(EVENT_GUILD_TRADER_HIRED_UPDATED)
-            end
-            
-            ZO_Gamepad_ParametricList_Screen.OnStateChanged(self, oldState, newState)
-        end)
-    end
+        ZO_Gamepad_ParametricList_Screen.OnStateChanged(self, oldState, newState)
+    end)
 end
 
 ------------
@@ -101,8 +71,8 @@ end
 ------------
 
 local function SetupOptionsList(list)
-    list:AddDataTemplate(GAMEPAD_OPTIONS_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadMenuEntryHeaderTemplate")
-    list:AddDataTemplateWithHeader(GAMEPAD_OPTIONS_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadMenuEntryHeaderTemplate")
+    list:AddDataTemplate(GAMEPAD_OPTIONS_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, EqualityFunction, "ZO_GamepadMenuEntryHeaderTemplate")
+    list:AddDataTemplateWithHeader(GAMEPAD_OPTIONS_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, EqualityFunction, "ZO_GamepadMenuEntryHeaderTemplate")
 end
 
 function ZO_GamepadGuildHub:PerformDeferredInitializationHub()
@@ -113,6 +83,7 @@ function ZO_GamepadGuildHub:PerformDeferredInitializationHub()
     self.singleGuildList = self:AddList("SingleGuild", SetupOptionsList)
 
     self:InitializeHeader()
+    self:InitializeGuildBrowserExplanation()
     self:InitializeCreateGuildExplanation()
     self:InitializeCreateGuildDialog()
     self:InitializeChangeAboutUsDialog()
@@ -122,17 +93,64 @@ end
 function ZO_GamepadGuildHub:PerformUpdate()
     self:UpdateLists()
     self:UpdateContent()
-    
-    if(self.optionsGuildId ~= nil) then
+
+    if self.optionsGuildId ~= nil then
         self:ValidateOptionsGuildId()
     end
 end
 
+function ZO_GamepadGuildHub:OnSceneShowing(oldState, newState)
+    self.displayMode = self.enterInSingleGuildList and GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST or GUILD_HUB_DISPLAY_MODE.GUILDS_LIST
+    self.enterInSingleGuildList = false
+
+    self.displayedGuildId = nil
+    self.displayedCreateGuild = nil
+    self.displayGuildBrowser = nil
+    self.filteredGuildId = nil
+
+    self:PerformDeferredInitializationHub()
+    self:Update()
+
+    local OnRefreshMatchGuildId = function(_, guildId)
+        if self.optionsGuildId == guildId then
+            self:Update()
+        end
+    end
+
+    local control = self.control
+    control:RegisterForEvent(EVENT_GUILD_DATA_LOADED, function() self:Update() end)
+    control:RegisterForEvent(EVENT_PLAYER_STATUS_CHANGED, function() self:Update() end)
+    control:RegisterForEvent(EVENT_LEVEL_UPDATE, function() self:Update() end)
+    control:AddFilterForEvent(EVENT_LEVEL_UPDATE, REGISTER_FILTER_UNIT_TAG, "player")
+    control:RegisterForEvent(EVENT_GUILD_MOTD_CHANGED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_DESCRIPTION_CHANGED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_RANK_CHANGED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_RANKS_CHANGED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_MEMBER_RANK_CHANGED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_KEEP_CLAIM_UPDATED, OnRefreshMatchGuildId)
+    control:RegisterForEvent(EVENT_GUILD_TRADER_HIRED_UPDATED, OnRefreshMatchGuildId)
+    TriggerTutorial(TUTORIAL_TRIGGER_GUILDS_HOME_OPENED)
+end
+
+function ZO_GamepadGuildHub:OnSceneHidden(oldState, newState)
+    local control = self.control
+    control:UnregisterForEvent(EVENT_GUILD_DATA_LOADED)
+    control:UnregisterForEvent(EVENT_PLAYER_STATUS_CHANGED)
+    control:UnregisterForEvent(EVENT_LEVEL_UPDATE)
+    control:UnregisterForEvent(EVENT_GUILD_MOTD_CHANGED)
+    control:UnregisterForEvent(EVENT_GUILD_DESCRIPTION_CHANGED)
+    control:UnregisterForEvent(EVENT_GUILD_RANK_CHANGED)
+    control:UnregisterForEvent(EVENT_GUILD_RANKS_CHANGED)
+    control:UnregisterForEvent(EVENT_GUILD_MEMBER_RANK_CHANGED)
+    control:UnregisterForEvent(EVENT_GUILD_KEEP_CLAIM_UPDATED)
+    control:UnregisterForEvent(EVENT_GUILD_TRADER_HIRED_UPDATED)
+end
+
 function ZO_GamepadGuildHub:UpdateLists()
-    if(self.displayMode == GUILD_HUB_DISPLAY_MODE.GUILDS_LIST) then
+    if self.displayMode == GUILD_HUB_DISPLAY_MODE.GUILDS_LIST then
         self:SetCurrentList(self.guildList)
         self:RefreshGuildList()
-    elseif(self.displayMode == GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST) then
+    elseif self.displayMode == GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST then
         self:SetCurrentList(self.singleGuildList)
         self:RefreshSingleGuildList()
     end
@@ -142,13 +160,14 @@ function ZO_GamepadGuildHub:UpdateContent()
     self:RefreshHeader()
 
     self:RefreshCreateGuildExplanation()
+    self:RefreshGuildBrowserExplanation()
     self:RefreshGuildInfo()
 
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
 end
 
 function ZO_GamepadGuildHub:ValidateOptionsGuildId()
-    if(not ZO_ValidatePlayerGuildId(self.optionsGuildId)) then
+    if not ZO_ValidatePlayerGuildId(self.optionsGuildId) then
         self.optionsGuildId = nil
         self:ActivateMainList()
     end
@@ -163,14 +182,14 @@ function ZO_GamepadGuildHub:InitializeChangeMotdDialog()
     local parametricDialog = ZO_GenericGamepadDialog_GetControl(GAMEPAD_DIALOGS.PARAMETRIC)
 
     local function UpdateSelectedMotd(aboutUs)
-        if(self.selectedMotd ~= aboutUs) then
+        if self.selectedMotd ~= aboutUs then
             self.selectedMotd = aboutUs
         end
     end
 
     local function ReleaseDialog()
         ZO_Dialogs_ReleaseDialogOnButtonPress(dialogName)
-    end 
+    end
 
     local function SetupDialog(dialog)
         self.selectedMotd = nil
@@ -211,7 +230,7 @@ function ZO_GamepadGuildHub:InitializeChangeMotdDialog()
 
                         ZO_EditDefaultText_Initialize(control.editBoxControl, GetString(SI_GAMEPAD_GUILD_MOTD_EMPTY_TEXT))
                         control.editBoxControl:SetMaxInputChars(MAX_GUILD_MOTD_LENGTH)
-                        control.editBoxControl:SetText(self.selectedMotd)  
+                        control.editBoxControl:SetText(self.selectedMotd)
                     end,
                 },
             },
@@ -248,10 +267,10 @@ function ZO_GamepadGuildHub:InitializeChangeMotdDialog()
                 callback = function(dialog)
                     local selectedData = dialog.entryList:GetTargetData()
                     local targetControl = dialog.entryList:GetTargetControl()
-                    if(selectedData.nameField and targetControl) then
+                    if selectedData.nameField and targetControl then
                         targetControl.editBoxControl:TakeFocus()
-                    elseif(selectedData.finishedSelector) then
-                        if(self.selectedMotd and self.selectedMotd ~= "") then
+                    elseif selectedData.finishedSelector then
+                        if self.selectedMotd and self.selectedMotd ~= "" then
                             SetGuildMotD(self.optionsGuildId, self.selectedMotd)
                         end
 
@@ -262,7 +281,7 @@ function ZO_GamepadGuildHub:InitializeChangeMotdDialog()
                     local selectedData = parametricDialog.entryList:GetTargetData()
                     local enabled = true
 
-                    if(selectedData.finishedSelector) then
+                    if selectedData.finishedSelector then
                         enabled = self.selectedMotd and self.selectedMotd ~= ""
                     end
 
@@ -289,7 +308,7 @@ function ZO_GamepadGuildHub:InitializeChangeAboutUsDialog()
 
     local function ReleaseDialog()
         ZO_Dialogs_ReleaseDialogOnButtonPress(dialogName)
-    end 
+    end
 
     local function SetupDialog(dialog)
         self.selectedAboutUs = nil
@@ -318,7 +337,7 @@ function ZO_GamepadGuildHub:InitializeChangeAboutUsDialog()
 
                 templateData = {
                     nameField = true,
-                    textChangedCallback = function(control) 
+                    textChangedCallback = function(control)
                         local newAboutUs = control:GetText()
                         UpdateSelectedAboutUs(newAboutUs)
                     end,
@@ -367,10 +386,10 @@ function ZO_GamepadGuildHub:InitializeChangeAboutUsDialog()
                 callback = function(dialog)
                     local selectedData = dialog.entryList:GetTargetData()
                     local targetControl = dialog.entryList:GetTargetControl()
-                    if(selectedData.nameField and targetControl) then
+                    if selectedData.nameField and targetControl then
                         targetControl.editBoxControl:TakeFocus()
-                    elseif(selectedData.finishedSelector) then
-                        if(self.selectedAboutUs and self.selectedAboutUs ~= "") then
+                    elseif selectedData.finishedSelector then
+                        if self.selectedAboutUs and self.selectedAboutUs ~= "" then
                             SetGuildDescription(self.optionsGuildId, self.selectedAboutUs)
                         end
 
@@ -381,7 +400,7 @@ function ZO_GamepadGuildHub:InitializeChangeAboutUsDialog()
                     local selectedData = parametricDialog.entryList:GetTargetData()
                     local enabled = true
 
-                    if(selectedData.finishedSelector) then
+                    if selectedData.finishedSelector then
                         enabled = self.selectedAboutUs and self.selectedAboutUs ~= ""
                     end
 
@@ -405,7 +424,7 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
         self.selectedName = name
         self.guildNameViolations = { IsValidGuildName(self.selectedName) }
         self.noViolations = #self.guildNameViolations == 0
-            
+
         if (not self.noViolations) and self.createGuildEditBoxSelected then
             local HIDE_UNVIOLATED_RULES = true
             self.creatingGuildInfoLabel:SetText(ZO_ValidNameInstructions_GetViolationString(self.selectedName, self.guildNameViolations, HIDE_UNVIOLATED_RULES))
@@ -414,7 +433,7 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
             self.creatingGuildInfoLabel:SetText(self.createGuildWithSelectedAllianceMessageText)
             self.creatingGuildTitle = self.noViolations and name or defaultTitle
         end
-                        
+
         KEYBIND_STRIP:UpdateCurrentKeybindButtonGroups()
         self:RefreshHeader()
     end
@@ -481,40 +500,28 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
             -- alliance icon selector entry
             {
                 header = GetString(SI_GAMEPAD_GUILD_CREATE_DIALOG_ALLIANCE_SELECTOR_HEADER),
-                headerTemplate = "ZO_GamepadMenuEntryFullWidthHeaderTemplate",
-                template = "ZO_Gamepad_Dropdown_Item_FullWidth",
+                template = "ZO_GamepadDropdownItem",
 
                 templateData = {
                     setup = function(control, data, selected, reselectingDuringRebuild, enabled, active)
-                        local dropDown = ZO_ComboBox_ObjectFromContainer(control:GetNamedChild("Dropdown"))
+                        local dropDown = control.dropdown
                         self.allianceDropDown = dropDown
 
-                        if not dropDown.alliancesInitialized then
-                            dropDown:SetSortsItems(false)
-                            dropDown:ClearItems()
+                        dropDown:SetSortsItems(false)
+                        dropDown:ClearItems()
 
-                            for i = 1, NUM_ALLIANCES do
-                                local allianceText = zo_iconTextFormat(GetLargeAllianceSymbolIcon(i), 32, 32, GetAllianceName(i))
-                                local entry = dropDown:CreateItemEntry(allianceText, OnAllianceSelected)
-                                entry.allianceIndex = i
-                                dropDown:AddItem(entry)
-                            end
-
-                            dropDown.alliancesInitialized = true
+                        for i = 1, NUM_ALLIANCES do
+                            local allianceText = zo_iconTextFormat(GetLargeAllianceSymbolIcon(i), 32, 32, GetAllianceName(i))
+                            local entry = dropDown:CreateItemEntry(allianceText, OnAllianceSelected)
+                            entry.allianceIndex = i
+                            dropDown:AddItem(entry)
                         end
-
-                        local function OnDropdownDeactivated()
-                            KEYBIND_STRIP:PopKeybindGroupState()
-                        end
-
-                        dropDown:SetDeactivatedCallback(OnDropdownDeactivated)
 
                         dropDown:SelectItemByIndex(self.selectedAllianceIndex)
                         dropDown:SetHighlightedItem(self.selectedAllianceIndex)
                     end,
                     
                     callback = function()
-                        KEYBIND_STRIP:PushKeybindGroupState() -- This is just to hide the keybinds (don't need to store the state)
                         self.allianceDropDown:Activate()
                         self.allianceDropDown:SetHighlightedItem(self.selectedAllianceIndex)
                     end
@@ -525,7 +532,7 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
             {
                 template = "ZO_Gamepad_GenericDialog_Parametric_TextFieldItem",
                 templateData = {
-                    textChangedCallback = function(control) 
+                    textChangedCallback = function(control)
                         local newName = control:GetText()
                         UpdateSelectedName(newName)
 
@@ -539,7 +546,7 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
                     setup = function(control, data, selected, reselectingDuringRebuild, enabled, active)
                         control.editBoxControl.textChangedCallback = data.textChangedCallback
 
-                        if(self.selectedName == "") then
+                        if self.selectedName == "" then
                             ZO_EditDefaultText_Initialize(control.editBoxControl, GetString(SI_GUILD_CREATE_DIALOG_NAME_DEFAULT_TEXT))
                         end
 
@@ -600,6 +607,14 @@ function ZO_GamepadGuildHub:InitializeCreateGuildDialog()
             {
                 keybind = "DIALOG_PRIMARY",
                 text = GetString(SI_GAMEPAD_SELECT_OPTION),
+                enabled = function(dialog)
+                    local targetData = dialog.entryList:GetTargetData()
+                    if targetData and targetData.validInput then
+                        return targetData.validInput()
+                    end
+
+                    return true
+                end,
                 callback = function(dialog)
                     local targetData = dialog.entryList:GetTargetData()
                     if targetData and targetData.callback then
@@ -621,20 +636,22 @@ end
 
 function ZO_GamepadGuildHub:RefreshGuildInfo()
     local targetData = self.guildList:GetTargetData()
-    if(targetData == nil or targetData.createGuild) then
+    if targetData == nil or targetData.isCreateGuild or targetData.isGuildBrowser then
         GAMEPAD_GUILD_HUB_SCENE:RemoveFragment(GUILD_INFO_GAMEPAD_FRAGMENT)
+        GAMEPAD_GUILD_HUB_SCENE:RemoveFragment(GAMEPAD_GENERIC_FOOTER_FRAGMENT)
     else
-        if(self.displayedGuildId == nil) then
-            if(targetData and targetData.guildId ~= nil) then
+        if self.displayedGuildId == nil then
+            if targetData and targetData.guildId ~= nil then
                 GAMEPAD_GUILD_INFO:SetGuildId(targetData.guildId)
             end
         end
-        
+
+        GAMEPAD_GUILD_HUB_SCENE:AddFragment(GAMEPAD_GENERIC_FOOTER_FRAGMENT)
         GAMEPAD_GUILD_HUB_SCENE:AddFragment(GUILD_INFO_GAMEPAD_FRAGMENT)
         GAMEPAD_GUILD_INFO:RefreshScreen()
     end
 end
-                   
+
 -------------------------------
 -- Guild Create Explaination --
 -------------------------------
@@ -651,9 +668,7 @@ end
 
 function ZO_GamepadGuildHub:RefreshCreateGuildExplanation()
     local targetData = self.guildList:GetTargetData()
-    local shouldShowCreateGuildExplanation = not targetData or targetData.createGuild
-
-    self.contentHeader:SetHidden(not shouldShowCreateGuildExplanation)
+    local shouldShowCreateGuildExplanation = not targetData or targetData.isCreateGuild
 
     if shouldShowCreateGuildExplanation and not self.creatingGuild then
         GAMEPAD_GUILD_HUB_SCENE:AddFragment(self.createGuildExplainationFragment)
@@ -661,7 +676,30 @@ function ZO_GamepadGuildHub:RefreshCreateGuildExplanation()
         GAMEPAD_GUILD_HUB_SCENE:RemoveFragment(self.createGuildExplainationFragment)
     end
 end
-                            
+
+-------------------------------
+-- Guild Browser Explanation --
+-------------------------------
+
+function ZO_GamepadGuildHub:InitializeGuildBrowserExplanation()
+    local hubContainer = self.control:GetNamedChild("RightPaneContainer")
+
+    self.guildBrowserExplanationControl = hubContainer:GetNamedChild("GuildBrowserExplanation")
+
+    self.guildBrowserExplainationFragment = ZO_FadeSceneFragment:New(self.guildBrowserExplanationControl, true)
+end
+
+function ZO_GamepadGuildHub:RefreshGuildBrowserExplanation()
+    local targetData = self.guildList:GetTargetData()
+    local shouldShowGuildBrowserExplanation = not targetData or targetData.isGuildBrowser
+
+    if shouldShowGuildBrowserExplanation and not self.isGuildBrowser then
+        GAMEPAD_GUILD_HUB_SCENE:AddFragment(self.guildBrowserExplainationFragment)
+    else
+        GAMEPAD_GUILD_HUB_SCENE:RemoveFragment(self.guildBrowserExplainationFragment)
+    end
+end
+
 ------------
 -- Header --
 ------------
@@ -680,12 +718,43 @@ function ZO_GamepadGuildHub:InitializeHeader()
         if self.creatingGuild then
             return self.creatingGuildTitle
         else
-            return GetString(SI_GUILD_CREATE_TITLE)
+            local targetData = self.guildList:GetTargetData()
+            if targetData then
+                if targetData.isCreateGuild then
+                    return GetString(SI_GUILD_CREATE_TITLE)
+                elseif targetData.isGuildBrowser then
+                    return GetString(SI_GAMEPAD_GUILD_GUILD_FINDER)
+                end
+            end
+        end
+    end
+
+    local function GenerateContentHeaderDataHeaderText()
+        if not self.creatingGuild then
+            local targetData = self.guildList:GetTargetData()
+            if targetData then
+                if not targetData.isCreateGuild then
+                    return GetString(SI_GAMEPAD_GUILD_FINDER_APPLICATIONS_HEADER)
+                end
+            end
+        end
+    end
+
+    local function GenerateContentHeaderDataText()
+        if not self.creatingGuild then
+            local targetData = self.guildList:GetTargetData()
+            if targetData then
+                if not targetData.isCreateGuild then
+                    return zo_strformat(SI_GUILD_BROWSER_APPLICATIONS_QUANTITY_FORMATTER, GetGuildFinderNumAccountApplications(), MAX_GUILD_FINDER_APPLICATIONS_PER_ACCOUNT)
+                end
+            end
         end
     end
 
     self.contentHeaderData = {
         titleText = GenerateContentHeaderText,
+        data1HeaderText = GenerateContentHeaderDataHeaderText,
+        data1Text = GenerateContentHeaderDataText,
     }
 end
 
@@ -693,8 +762,12 @@ function ZO_GamepadGuildHub:RefreshHeader()
     ZO_GamepadGenericHeader_Refresh(self.header, self.headerData)
 
     ZO_GamepadGenericHeader_Refresh(self.contentHeader, self.contentHeaderData)
+
+    local targetData = self.guildList:GetTargetData()
+    local shouldShowHeader = not targetData or targetData.isCreateGuild or targetData.isGuildBrowser
+    self.contentHeader:SetHidden(not shouldShowHeader)
 end
-                                              
+
 --------------------
 -- Key Bind Strip --
 --------------------
@@ -709,15 +782,17 @@ function ZO_GamepadGuildHub:InitializeKeybindStripDescriptors()
             keybind = "UI_SHORTCUT_PRIMARY",
 
             callback = function()
-                if(self.displayMode == GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST) then
+                if self.displayMode == GUILD_HUB_DISPLAY_MODE.SINGLE_GUILD_LIST then
                     local targetData = self.singleGuildList:GetTargetData()
-                    if(targetData.selectCallback ~= nil) then
+                    if targetData.selectCallback ~= nil then
                         targetData.selectCallback()
                     end
                 else
                     local targetData = self.guildList:GetTargetData()
-                    if(targetData.createGuild == true) then
+                    if targetData.isCreateGuild == true then
                         ZO_Dialogs_ShowGamepadDialog(GUILD_CREATE_GAMEPAD_DIALOG)
+                    elseif targetData.isGuildBrowser == true then
+                        SCENE_MANAGER:Push("guildBrowserGamepad")
                     else
                         self.optionsGuildId = targetData.guildId
                         self:ActivateSingleGuildList()
@@ -741,7 +816,7 @@ function ZO_GamepadGuildHub:InitializeKeybindStripDescriptors()
             keybind = "UI_SHORTCUT_NEGATIVE",
 
             callback = function()
-                if(self.displayMode ~= GUILD_HUB_DISPLAY_MODE.GUILDS_LIST) then
+                if self.displayMode ~= GUILD_HUB_DISPLAY_MODE.GUILDS_LIST then
                     self:ActivateMainList()
                     PlaySound(SOUNDS.GAMEPAD_MENU_BACK)
                 else
@@ -758,9 +833,9 @@ end
 -- Option List --
 -----------------
 function ZO_GamepadGuildHub:SetupList(list)
-    list:AddDataTemplate(GAMEPAD_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
-    list:AddDataTemplateWithHeader(GAMEPAD_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadMenuEntryHeaderTemplate")
-    list:AddDataTemplateWithHeader(GAMEPAD_CREATE_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadMenuEntryHeaderTemplate")
+    list:AddDataTemplate(GAMEPAD_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, EqualityFunction)
+    list:AddDataTemplateWithHeader(GAMEPAD_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, EqualityFunction, "ZO_GamepadMenuEntryHeaderTemplate")
+    list:AddDataTemplateWithHeader(GAMEPAD_CREATE_GUILD_LIST_ENTRY, ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, EqualityFunction, "ZO_GamepadMenuEntryHeaderTemplate")
 end
 
 do
@@ -770,13 +845,10 @@ do
     local ICON_LEAVE = "EsoUI/Art/Guild/Gamepad/gp_guild_menuIcon_leaveGuild.dds"
 
     function ZO_GamepadGuildHub:AddOptionsToSingleGuildList()
-        local data = nil
-    
         local firstEntry = true
-    
         local function AddEntry(data)
-            if(firstEntry) then
-                data:SetHeader(GetString(SI_GAMEPAD_GUILD_OPTIONS_LIST_HEADER)) 
+            if firstEntry then
+                data:SetHeader(GetString(SI_GAMEPAD_GUILD_OPTIONS_LIST_HEADER))
                 self.singleGuildList:AddEntryWithHeader(GAMEPAD_OPTIONS_LIST_ENTRY, data)
                 firstEntry = false
             else
@@ -784,10 +856,11 @@ do
             end
             data:SetIconTintOnSelection(true)
         end
-        
+
+        local data
         -- Options
         local platform = GetUIPlatform()
-        if(DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_INVITE)) then
+        if DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_INVITE) then
             data = ZO_GamepadEntryData:New(GetString(SI_GUILD_INVITE_ACTION), ICON_INVITE)
             data.guildId = self.optionsGuildId
             data.selectCallback = function(optionsSelectedData)
@@ -800,7 +873,7 @@ do
                 end
             end
             AddEntry(data)
-    
+
             if platform == UI_PLATFORM_XBOX  and GetNumberConsoleFriends() > 0 then
                 data = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_ADD_FRIEND), ICON_INVITE)
                 data.guildId = self.optionsGuildId
@@ -810,8 +883,8 @@ do
                 AddEntry(data)
             end
         end
-    
-        if(DoesGuildHaveClaimedKeep(self.optionsGuildId) and DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_RELEASE_AVA_RESOURCE)) then
+
+        if DoesGuildHaveClaimedKeep(self.optionsGuildId) and DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_RELEASE_AVA_RESOURCE) then
             data = ZO_GamepadEntryData:New(GetString(SI_GUILD_RELEASE_KEEP), ICON_RELEASE_OWNERSHIP)
             data.guildId = self.optionsGuildId
             data.selectCallback = function(optionsSelectedData)
@@ -820,8 +893,8 @@ do
             end
             AddEntry(data)
         end
-    
-        if(DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_SET_MOTD)) then
+
+        if DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_SET_MOTD) then
             data = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_INFO_CHANGE_MOTD), ICON_CHANGE_MESSAGE)
             data.guildId = self.optionsGuildId
             data.selectCallback = function(optionsSelectedData)
@@ -829,8 +902,8 @@ do
             end
             AddEntry(data)
         end
-    
-        if(DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_DESCRIPTION_EDIT)) then
+
+        if DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_DESCRIPTION_EDIT) then
             data = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_INFO_CHANGE_ABOUT_US), ICON_CHANGE_MESSAGE)
             data.guildId = self.optionsGuildId
             data.selectCallback = function(optionsSelectedData)
@@ -838,7 +911,14 @@ do
             end
             AddEntry(data)
         end
-    
+
+        if DoesPlayerHaveGuildPermission(self.optionsGuildId, GUILD_PERMISSION_GUILD_KIOSK_BID) then
+            data = ZO_GamepadEntryData:New(GetString(SI_GUILD_WEEKLY_BIDS_VIEW), "EsoUI/Art/Guild/Gamepad/gp_guild_menuIcon_viewBids.dds")
+            data.guildId = self.optionsGuildId
+            data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowWeeklyBids() end, GetString(SI_GUILD_WEEKLY_BIDS_VIEW))
+            AddEntry(data)
+        end
+
         data = ZO_GamepadEntryData:New(GetString(SI_GUILD_LEAVE), ICON_LEAVE)
         data.guildId = self.optionsGuildId
         data.selectCallback = function(optionsSelectedData)
@@ -846,7 +926,7 @@ do
                 self.filteredGuildId = guildId
                 self:ActivateMainList()
             end
-    
+
             ZO_ShowLeaveGuildDialog(self.optionsGuildId, { leftGuildCallback = LeftGuildCallback }, true)
         end
         AddEntry(data)
@@ -855,7 +935,7 @@ end
 
 function ZO_GamepadGuildHub:ActivateMainList(blockUpdate)
     self.displayMode = GUILD_HUB_DISPLAY_MODE.GUILDS_LIST
-    if(blockUpdate ~= true) then
+    if blockUpdate ~= true then
         self:Update()
     end
 end
@@ -864,28 +944,27 @@ end
 -- Single Guild List --
 ---------------
 
+function ZO_GamepadGuildHub:GenerateShowGuildSubmenuCallback(callback, title)
+    return function()
+        GAMEPAD_GUILD_HOME:SetGuildId(self.optionsGuildId)
+        GAMEPAD_GUILD_HOME:SetActivateScreenInfo(callback, title)
+        SCENE_MANAGER:Push("gamepad_guild_home")
+    end
+end
+
 function ZO_GamepadGuildHub:RefreshSingleGuildList()
     self.singleGuildList:Clear()
 
-    local data
-    local title
     local guildId = self.optionsGuildId
-    local showEditRankHeaderTitle = GAMEPAD_GUILD_HOME:ShouldShowEditRankHeaderTitle()
-
-    local function GenerateShowGuildSubmenuCallback(callback, title)
-        return function()
-            GAMEPAD_GUILD_HOME:SetGuildId(guildId)
-            GAMEPAD_GUILD_HOME:SetActivateScreenInfo(callback, title)
-            SCENE_MANAGER:Push("gamepad_guild_home")
-        end
-    end
 
     -- Guild Submenus
+    local showEditRankHeaderTitle = GAMEPAD_GUILD_HOME:ShouldShowEditRankHeaderTitle()
     if not showEditRankHeaderTitle then
-        title = GetString(SI_WINDOW_TITLE_GUILD_ROSTER)
-        data = ZO_GamepadEntryData:New(title)
+        local title = GetString(SI_WINDOW_TITLE_GUILD_ROSTER)
+        local data = ZO_GamepadEntryData:New(title)
         data:SetIconTintOnSelection(true)
-        data.selectCallback = GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowRoster() end)
+        data.optionId = GUILD_HUB_SINGLE_GUILD_LIST_OPTION.ROSTER
+        data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowRoster() end)
         self.singleGuildList:AddEntry(GAMEPAD_OPTIONS_LIST_ENTRY, data)
     end
 
@@ -893,22 +972,32 @@ function ZO_GamepadGuildHub:RefreshSingleGuildList()
     if showEditRankHeaderTitle then
         title = SI_GAMEPAD_GUILD_RANK_EDIT
     end
+
     title = GetString(title)
+    local data = ZO_GamepadEntryData:New(title)
+    data.optionId = GUILD_HUB_SINGLE_GUILD_LIST_OPTION.RANK
+    data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowRanks() end, title)
+    self.singleGuildList:AddEntry(GAMEPAD_OPTIONS_LIST_ENTRY, data)
+
+    title = GetString(SI_WINDOW_TITLE_GUILD_RECRUITMENT)
     data = ZO_GamepadEntryData:New(title)
-    data.selectCallback = GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowRanks() end, title)
+    data.optionId = GUILD_HUB_SINGLE_GUILD_LIST_OPTION.RECRUITMENT
+    data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowRecruitment() end, title)
     self.singleGuildList:AddEntry(GAMEPAD_OPTIONS_LIST_ENTRY, data)
 
     if DoesGuildHavePrivilege(guildId, GUILD_PRIVILEGE_HERALDRY) and IsPlayerAllowedToEditHeraldry(guildId) and not showEditRankHeaderTitle then
         title = GetString(SI_WINDOW_TITLE_GUILD_HERALDRY)
         data = ZO_GamepadEntryData:New(title)
-        data.selectCallback = GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowHeraldry() end, title)
+        data.optionId = GUILD_HUB_SINGLE_GUILD_LIST_OPTION.HERALDRY
+        data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowHeraldry() end, title)
         self.singleGuildList:AddEntry(GAMEPAD_OPTIONS_LIST_ENTRY, data)
     end
 
     if not showEditRankHeaderTitle then
         title = GetString(SI_WINDOW_TITLE_GUILD_HISTORY)
         data = ZO_GamepadEntryData:New(title)
-        data.selectCallback = GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowHistory() end, title)
+        data.optionId = GUILD_HUB_SINGLE_GUILD_LIST_OPTION.HISTORY
+        data.selectCallback = self:GenerateShowGuildSubmenuCallback(function() GAMEPAD_GUILD_HOME:ShowHistory() end, title)
         self.singleGuildList:AddEntry(GAMEPAD_OPTIONS_LIST_ENTRY, data)
     end
 
@@ -933,34 +1022,37 @@ end
 ---------------
 
 function ZO_GamepadGuildHub:OnTargetChanged(list, selectedData, oldSelectedData)
-    if(selectedData ~= nil) then
-        if(self.displayMode == GUILD_HUB_DISPLAY_MODE.GUILDS_LIST) then
-            local refreshDueToCreateExplaination = (self.displayedCreateGuild ~= selectedData.createGuild)
-            local refershDueToGuildId = (selectedData.guildId ~= nil and self.displayedGuildId ~= selectedData.guildId)
-    
-	        if(refreshDueToCreateExplaination or refershDueToGuildId) then 
-                if(refershDueToGuildId) then
+    if selectedData ~= nil then
+        if self.displayMode == GUILD_HUB_DISPLAY_MODE.GUILDS_LIST then
+            local refreshDueToCreateExplanation = (self.displayedCreateGuild ~= selectedData.isCreateGuild)
+            local refreshDueToGuildId = (selectedData.guildId ~= nil and self.displayedGuildId ~= selectedData.guildId)
+            local refreshDueToGuildBrowser = self.displayGuildBrowser ~= selectedData.isGuildBrowser
+
+            if refreshDueToCreateExplanation or refreshDueToGuildId or refreshDueToGuildBrowser then
+                if refreshDueToGuildId then
                     self.displayedGuildId = selectedData.guildId
                     GAMEPAD_GUILD_INFO:SetGuildId(self.displayedGuildId)
                 end
 
-		        if(refreshDueToCreateExplaination) then
-			        self.displayedCreateGuild = selectedData.createGuild
-                    if(selectedData.createGuild) then
+                if refreshDueToGuildBrowser then
+                    self.displayGuildBrowser = selectedData.isGuildBrowser
+                end
+
+                if refreshDueToCreateExplanation then
+                    self.displayedCreateGuild = selectedData.isCreateGuild
+                    if selectedData.isCreateGuild then
                         self.optionsGuildId = nil
                     end
-		        end
+                end
 
-		        self:UpdateContent()
-	        end
+                self:UpdateContent()
+            end
         end
     end
 end
 
 function ZO_GamepadGuildHub:RefreshGuildList()
     self.guildList:Clear()
-
-    local data = nil
 
     -- Entries
     local numGuilds = GetNumGuilds()
@@ -973,9 +1065,9 @@ function ZO_GamepadGuildHub:RefreshGuildList()
         data:SetFontScaleOnSelection(false)
         data:SetIconTintOnSelection(true)
         data.guildId = guildId
-        if(self.filteredGuildId ~= guildId) then
-            if(i == 1) then
-                data:SetHeader(GetString(SI_GAMEPAD_GUILD_LIST_MEMBERSHIP_HEADER)) 
+        if self.filteredGuildId ~= guildId then
+            if i == 1 then
+                data:SetHeader(GetString(SI_GAMEPAD_GUILD_LIST_MEMBERSHIP_HEADER))
                 self.guildList:AddEntryWithHeader(GAMEPAD_GUILD_LIST_ENTRY, data)
             else
                 self.guildList:AddEntry(GAMEPAD_GUILD_LIST_ENTRY, data)
@@ -983,21 +1075,27 @@ function ZO_GamepadGuildHub:RefreshGuildList()
         end
     end
 
-    local data = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_CREATE_NEW_GUILD), "EsoUI/Art/Buttons/Gamepad/gp_plus_large.dds")
-    data:SetIconTintOnSelection(true)
-    data:SetIconDisabledTintOnSelection(true)
-    data:SetFontScaleOnSelection(false)    
-    data:SetEnabled(ZO_CanPlayerCreateGuild())
-    
-    data.createGuild = true
+    local guildBrowserData = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_GUILD_FINDER), "EsoUI/Art/GuildFinder/Gamepad/gp_guild_menuIcon_guildBrowser.dds")
+    guildBrowserData:SetIconTintOnSelection(true)
+    guildBrowserData:SetFontScaleOnSelection(false)
+    guildBrowserData.isGuildBrowser = true
+    guildBrowserData:SetHeader(GetString(SI_GAMEPAD_GUILD_LIST_NEW_HEADER))
+    self.guildList:AddEntryWithHeader(GAMEPAD_GUILD_LIST_ENTRY, guildBrowserData)
+
+    local createNewGuildData = ZO_GamepadEntryData:New(GetString(SI_GAMEPAD_GUILD_CREATE_NEW_GUILD), "EsoUI/Art/Buttons/Gamepad/gp_plus_large.dds")
+    createNewGuildData:SetIconTintOnSelection(true)
+    createNewGuildData:SetIconDisabledTintOnSelection(true)
+    createNewGuildData:SetFontScaleOnSelection(false)
+    createNewGuildData:SetEnabled(ZO_CanPlayerCreateGuild())
+
+    createNewGuildData.isCreateGuild = true
     local createError
     if self.displayMode == GUILD_HUB_DISPLAY_MODE.GUILDS_LIST then
         createError = ZO_GetGuildCreateError()
     end
-    data.subLabels = {createError}
-    data.GetSubLabelColor = function() return ZO_ERROR_COLOR end
-    data:SetHeader(GetString(SI_GAMEPAD_GUILD_LIST_NEW_HEADER))
-    self.guildList:AddEntryWithHeader(GAMEPAD_CREATE_GUILD_LIST_ENTRY, data)
+    createNewGuildData.subLabels = {createError}
+    createNewGuildData.GetSubLabelColor = function() return ZO_ERROR_COLOR end
+    self.guildList:AddEntry(GAMEPAD_CREATE_GUILD_LIST_ENTRY, createNewGuildData)
 
     self.guildList:Commit()
 

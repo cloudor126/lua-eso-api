@@ -151,7 +151,7 @@ function ChampionPerks:Initialize(control)
             SetShouldRenderWorld(true)
         elseif newState == SCENE_HIDDEN then
             if self:HasUnsavedChanges() and AreChampionPointsActive() then
-                ZO_Alert(UI_ALERT_CATEGORY_ALERT, nil, GetString(SI_CHAMPION_UNSAVED_CHANGES_EXIT_ALERT))
+                ZO_Alert(UI_ALERT_CATEGORY_ALERT, SOUNDS.NEGATIVE_CLICK, GetString(SI_CHAMPION_UNSAVED_CHANGES_EXIT_ALERT))
             end
             self:ResetToZoomedOut()
             self:RemoveSharedKeybinds()
@@ -238,12 +238,12 @@ function ChampionPerks:SetupCustomConfirmDialog()
         },
         setup = function(dialog)
             if SCENE_MANAGER:IsCurrentSceneGamepad() then
-                local icon = zo_iconFormat(ZO_GAMEPAD_CURRENCY_ICON_GOLD_TEXTURE, 24, 24)
-                gamepadData.data1.value = zo_strformat(SI_CHAMPION_RESPEC_CURRENCY_FORMAT, ZO_CommaDelimitNumber(GetCarriedCurrencyAmount(CURT_MONEY)) , icon)
-                gamepadData.data2.value = zo_strformat(SI_CHAMPION_RESPEC_CURRENCY_FORMAT, ZO_CommaDelimitNumber(GetChampionRespecCost()), icon)
+                local gamepadGoldIconMarkup =  ZO_Currency_GetGamepadFormattedCurrencyIcon(CURT_MONEY)
+                gamepadData.data1.value = zo_strformat(SI_CHAMPION_RESPEC_CURRENCY_FORMAT, ZO_CommaDelimitNumber(GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)), gamepadGoldIconMarkup)
+                gamepadData.data2.value = zo_strformat(SI_CHAMPION_RESPEC_CURRENCY_FORMAT, ZO_CommaDelimitNumber(GetChampionRespecCost()), gamepadGoldIconMarkup)
                 dialog.setupFunc(dialog, gamepadData)
             else
-                ZO_CurrencyControl_SetSimpleCurrency(customControl:GetNamedChild("BalanceAmount"), CURT_MONEY,  GetCarriedCurrencyAmount(CURT_MONEY))
+                ZO_CurrencyControl_SetSimpleCurrency(customControl:GetNamedChild("BalanceAmount"), CURT_MONEY,  GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER))
                 ZO_CurrencyControl_SetSimpleCurrency(customControl:GetNamedChild("RespecCost"), CURT_MONEY,  GetChampionRespecCost())
             end
         end,
@@ -437,10 +437,10 @@ function ChampionPerks:InitializeSharedKeybindStripDescriptors()
             name = function()
                 if self:IsRespecNeeded() then
                     local cost = GetChampionRespecCost()
-                    if GetCarriedCurrencyAmount(CURT_MONEY) < cost then
+                    if GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) < cost then
                         cost = ZO_ERROR_COLOR:Colorize(cost)
                     end
-                    return zo_strformat(SI_CHAMPION_CONFIRM_SPEND_RESPEC_ACTION, cost, ZO_Currency_GetPlatformFormattedGoldIcon())
+                    return zo_strformat(SI_CHAMPION_CONFIRM_SPEND_RESPEC_ACTION, cost, ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_MONEY))
                 else
                     return GetString(SI_CHAMPION_CONFIRM_SPEND_POINTS_ACTION)
                 end
@@ -457,7 +457,7 @@ function ChampionPerks:InitializeSharedKeybindStripDescriptors()
                 end
 
                 if self:IsRespecNeeded() then
-                    return GetCarriedCurrencyAmount(CURT_MONEY) >= GetChampionRespecCost()
+                    return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) >= GetChampionRespecCost()
                 else
                     return true
                 end
@@ -549,6 +549,8 @@ function ChampionPerks:InitializeGamepadKeybindStripDescriptors()
             enabled = function() return not self:IsAnimating() end,
         },
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Champion Star Remove Points",
             ethereal = true,
             keybind = "UI_SHORTCUT_LEFT_TRIGGER",
             handlesKeyUp = true,
@@ -571,12 +573,15 @@ function ChampionPerks:InitializeGamepadKeybindStripDescriptors()
                         else
                             selectedStar:StartRemovingPoints()
                         end
+                        return true
                     end
                 end
                 return false
             end,
         },
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Champion Star Add Points",
             ethereal = true,
             keybind = "UI_SHORTCUT_RIGHT_TRIGGER",
             handlesKeyUp = true,
@@ -599,11 +604,15 @@ function ChampionPerks:InitializeGamepadKeybindStripDescriptors()
                         else
                             selectedStar:StartAddingPoints()
                         end
+                        return true
                     end
                 end
+                return false
             end,
         },
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Champion Rotate Left",
             ethereal = true,
             keybind = "UI_SHORTCUT_LEFT_SHOULDER",
             callback = function()
@@ -613,6 +622,8 @@ function ChampionPerks:InitializeGamepadKeybindStripDescriptors()
             end,
         },
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Champion Rotate Right",
             ethereal = true,
             keybind = "UI_SHORTCUT_RIGHT_SHOULDER",
             callback = function()
@@ -895,10 +906,17 @@ function ChampionPerks:ApplyCenterInfoStyle(constants)
     self.radialSelectorNode:SetControlPosition(self.radialSelectorTexture, 0, constants.RADIAL_SELECTOR_Y, CONSTELLATIONS_DEPTH)
 end
 
+function ChampionPerks:RefreshInactiveAlertMessage()
+    local active, activeReason = AreChampionPointsActive()
+    if not active then
+        self.inactiveAlert.messageLabel:SetText(GetString("SI_CHAMPIONPOINTACTIVEREASON", activeReason))
+    end
+end
+
 function ChampionPerks:ApplyInactiveAlertStyle(constants, control)
     control.messageLabel:SetFont(constants.INACTIVE_ALERT_FONT)
     control.messageLabel:SetModifyTextType(constants.INACTIVE_ALERT_MODIFY_TEXT_TYPE)
-    control.messageLabel:SetText(GetString(SI_CHAMPION_NO_ABILITIES_INACTIVE_ALERT))
+    self:RefreshInactiveAlertMessage()
     control:ClearAnchors()
     control:SetAnchor(TOPLEFT, nil, TOPLEFT, constants.INACTIVE_ALERT_OFFSETX, constants.INACTIVE_ALERT_OFFSETY)
 end
@@ -1031,7 +1049,7 @@ local MOUSEOVER_SOUNDS = {
 
 function ChampionPerks:RefreshCursorAndPlayMouseover()
     local newCursor = MOUSE_CURSOR_DO_NOT_CARE
-    local attributeType = ATTRIBUTE_TYPE_NONE
+    local attributeType = ATTRIBUTE_NONE
     if self.zoomedInMouseoverState == ZOOMED_IN_MOUSEOVER_STATE_LEFT then
         newCursor = MOUSE_CURSOR_NEXT_LEFT
         if self.leftOfChosenConstellation then
@@ -1369,7 +1387,7 @@ function ChampionPerks:ToggleRespecMode()
     if isInRespecMode and self:HasUnsavedChanges() then
         self:ShowDialog("CHAMPION_CONFIRM_CANCEL_RESPEC")
     elseif not isInRespecMode then
-        self:ShowDialog("CHAMPION_CONFIRM_ENTER_RESPEC", nil, { mainTextParams = { GetChampionRespecCost(), ZO_Currency_GetPlatformFormattedGoldIcon() } })
+        self:ShowDialog("CHAMPION_CONFIRM_ENTER_RESPEC", nil, { mainTextParams = { GetChampionRespecCost(), ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_MONEY) } })
     else
         self:SetInRespecMode(not isInRespecMode)
     end
@@ -1744,10 +1762,12 @@ function ChampionPerks:SetState(state)
 
         if state == STATE_ZOOMED_OUT then
             self.centerAlphaInterpolator:SetTargetBase(1)
-            local active, activeReason = AreChampionPointsActive()
+            local active = AreChampionPointsActive()
             if not active then
                 self.inactiveAlert.messageLabel:SetHidden(false)
-                self.inactiveAlert.messageLabel:SetText(GetString("SI_CHAMPIONPOINTACTIVEREASON", activeReason))
+                self:RefreshInactiveAlertMessage()
+            else
+                self.inactiveAlert.messageLabel:SetHidden(true)
             end
         else
             self.centerAlphaInterpolator:SetCurrentValue(0)
@@ -2197,6 +2217,7 @@ function ChampionPerks:CleanDirty()
         self:RefreshChosenConstellationInfo()
         self:RefreshSelectedConstellationInfo()
         KEYBIND_STRIP:UpdateCurrentKeybindButtonGroups()
+        self.hasUnsavedChanges = self:HasUnsavedChanges()
         self.dirty = false
     end
 end
@@ -2237,6 +2258,13 @@ function ChampionPerks:OnPlayerActivated()
     if SYSTEMS:IsShowing("champion") then
         --Refresh confirm and redistribute keybinds (which can be disabled by being in an AvA campaign) on loading into a new zone
         self:RefreshApplicableSharedKeybinds()
+    end
+    --If we jumped somewhere just reset everything to zero since the backend was destroyed which means C++ thinks we have no pending points.
+    --If the system isn't initialized this means that the UI was reloaded so we don't clear in that case.
+    if self.initialized and self.hasUnsavedChanges then
+        self:ResetPendingPoints()
+        self:MarkDirty()
+        ZO_Alert(UI_ALERT_CATEGORY_ALERT, SOUNDS.NEGATIVE_CLICK, GetString(SI_CHAMPION_UNSAVED_CHANGES_RESET_ALERT))
     end
 end
 

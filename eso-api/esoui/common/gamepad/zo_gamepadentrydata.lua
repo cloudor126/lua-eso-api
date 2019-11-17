@@ -1,23 +1,8 @@
 --[[ Gamepad Visual Data Object ]]--
-ZO_GamepadEntryData = {}
-
-ZO_GamepadEntryData.metaTable =
-{
-    __index = function(tbl, key)
-        local value = ZO_GamepadEntryData[key]
-        if value == nil then
-            local dataSource = rawget(tbl, "dataSource")
-            if dataSource then
-                value = dataSource[key]
-            end
-        end
-        return value
-    end,
-}
+ZO_GamepadEntryData = ZO_DataSourceObject:Subclass()
 
 function ZO_GamepadEntryData:New(...)
-    local entryData = {}
-    setmetatable(entryData, self.metaTable)
+    local entryData = ZO_DataSourceObject.New(self)
     entryData:Initialize(...)
     return entryData
 end
@@ -27,9 +12,10 @@ function ZO_GamepadEntryData:Initialize(text, icon, selectedIcon, highlight, isN
     self.numIcons = 0
     self:AddIcon(icon, selectedIcon)
     self.highlight = highlight
-    self.brandNew = isNew
+    self:SetNew(isNew)
     self.fontScaleOnSelection = true
     self.alphaChangeOnSelection = false
+    self.showBarEvenWhenUnselected = true
     self.enabled = true
     self.subLabelTemplate = "ZO_GamepadMenuEntrySubLabelTemplateMain"
 end
@@ -53,6 +39,8 @@ end
 
 function ZO_GamepadEntryData:InitializeTradingHouseVisualData(itemData)
     self:InitializeInventoryVisualData(itemData)
+    self:SetSubLabelColors(ZO_NORMAL_TEXT)
+    self:SetShowUnselectedSublabels(true)
 end
 
 function ZO_GamepadEntryData:InitializeItemImprovementVisualData(bag, index, stackCount, quality)
@@ -69,13 +57,6 @@ function ZO_GamepadEntryData:InitializeItemImprovementVisualData(bag, index, sta
     end
 end
 
-function ZO_GamepadEntryData:InitializeCollectibleVisualData(itemData)
-    self.uniqueId = itemData.uniqueId
-    self:SetDataSource(itemData)
-    self:AddIcon(itemData.icon)
-    self.cooldownIcon = itemData.icon or itemData.iconFile
-end
-
 function ZO_GamepadEntryData:AddSubLabels(subLabels)
     for _, subLabel in ipairs(subLabels) do
         self:AddSubLabel(subLabel)
@@ -88,10 +69,10 @@ function ZO_GamepadEntryData:InitializeImprovementKitVisualData(bag, index, stac
     self:SetSubLabelColors(ZO_NORMAL_TEXT)
 end
 
-function ZO_GamepadEntryData:InitializeCraftingInventoryVisualData(itemInfo, customSortData)
-    self:SetStackCount(itemInfo.stack)
-    self.bagId = itemInfo.bag
-    self.slotIndex = itemInfo.index
+function ZO_GamepadEntryData:InitializeCraftingInventoryVisualData(bagId, slotIndex, stackCount, customSortData, customBestCategoryNameFunction, slotData)
+    self:SetStackCount(stackCount)
+    self.bagId = bagId
+    self.slotIndex = slotIndex
 
     local itemName = GetItemName(self.bagId, self.slotIndex)
     local icon, _, sellPrice, meetsUsageRequirements, _, _, _, quality = GetItemInfo(self.bagId, self.slotIndex)
@@ -101,8 +82,17 @@ function ZO_GamepadEntryData:InitializeCraftingInventoryVisualData(itemInfo, cus
     self.meetsUsageRequirement = meetsUsageRequirements
     self.quality = quality
     self.itemType = GetItemType(self.bagId, self.slotIndex)
-    self.bestItemCategoryName = zo_strformat(GetString("SI_ITEMTYPE", self.itemType))
     self.customSortData = customSortData
+
+    if slotData then
+        ZO_ShallowTableCopy(slotData, self)
+    end
+
+    if customBestCategoryNameFunction then
+        customBestCategoryNameFunction(self)
+    else
+        self.bestItemCategoryName = zo_strformat(GetString("SI_ITEMTYPE", self.itemType))
+    end
 
     self:SetNameColors(self:GetColorsBasedOnQuality(self.quality))
     self.subLabelSelectedColor = self.selectedNameColor
@@ -111,18 +101,18 @@ function ZO_GamepadEntryData:InitializeCraftingInventoryVisualData(itemInfo, cus
 end
 
 local LOOT_QUEST_COLOR = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_ITEM_TOOLTIP, ITEM_TOOLTIP_COLOR_QUEST_ITEM_NAME))
-function ZO_GamepadEntryData:InitializeLootVisualData(lootId, count, quality, value, isQuest, isStolen, itemType)
+function ZO_GamepadEntryData:InitializeLootVisualData(lootId, count, quality, value, isQuest, isStolen, lootType)
     self.lootId = lootId
     self:SetStackCount(count)
     self.quality = quality
     self.value = value
     self.isQuest = isQuest
     self.isStolen = isStolen
-    self.itemType = itemType
+    self.lootType = lootType
     self:SetFontScaleOnSelection(false)    --item entries don't grow on selection
-    
+
     if isQuest then
-        self:SetNameColors(LOOT_QUEST_COLOR)
+        self:SetNameColors(LOOT_QUEST_COLOR, LOOT_QUEST_COLOR)
     elseif quality then
         self:SetNameColors(self:GetColorsBasedOnQuality(quality))
     else
@@ -135,12 +125,28 @@ function ZO_GamepadEntryData:SetHeader(header)
     self.header = header
 end
 
+function ZO_GamepadEntryData:GetHeader()
+    return self.header
+end
+
 function ZO_GamepadEntryData:SetNew(isNew)
     self.brandNew = isNew
 end
 
+function ZO_GamepadEntryData:IsNew()
+    if type(self.brandNew) == "function" then
+        return self.brandNew(self)
+    else
+        return self.brandNew
+    end
+end
+
 function ZO_GamepadEntryData:SetText(text)
     self.text = text
+end
+
+function ZO_GamepadEntryData:GetText()
+    return self.text
 end
 
 function ZO_GamepadEntryData:SetFontScaleOnSelection(active)
@@ -155,8 +161,8 @@ function ZO_GamepadEntryData:SetMaxIconAlpha(alpha)
     self.maxIconAlpha = alpha
 end
 
-function ZO_GamepadEntryData:SetDataSource(source)
-    self.dataSource = source
+function ZO_GamepadEntryData:SetIgnoreTraitInformation(ignoreTraitInformation)
+    self.ignoreTraitInformation = ignoreTraitInformation
 end
 
 function ZO_GamepadEntryData:GetColorsBasedOnQuality(quality)
@@ -241,9 +247,9 @@ end
 function ZO_GamepadEntryData:GetNameColor(selected)
     if self.enabled then
         if selected then
-            return self.selectedNameColor or ZO_SELECTED_TEXT
+            return self.selectedNameColor or ZO_GAMEPAD_SELECTED_COLOR
         else
-            return self.unselectedNameColor or ZO_DISABLED_TEXT
+            return self.unselectedNameColor or ZO_GAMEPAD_UNSELECTED_COLOR
         end
     else
         return self:GetNameDisabledColor(selected)
@@ -251,14 +257,14 @@ function ZO_GamepadEntryData:GetNameColor(selected)
 end
 
 function ZO_GamepadEntryData:SetIconTintOnSelection(selected)
-    self:SetIconTint(selected and ZO_SELECTED_TEXT, selected and ZO_DISABLED_TEXT)
+    self:SetIconTint(selected and ZO_GAMEPAD_SELECTED_COLOR, selected and ZO_GAMEPAD_UNSELECTED_COLOR)
 end
 
 function ZO_GamepadEntryData:GetSubLabelColor(selected)
     if selected then
-        return self.selectedSubLabelColor or ZO_SELECTED_TEXT
+        return self.selectedSubLabelColor or ZO_GAMEPAD_SELECTED_COLOR
     else
-        return self.unselectedSubLabelColor or ZO_DISABLED_TEXT
+        return self.unselectedSubLabelColor or ZO_GAMEPAD_UNSELECTED_COLOR
     end
 end
 
@@ -285,8 +291,23 @@ function ZO_GamepadEntryData:SetIconTint(selectedColor, unselectedColor)
     self.unselectedIconTint = unselectedColor
 end
 
+-- If this is set for one data entry in a list for a given data type, it must be set for all entries in that list for that data type
+-- Otherwise it will not be reset when the control gets recycled
 function ZO_GamepadEntryData:SetIconDesaturation(desaturation)
     self.iconDesaturation = desaturation
+end
+
+-- See comment for SetIconDesaturation
+function ZO_GamepadEntryData:SetIconSampleProcessingWeight(type, weight)
+    if not self.textureSampleProcessingWeights then
+        self.textureSampleProcessingWeights = {}
+    end
+    self.textureSampleProcessingWeights[type] = weight
+end
+
+-- See comment for SetIconDesaturation
+function ZO_GamepadEntryData:SetIconSampleProcessingWeightTable(typeToWeightTable)
+    self.textureSampleProcessingWeights = typeToWeightTable
 end
 
 function ZO_GamepadEntryData:AddSubLabel(text)
@@ -344,14 +365,14 @@ end
 
 function ZO_GamepadEntryData:GetNameDisabledColor(selected)
     if selected then
-        return self.selectedNameDisabledColor or ZO_NORMAL_TEXT
+        return self.selectedNameDisabledColor or ZO_GAMEPAD_DISABLED_SELECTED_COLOR
     else
         return self.unselectedNameDisabledColor or ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR
     end
 end
 
 function ZO_GamepadEntryData:SetIconDisabledTintOnSelection(selected)
-    self:SetDisabledIconTint(selected and ZO_NORMAL_TEXT, selected and ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR)
+    self:SetDisabledIconTint(selected and ZO_GAMEPAD_DISABLED_SELECTED_COLOR, selected and ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR)
 end
 
 function ZO_GamepadEntryData:SetModifyTextType(modifyTextType)
@@ -364,4 +385,34 @@ end
 
 function ZO_GamepadEntryData:SetStackCount(stackCount)
     self.stackCount = stackCount
+end
+
+function ZO_GamepadEntryData:SetCooldownIcon(icon)
+    self.cooldownIcon = icon
+end
+
+function ZO_GamepadEntryData:SetCanLevel(canLevel)
+    self.canLevel = canLevel
+end
+
+function ZO_GamepadEntryData:CanLevel()
+    if self.canLevel then
+        if type(self.canLevel) == "function" then
+            return self.canLevel()
+        else
+            return self.canLevel
+        end
+    else
+        return false
+    end
+end
+
+function ZO_GamepadEntryData:SetBarValues(min, max, value)
+    self.barMin = min
+    self.barMax = max
+    self.barValue = value
+end
+
+function ZO_GamepadEntryData:SetShowBarEvenWhenUnselected(showBarEvenWhenUnselected)
+    self.showBarEvenWhenUnselected = showBarEvenWhenUnselected
 end

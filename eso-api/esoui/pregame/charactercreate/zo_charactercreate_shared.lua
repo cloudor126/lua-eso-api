@@ -27,6 +27,8 @@ CHARACTER_CREATE_SELECTOR_RACE = "race"
 CHARACTER_CREATE_SELECTOR_CLASS = "class"
 CHARACTER_CREATE_SELECTOR_ALLIANCE = "alliance"
 
+CHARACTER_CREATE_MAX_SUPPORTED_CLASSES = 6
+
 --[[ Character Create Manager]]--
 
 ZO_CHARACTER_CREATE_SYSTEM_NAME = "CHARACTER_CREATE"
@@ -112,20 +114,6 @@ function ZO_CharacterCreate_Manager:Initialize()
 
     CALLBACK_MANAGER:RegisterCallback("OnCharacterConstructionReady", OnCharacterConstructionReady)
     CALLBACK_MANAGER:RegisterCallback("CharacterCreateRequested", OnCharacterCreateRequested)
-
-    local function OnPregameCharacterListReceived(characterCount, previousCharacterCount)
-        if characterCount == 0 then
-            if previousCharacterCount > 0 then
-                -- User just deleted their last character, go straight to character create
-                PregameStateManager_SetState("CharacterCreate")
-            else
-                -- User is coming in from an initial login without any characters...play intro movie
-                PregameStateManager_SetState("CharacterCreate_PlayIntro")
-            end
-        end
-    end
-
-    CALLBACK_MANAGER:RegisterCallback("PregameCharacterListReceived", OnPregameCharacterListReceived)
 end
 
 function ZO_CharacterCreate_Manager:GetCharacterData()
@@ -180,6 +168,20 @@ function ZO_CharacterCreate_Manager:InitializeForCharacterCreate()
     characterCreate:InitializeForCharacterCreate()
 end
 
+function ZO_CharacterCreate_Manager.GetOptionRestrictionString(restrictionReason, restrictingCollectible)
+    if restrictionReason ~= CHARACTER_CREATE_OPTION_RESTRICTION_REASON_NONE then
+        local restrictionString = GetString("SI_CHARACTERCREATEOPTIONRESTRICTIONREASON", restrictionReason)
+        if restrictingCollectible ~= 0 then
+            restrictionString = zo_strformat(restrictionString, GetCollectibleName(restrictingCollectible), GetCollectibleCategoryName(restrictingCollectible))
+        else
+            internalassert(false, "A collectible must be added to this entitlement restricted class/race def.")
+        end
+
+        return restrictionString
+    end
+    return ""
+end
+
 --[[ Character Create Base ]]--
 
 ZO_CharacterCreate_Base = ZO_Object:Subclass()
@@ -221,7 +223,7 @@ end
 
 -- Any functions that end up changing sliders need to be wrapped like this
 function ZO_CharacterCreate_Base:SetRace(race, options)
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     CharacterCreateSetRace(race)
     
     -- When picking a race, unless the player is entitled to playing any race as any alliance or if the newly selected race
@@ -250,7 +252,7 @@ function ZO_CharacterCreate_Base:SetRace(race, options)
 end
 
 function ZO_CharacterCreate_Base:SetAlliance(allianceDef, options)
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     ZO_CharacterCreate_SetAlliance(allianceDef)
 
     -- When picking an alliance, unless the player is entitled to playing any race as any alliance or if the current race
@@ -309,7 +311,7 @@ function ZO_CharacterCreate_Base:PickRandomAlliance()
 end
 
 function ZO_CharacterCreate_Base:GetCurrentAllianceData()
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     local selectedAlliance = CharacterCreateGetAlliance(characterMode)
     local alliance = self.characterData:GetAllianceForAllianceDef(selectedAlliance)
 
@@ -524,22 +526,12 @@ end
 
 ZO_CHARACTERCREATE_MANAGER = ZO_CharacterCreate_Manager:New()
 
--- TODO: Move these keyboard functions to the keyboard file... but it's called by non-keyboard specific files
-function ZO_CharacterCreate_PrepareFadeFromMovie()
+function ZO_CharacterCreate_FadeIn()
     ZO_CharacterCreateOverlay.fadeTimeline:Stop()
     ZO_CharacterCreateOverlay:SetHidden(false)
     ZO_CharacterCreateOverlay:SetMouseEnabled(true)
     ZO_CharacterCreateOverlay:SetAlpha(1)
-    ZO_CHARACTERCREATE_MANAGER:SetPlayingTransitionAnimations(true)
-end
 
-function ZO_CharacterCreate_AbortMovieFade()
-    ZO_CharacterCreateOverlay:SetHidden(true)
-    ZO_CharacterCreateOverlay:SetMouseEnabled(false)
-    ZO_CHARACTERCREATE_MANAGER:SetPlayingTransitionAnimations(false)
-end
-
-function ZO_CharacterCreate_FadeFromMovie()
     ZO_CharacterCreateOverlay.fadeTimeline:PlayFromStart()
     ZO_CHARACTERCREATE_MANAGER:SetPlayingTransitionAnimations(true)
 end

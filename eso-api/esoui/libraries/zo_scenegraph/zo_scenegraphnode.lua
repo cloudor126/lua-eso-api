@@ -1,33 +1,3 @@
----
---@type Matrix33
-
----
---@field [parent=#Matrix33] #number _11
-
----
---@field [parent=#Matrix33] #number _12
-
----
---@field [parent=#Matrix33] #number _13
-
----
---@field [parent=#Matrix33] #number _21
-
----
---@field [parent=#Matrix33] #number _22
-
----
---@field [parent=#Matrix33] #number _23
-
----
---@field [parent=#Matrix33] #number _31
-
----
---@field [parent=#Matrix33] #number _32
-
----
---@field [parent=#Matrix33] #number _33
-
 ZO_SceneGraphNode = ZO_Object:Subclass()
 
 function ZO_SceneGraphNode:New(...)
@@ -174,7 +144,7 @@ function ZO_SceneGraphNode:AcquireResultMatrix()
 end
 
 function ZO_SceneGraphNode:BuildWorldViewMatrix()
-    local resultMatrix -- #Matrix33
+    local resultMatrix
     self.finalRotation = self.rotation
     self.finalScale = self.scale
     self.finalTranslateZ = self.translateZ
@@ -185,7 +155,7 @@ function ZO_SceneGraphNode:BuildWorldViewMatrix()
     end
     if self.translateX ~= 0 or self.translateY ~= 0 then
         if resultMatrix then
-            local workingMatrix = self:AcquireWorkingMatrix()  -- #Matrix33
+            local workingMatrix = self:AcquireWorkingMatrix()
             zo_setToTranslationMatrix2D(workingMatrix, self.translateX, self.translateY)
             zo_matrixMultiply33x33(workingMatrix, resultMatrix, resultMatrix)
         else
@@ -195,7 +165,7 @@ function ZO_SceneGraphNode:BuildWorldViewMatrix()
     end
     if self.rotation ~= 0 then
         if resultMatrix then
-            local workingMatrix = self:AcquireWorkingMatrix() -- #Matrix33
+            local workingMatrix = self:AcquireWorkingMatrix()
             zo_setToRotationMatrix2D(workingMatrix, self.rotation)
             zo_matrixMultiply33x33(workingMatrix, resultMatrix, resultMatrix)
         else
@@ -265,7 +235,7 @@ function ZO_SceneGraphNode:Render()
                 local depthScale = 1 / distanceFromCamera
                 local positionX = self.controlX[i]
                 local positionY = self.controlY[i]
-                local worldViewMatrix = self.worldViewMatrix -- #Matrix33
+                local worldViewMatrix = self.worldViewMatrix
 
                 local finalX = worldViewMatrix._11 * positionX + worldViewMatrix._12 * positionY + worldViewMatrix._13
                 local finalY = worldViewMatrix._21 * positionX + worldViewMatrix._22 * positionY + worldViewMatrix._23
@@ -330,7 +300,10 @@ end
 
 local function RemoveFromTables(index, ...)
     for i = 1, select("#", ...) do
-        table.remove(select(i, ...), index)
+        local tableToRemoveFrom = select(i, ...)
+        local numElements = #tableToRemoveFrom
+        tableToRemoveFrom[index] = tableToRemoveFrom[numElements]
+        tableToRemoveFrom[numElements] = nil
     end
 end
 
@@ -395,7 +368,7 @@ end
 
 function ZO_SceneGraphNode:SetControlUseRotation(control, useRotation)
     local index = self:GetControlIndex(control)
-    if self.controlAnchorPoint[index] ~= anchorPoint then
+    if self.controlUseRotation[index] ~= useRotation then
         self.controlUseRotation[index] = useRotation
         self:SetDirty(true)
     end

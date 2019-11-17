@@ -30,11 +30,21 @@ function ZO_HousingFurniturePlacement_Keyboard:InitializeKeybindStrip()
                 self:ClearSelection()
             end,
             visible = function()
-                local hasSelection = self:GetMostRecentlySelectedData() ~= nil
+                local hasSelection = self:GetMostRecentlySelectedData() ~= nil and IsCurrentlyPreviewing()
                 return hasSelection
             end,
         },
     }
+end
+
+function ZO_HousingFurniturePlacement_Keyboard:InitializeThemeSelector()
+    self.placementThemeDropdown = self.contents:GetNamedChild("Dropdown")
+
+    local function OnThemeChanged(comboBox, entryText, entry)
+        SHARED_FURNITURE:SetPlacementFurnitureTheme(entry.furnitureTheme)
+    end
+
+    ZO_HousingSettingsTheme_SetupDropdown(self.placementThemeDropdown, OnThemeChanged)
 end
 
 function ZO_HousingFurniturePlacement_Keyboard:OnSearchTextChanged(editBox)

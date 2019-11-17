@@ -150,6 +150,10 @@ function ZO_GamepadOptions:Select()
         end
     elseif controlType == OPTIONS_INVOKE_CALLBACK then
         ZO_Options_InvokeCallback(control)
+    elseif controlType == OPTIONS_COLOR then
+        ZO_Options_ColorOnClicked(control)
+    elseif controlType == OPTIONS_CHAT_COLOR then
+        ZO_Options_ChatColorOnClicked(control)
     end
 end
 
@@ -333,6 +337,11 @@ function ZO_GamepadOptions:SetupOptionsList(list)
     list:AddDataTemplateWithHeader("ZO_GamepadOptionsLabelRow", OptionsSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadOptionsHeaderTemplate")
     list:SetDataTemplateReleaseFunction("ZO_GamepadOptionsLabelRow", ReleaseControl)
     list:SetDataTemplateWithHeaderReleaseFunction("ZO_GamepadOptionsLabelRow", ReleaseControl)
+
+    list:AddDataTemplate("ZO_GamepadOptionsColorRow", OptionsSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
+    list:AddDataTemplateWithHeader("ZO_GamepadOptionsColorRow", OptionsSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadOptionsHeaderTemplate")
+    list:SetDataTemplateReleaseFunction("ZO_GamepadOptionsColorRow", ReleaseControl)
+    list:SetDataTemplateWithHeaderReleaseFunction("ZO_GamepadOptionsColorRow", ReleaseControl)
 end
 
 function ZO_GamepadOptions:InitializeOptionsLists()
@@ -340,63 +349,97 @@ function ZO_GamepadOptions:InitializeOptionsLists()
     self.optionsList = self:AddList("options", function(list) self:SetupOptionsList(list) end)
 end
 
-function ZO_GamepadOptions:OnSelectionChanged(list)
-    if self:IsAtRoot() then return end
+do
+    local CONTROL_TYPES_WITH_PRIMARY_ACTION =
+    {
+        [OPTIONS_CHECKBOX] = true,
+        [OPTIONS_INVOKE_CALLBACK] = true,
+        [OPTIONS_COLOR] = true,
+        [OPTIONS_CHAT_COLOR] = true,
+    }
 
-    local control = list:GetSelectedControl()
-    if control.data == nil then return end
+    function ZO_GamepadOptions:OnSelectionChanged(list)
+        if self:IsAtRoot() then return end
 
-    local controlType = self:GetControlTypeFromControl(control)
-    local enabled = control.data.enabled
-    if ((controlType == OPTIONS_CHECKBOX or controlType == OPTIONS_INVOKE_CALLBACK) and enabled ~= false) then
-        if not self.isPrimaryActionActive then 
-            KEYBIND_STRIP:AddKeybindButtonGroup(self.primaryActionDescriptor)
-            self.isPrimaryActionActive = true
+        local control = list:GetSelectedControl()
+        if control.data == nil then return end
+
+        local controlType = self:GetControlTypeFromControl(control)
+        local enabled = control.data.enabled
+        if CONTROL_TYPES_WITH_PRIMARY_ACTION[controlType] and enabled ~= false then
+            if not self.isPrimaryActionActive then 
+                KEYBIND_STRIP:AddKeybindButtonGroup(self.primaryActionDescriptor)
+                self.isPrimaryActionActive = true
+            else
+                --Update incase its name changed based on it being a different control type
+                KEYBIND_STRIP:UpdateKeybindButtonGroup(self.primaryActionDescriptor)
+            end
+        else
+            KEYBIND_STRIP:RemoveKeybindButtonGroup(self.primaryActionDescriptor)
+            self.isPrimaryActionActive = false
         end
-    else
-        KEYBIND_STRIP:RemoveKeybindButtonGroup(self.primaryActionDescriptor)
-        self.isPrimaryActionActive = false
-    end
 
-    if self:HasInfoPanel() then
         local data = list:GetTargetData()
         local settingId = data.settingId
+        
+        --Controller Info Panel
+        local showingInfoPanel = self:HasInfoPanel() and data.gamepadShowsControllerInfo
+        if showingInfoPanel then
+            GAMEPAD_OPTIONS_PANEL_SCENE:AddFragment(OPTIONS_MENU_INFO_PANEL_FRAGMENT)
+            GAMEPAD_OPTIONS_PANEL_SCENE:AddFragment(GAMEPAD_NAV_QUADRANT_2_3_4_BACKGROUND_FRAGMENT)
+        else
+            GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragment(OPTIONS_MENU_INFO_PANEL_FRAGMENT)
+            GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragment(GAMEPAD_NAV_QUADRANT_2_3_4_BACKGROUND_FRAGMENT)
+        end
+
+        --Camera Options (Enables the camera matching the option so you can test it)
         local isFirstPersonCameraSetting = settingId == CAMERA_SETTING_FIRST_PERSON_FIELD_OF_VIEW
+                                            or settingId == CAMERA_SETTING_FIRST_PERSON_HEAD_BOB
         local isThirdPersonCameraSetting = settingId == CAMERA_SETTING_THIRD_PERSON_FIELD_OF_VIEW
                                             or settingId == CAMERA_SETTING_THIRD_PERSON_HORIZONTAL_POSITION_MULTIPLIER
                                             or settingId == CAMERA_SETTING_THIRD_PERSON_HORIZONTAL_OFFSET
-        if data.system == SETTING_TYPE_CAMERA and (isFirstPersonCameraSetting or isThirdPersonCameraSetting) then
+        local showingCameraPreview = data.system == SETTING_TYPE_CAMERA and (isFirstPersonCameraSetting or isThirdPersonCameraSetting)
+
+        if showingCameraPreview then
             local option = CAMERA_OPTIONS_PREVIEW_FORCE_FIRST_PERSON
             if isThirdPersonCameraSetting then
                 option = CAMERA_OPTIONS_PREVIEW_FORCE_THIRD_PERSON
             end
 
             SetCameraOptionsPreviewModeEnabled(true, option)
-
-            GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_GAMEPAD_OPTIONS)
-            GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragment(OPTIONS_MENU_INFO_PANEL_FRAGMENT)
-            GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragment(GAMEPAD_NAV_QUADRANT_2_3_4_BACKGROUND_FRAGMENT)
+            -- pregame does not have FRAGMENT_GROUP so make sure it exists before trying this
+            if FRAGMENT_GROUP then
+                GAMEPAD_OPTIONS_PANEL_SCENE:RemoveFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_GAMEPAD_OPTIONS)
+            end
         else
             SetCameraOptionsPreviewModeEnabled(false, CAMERA_OPTIONS_PREVIEW_NONE)
+            -- pregame does not have FRAGMENT_GROUP so make sure it exists before trying this
+            if FRAGMENT_GROUP then
+                GAMEPAD_OPTIONS_PANEL_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_GAMEPAD_OPTIONS)
+            end
+        end
 
-            GAMEPAD_OPTIONS_PANEL_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_GAMEPAD_OPTIONS)
-            GAMEPAD_OPTIONS_PANEL_SCENE:AddFragment(OPTIONS_MENU_INFO_PANEL_FRAGMENT)
-            GAMEPAD_OPTIONS_PANEL_SCENE:AddFragment(GAMEPAD_NAV_QUADRANT_2_3_4_BACKGROUND_FRAGMENT)
+        --Tooltip (only shown if there is tooltip text and the controller info isn't shown and we aren't adjusting a camera setting)
+        if not showingInfoPanel and not showingCameraPreview and data.tooltipText then
+            local tooltipText
+            if type(data.tooltipText) == "number" then
+                tooltipText = GetString(data.tooltipText)
+            else
+                tooltipText = data.tooltipText
+            end
+            GAMEPAD_TOOLTIPS:LayoutTextBlockTooltip(GAMEPAD_LEFT_TOOLTIP, tooltipText)
+        else
+            GAMEPAD_TOOLTIPS:Reset(GAMEPAD_LEFT_TOOLTIP)
         end
     end
 end
 
 local function SetSelectedStateOnControl(control, selected)
     control:SetAlpha(ZO_GamepadMenuEntryTemplate_GetAlpha(selected))
-    local enabled =  control.data.enabled ~= false
-    local color
-    if not enabled then
-        color = selected and ZO_NORMAL_TEXT or ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR
-    else
-        color = selected and ZO_SELECTED_TEXT or ZO_DISABLED_TEXT
-    end
+    local enabled = control.data.enabled ~= false
 
-    local r,g,b,a = color:UnpackRGBA()
+    local color = ZO_GamepadMenuEntryTemplate_GetLabelColor(selected, not enabled)
+    local r, g, b, a = color:UnpackRGBA()
 
     local label = GetControl(control, "Name")    
     label:SetColor(r, g, b, 1)
@@ -429,9 +472,12 @@ end
 
 function ZO_GamepadOptions:InitializeControl(control, selected)
     local label = GetControl(control, "Name")
+
+    control.data.enabled = true
     --determine if this control should be disabled because of a dependency on another control type
-    --this is rarely used so enabled == nil or true, only false is disabled
-    control.data.enabled = control.data.gamepadIsEnabledCallback and control.data.gamepadIsEnabledCallback()
+    if control.data.gamepadIsEnabledCallback then
+        control.data.enabled = control.data.gamepadIsEnabledCallback()
+    end
     SetSelectedStateOnControl(control, selected)
 
     local IS_GAMEPAD_CONTROL = false
@@ -587,7 +633,9 @@ local TEMPLATE_NAMES =
     [OPTIONS_HORIZONTAL_SCROLL_LIST] = "ZO_GamepadOptionsHorizontalListRow",
     [OPTIONS_SLIDER] = "ZO_GamepadOptionsSliderRow",
     [OPTIONS_CHECKBOX] = "ZO_GamepadOptionsCheckboxRow",
-    [OPTIONS_INVOKE_CALLBACK] = "ZO_GamepadOptionsLabelRow"
+    [OPTIONS_INVOKE_CALLBACK] = "ZO_GamepadOptionsLabelRow",
+    [OPTIONS_COLOR] = "ZO_GamepadOptionsColorRow",
+    [OPTIONS_CHAT_COLOR] = "ZO_GamepadOptionsColorRow",
 }
 
 function ZO_GamepadOptions:RefreshCategoryList()
@@ -601,6 +649,7 @@ function ZO_GamepadOptions:RefreshCategoryList()
     self:AddCategory(SETTING_PANEL_INTERFACE)
     self:AddCategory(SETTING_PANEL_NAMEPLATES)
     self:AddCategory(SETTING_PANEL_SOCIAL)
+    self:AddCategory(SETTING_PANEL_COMBAT)
 
     self.categoryList:Commit()
 end
@@ -616,6 +665,7 @@ do
         [SETTING_PANEL_INTERFACE] = "EsoUI/Art/Options/Gamepad/gp_options_interface.dds",
         [SETTING_PANEL_SOCIAL] = "EsoUI/Art/Options/Gamepad/gp_options_social.dds",
         [SETTING_PANEL_NAMEPLATES] = "EsoUI/Art/Options/Gamepad/gp_options_nameplates.dds",
+        [SETTING_PANEL_COMBAT] = "EsoUI/Art/Options/Gamepad/gp_options_combat.dds",
     }
 
     function ZO_GamepadOptions:AddCategory(panelId)
@@ -647,7 +697,15 @@ function ZO_GamepadOptions:AddSettingGroup(panelId)
     if settings then
         for i = 1, #settings do
             local setting = settings[i]
-            local header = setting.header and GetString(setting.header)
+            local header
+            if setting.header then
+                if type(setting.header) == "function" then
+                    header = setting.header(setting)
+                else
+                    header = GetString(setting.header)
+                end
+            end
+
             local data = self:GetSettingsData(setting.panel, setting.system, setting.settingId)
             local controlType = self:GetControlType(data.controlType)
             

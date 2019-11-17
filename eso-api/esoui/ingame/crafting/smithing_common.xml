@@ -17,25 +17,24 @@
         </AnimationTimeline>
     </Animations>
     <Controls>
-        <Button name="ZO_SmithingListSlot" inherits="ZO_ItemSlot" pixelRoundingEnabled="false" virtual="true">
-            <Dimensions x="64" y="64" />
-            <Textures mouseOver="" pressedMouseOver="" />
-        </Button>
+        <Button name="ZO_SmithingListSlot" virtual="true">
+            <Dimensions x="70" y="70" />
+            <Controls>
+                <Texture name="$(parent)Icon" pixelRoundingEnabled="false" level="2">
+                    <Dimensions x="64" y="64" />
+                    <Anchor point="CENTER"/>
+                </Texture>
 
-        <Button name="ZO_GamepadSmithingListSlot" inherits="ZO_ItemSlot_Gamepad" pixelRoundingEnabled="false" virtual="true">
-            <Dimensions x="64" y="64" />
-            <Textures mouseOver="" pressedMouseOver="" />
+                <Label name="$(parent)StackCount" horizontalAlignment="RIGHT" verticalAlignment="BOTTOM" font="ZoFontGameOutline" inheritScale="false">
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)Icon" offsetX="-10" offsetY="1" />
+                    <!-- Allow extra space for large stack counts like 898.8k -->
+                    <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)Icon" offsetX="2" offsetY="-1"/>
+                </Label>
+            </Controls>
         </Button>
-
-        <Texture name="ZO_SmithingListHighlight" textureFile="EsoUI/Art/Quickslots/quickslot_highlight_blob.dds" alpha=".35" virtual="true">
-            <Dimensions x="128" y="128" />
-            <OnInitialized>
-                self.pulseAnimation = ANIMATION_MANAGER:CreateTimelineFromVirtual("SmithingHorizontalScrollListPulse", self)
-            </OnInitialized>
-        </Texture>
 
         <Control name="ZO_SmithingHorizontalListTemplate" virtual="true">
-            <Dimensions x="500" y="125" />
+            <Dimensions x="500" y="127" />
 
             <OnInitialized>
                 ZO_SmithingHorizontalListTemplate_OnInitialized(self)
@@ -47,7 +46,7 @@
                 </Control>
 
                 <Control name="$(parent)List" inherits="ZO_HorizontalScrollListTemplate">
-                    <Dimensions x="470" y="64" />
+                    <Dimensions x="470" y="70" />
                     <Anchor point="CENTER" />
                 </Control>
 
@@ -55,12 +54,14 @@
                     <Anchor point="TOPLEFT" offsetY="8"/>
                 </Label>
 
-                <Label name="$(parent)SelectedLabel" font="ZoFontWinH4" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
+                <!-- This label's width is computed in ZO_SmithingHorizontalListTemplate_OnInitialized-->
+                <Label name="$(parent)SelectedLabel" horizontalAlignment="CENTER" maxLineCount="1" wrapMode="ELLIPSIS" font="ZoFontWinH4" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
                     <Anchor point="TOP" offsetY="8"/>
                 </Label>
 
-                <Label name="$(parent)ExtraInfoLabel" font="ZoFontWinH4" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" hidden="true">
-                    <Anchor point="BOTTOM" offsetY="-8"/>
+                <Label name="$(parent)ExtraInfoLabel" horizontalAlignment="CENTER" maxLineCount="1" wrapMode="ELLIPSIS" font="ZoFontWinH4" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" hidden="true">
+                    <Anchor point="BOTTOMLEFT" offsetY="-8"/>
+                    <Anchor point="BOTTOMRIGHT" offsetY="-8"/>
                 </Label>
             </Controls>
         </Control>
@@ -93,13 +94,27 @@
                 </Label>
 
                 <Control name="$(parent)List" inherits="ZO_GamepadHorizontalScrollListTemplate">
-                    <Dimensions x="ZO_GAMEPAD_CONTENT_WIDTH" y="64" />
+                    <Dimensions x="ZO_GAMEPAD_CONTENT_WIDTH" y="70" />
                     <Anchor point="CENTER"/>
                 </Control>
 
                 <Label name="$(parent)SelectedLabel" font="ZoFontGamepad34" modifyTextType="UPPERCASE" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_DISABLED" horizontalAlignment="CENTER">
-                    <Anchor point="BOTTOMLEFT" relativeTo="$(parent)List" relativePoint="TOPLEFT" offsetX="ZO_GAMEPAD_SMITHING_HORIZONTAL_LIST_X_PADDING"/>
-                    <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)List" relativePoint="TOPRIGHT" offsetX="-ZO_GAMEPAD_SMITHING_HORIZONTAL_LIST_X_PADDING"/>
+                    <OnInitialized>                        
+                        local fonts =
+                        {
+                            {
+                                font = "ZoFontGamepad34",
+                                lineLimit = 1,
+                            },
+                            {
+                                font = "ZoFontGamepad27",
+                                lineLimit = 1,
+                            },
+                        }
+                        ZO_FontAdjustingWrapLabel_OnInitialized(self, fonts, TEXT_WRAP_MODE_ELLIPSIS)
+                    </OnInitialized>
+                    <Anchor point="LEFT" relativeTo="$(parent)List" relativePoint="TOPLEFT" offsetX="ZO_GAMEPAD_SMITHING_HORIZONTAL_LIST_X_PADDING" offsetY="-23"/>
+                    <Anchor point="RIGHT" relativeTo="$(parent)List" relativePoint="TOPRIGHT" offsetX="-ZO_GAMEPAD_SMITHING_HORIZONTAL_LIST_X_PADDING" offsetY="-23"/>
                 </Label>
 
                 <Label name="$(parent)ExtraInfoLabel" font="ZoFontGamepad27" modifyTextType="UPPERCASE" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" horizontalAlignment="CENTER">
@@ -119,12 +134,6 @@
                     <AnchorFill/>
                 </Texture>
             </Controls>
-        </Control>
-
-        <Control name="ZO_SmithingPanelAnchors" virtual="true">
-            <Dimensions x="565" />
-            <Anchor point="TOPLEFT" relativeTo="ZO_SharedRightPanelBackground" offsetY="45" />
-            <Anchor point="BOTTOMLEFT" relativeTo="ZO_SharedRightPanelBackground" offsetY="-30" />
         </Control>
     </Controls>
 </GuiXml>

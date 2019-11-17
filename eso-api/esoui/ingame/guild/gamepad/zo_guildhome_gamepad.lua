@@ -1,6 +1,6 @@
 GAMEPAD_GUILD_HOME_SCENE_NAME = "gamepad_guild_home"
 
-local ZO_GamepadGuildHome = ZO_Gamepad_ParametricList_Screen:Subclass()
+ZO_GamepadGuildHome = ZO_Gamepad_ParametricList_Screen:Subclass()
 
 function ZO_GamepadGuildHome:New(...)
     return ZO_Gamepad_ParametricList_Screen.New(self, ...)
@@ -46,9 +46,9 @@ end
 function ZO_GamepadGuildHome:PerformDeferredInitializationHome()
     if self.deferredInitialized then return end
     self.deferredInitialized = true
-    
+
     self.itemList = self:GetMainList()
-    self.optionsList = self:AddList("Options", SetupOptionsList)
+    self.optionsList = self:AddList("Options")
 
     self:InitializeHeader()
     self:InitializeFooter()
@@ -140,8 +140,8 @@ function ZO_GamepadGuildHome:SetContentHeaderHidden(hide)
 end
 
 function ZO_GamepadGuildHome:RefreshFooter()
-    local numGuildMembers, numOnline = GetGuildInfo(self.guildId)
-    self.footerData.data1Text = zo_strformat(GetString(SI_GAMEPAD_GUILD_HEADER_MEMBERS_ONLINE_FORMAT), numOnline, numGuildMembers)
+    local numGuildMembers, numOnline, _, numInvitees = GetGuildInfo(self.guildId)
+    self.footerData.data1Text = zo_strformat(GetString(SI_GAMEPAD_GUILD_HEADER_MEMBERS_ONLINE_FORMAT), numOnline, numGuildMembers + numInvitees)
 
     GAMEPAD_GENERIC_FOOTER:Refresh(self.footerData)
 end
@@ -211,6 +211,14 @@ end
 
 function ZO_GamepadGuildHome:ShowHistory()
     self:SetCurrentPage(GUILD_HISTORY_GAMEPAD_FRAGMENT, GUILD_HISTORY_GAMEPAD)
+end
+
+function ZO_GamepadGuildHome:ShowRecruitment()
+    self:SetCurrentPage(GUILD_RECRUITMENT_GAMEPAD_FRAGMENT, GUILD_RECRUITMENT_GAMEPAD)
+end
+
+function ZO_GamepadGuildHome:ShowWeeklyBids()
+    self:SetCurrentPage(GUILD_WEEKLY_BIDS_GAMEPAD:GetListFragment(), GUILD_WEEKLY_BIDS_GAMEPAD)
 end
 
 --------------------

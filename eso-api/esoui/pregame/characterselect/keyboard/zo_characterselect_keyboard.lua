@@ -1,6 +1,9 @@
 local CHARACTER_DATA = 1
 local g_currentlySelectedCharacterData
 local g_deletingCharacterIds = {}
+local g_characterOrderDividerHalfHeight
+local g_characterSelectStartDragOrder
+local g_selectedOrderControl
 
 local function GetDataForCharacterId(charId)
     local dataList = ZO_ScrollList_GetDataList(ZO_CharacterSelectScrollList)
@@ -44,15 +47,46 @@ local function SetupCharacterEntry(control, data)
     characterName:SetText(ZO_CharacterSelect_GetFormattedCharacterName(data))
     characterStatus:SetText(ZO_CharacterSelect_GetFormattedLevelChampionAndClass(data))
 
-    if(data.location ~= 0) then
+    if data.location ~= 0 then
         characterLocation:SetText(zo_strformat(SI_CHARACTER_SELECT_LOCATION, GetLocationName(data.location)))
     else
         characterLocation:SetText(GetString(SI_UNKNOWN_LOCATION))
     end
 
     local allianceTexture = ZO_GetAllianceIcon(data.alliance)
-    if(allianceTexture) then
+    if allianceTexture then
         characterAlliance:SetTexture(allianceTexture)
+    end
+
+    if not control.orderUpButton then
+        local characterOrderUp = control:GetNamedChild("OrderUp")
+        local characterOrderDown = control:GetNamedChild("OrderDown")
+        characterOrderUp:SetHidden(true)
+        characterOrderDown:SetHidden(true)
+
+        control.orderUpButton = characterOrderUp;
+        control.orderDownButton = characterOrderDown;
+    end
+
+    local selectedData = ZO_CharacterSelect_GetSelectedCharacterData();
+    if selectedData == data then
+        control.orderUpButton:SetHidden(false)
+        control.orderDownButton:SetHidden(false)
+    else
+        control.orderUpButton:SetHidden(true)
+        control.orderDownButton:SetHidden(true)
+    end
+
+    if g_characterSelectStartDragOrder and g_characterSelectStartDragOrder ~= data.order then
+        characterName:SetAlpha(0.5)
+        characterStatus:SetAlpha(0.5)
+        characterLocation:SetAlpha(0.5)
+        characterAlliance:SetAlpha(0.5)
+    else
+        characterName:SetAlpha(1)
+        characterStatus:SetAlpha(1)
+        characterLocation:SetAlpha(1)
+        characterAlliance:SetAlpha(1)
     end
 end
 
@@ -83,10 +117,18 @@ end
 
 local SetupCharacterList
 local SelectedCharacterChanged
+local SetupScrollList
 do
-    local function AddCharacter(characterData)
+    SetupScrollList = function()
         local dataList = ZO_ScrollList_GetDataList(ZO_CharacterSelectScrollList)
-        table.insert(dataList, ZO_ScrollList_CreateDataEntry(CHARACTER_DATA, characterData))
+        local characterDataList = ZO_CharacterSelect_GetCharacterDataList()
+        if #characterDataList > 0 then
+            for _, dataEntry in ipairs(characterDataList) do
+                table.insert(dataList, ZO_ScrollList_CreateDataEntry(CHARACTER_DATA, dataEntry))
+            end
+
+            ZO_ScrollList_Commit(ZO_CharacterSelectScrollList)
+        end
     end
 
     SetupCharacterList = function(self, eventCode, numCharacters, maxCharacters, mostRecentlyPlayedCharacterId, numCharacterDeletesRemaining, maxCharacterDeletes)
@@ -108,20 +150,12 @@ do
         end
 
         -- Sharing data from ZO_CharacterSelectCommon
-        local characterDataList = ZO_CharacterSelect_GetCharacterDataList()
-        if(#characterDataList > 0) then
-            for _, dataEntry in ipairs(characterDataList) do
-                AddCharacter(dataEntry)
-            end
+        SetupScrollList()
 
-            ZO_ScrollList_Commit(ZO_CharacterSelectScrollList)
-
-            local characterData = ZO_CharacterSelect_GetBestSelectionData()
+        local characterData = ZO_CharacterSelect_GetBestSelectionData()
+        if characterData then
             SelectCharacter(characterData)
-
-            if characterData then
-                ZO_ScrollList_ScrollDataToCenter(ZO_CharacterSelectScrollList, characterData.index)
-            end
+            ZO_ScrollList_ScrollDataToCenter(ZO_CharacterSelectScrollList, characterData.order)
         end
 
         local accountChampionPoints = ZO_CharacterSelect_GetAccountChampionPoints()
@@ -133,14 +167,26 @@ do
     end
 
     SelectedCharacterChanged = function(self, previouslySelected, selected)
-        if(selected) then
-            if(g_currentlySelectedCharacterData == nil or g_currentlySelectedCharacterData.index ~= selected.index) then
+        if previouslySelected then
+            if previouslySelected.dataEntry.control then
+                previouslySelected.dataEntry.control.orderUpButton:SetHidden(true)
+                previouslySelected.dataEntry.control.orderDownButton:SetHidden(true)
+            end
+        end
+
+        if selected then
+            if g_currentlySelectedCharacterData == nil or g_currentlySelectedCharacterData.index ~= selected.index then
                 g_currentlySelectedCharacterData = selected
 
-                if(IsPregameCharacterConstructionReady()) then
+                if IsPregameCharacterConstructionReady() then
                     ZO_CharacterSelect_EnableSelection(g_currentlySelectedCharacterData)
                     DoCharacterSelection(g_currentlySelectedCharacterData.index)
                 end
+            end
+
+            if selected.dataEntry.control then
+                selected.dataEntry.control.orderUpButton:SetHidden(false)
+                selected.dataEntry.control.orderDownButton:SetHidden(false)
             end
         end
     end
@@ -266,17 +312,9 @@ local function ContextFilter(callback)
     end
 end
 
-local function OnPregameCharacterListReceived(characterCount, previousCharacterCount)
-    if (characterCount > 0) then
-        if PregameStateManager_GetCurrentState() ~= "CharacterSelect" then
-            PregameStateManager_SetState("CharacterSelect")
-        end
-    end
-end
+ZO_CHARACTER_SELECT_ENTRY_HEIGHT = 90
 
 function ZO_CharacterSelect_Initialize(self)
-    ZO_CharacterSelectRealmName:SetText("")
-
     local function OnCharacterSelectionChanged(previouslySelected, selected)
         SelectedCharacterChanged(self, previouslySelected, selected)
     end
@@ -294,34 +332,28 @@ function ZO_CharacterSelect_Initialize(self)
 
     local function OnPregameFullyLoaded()
         if ZO_CharacterSelect_CanShowAdditionalSlotsInfo() then
-            local label = ZO_CharacterSelectExtraCharacterSlots
-            local labelHeight = label:GetHeight()
-            label:SetText(zo_strformat(SI_ADDITIONAL_CHARACTER_SLOTS_DESCRIPTION, ZO_CharacterSelect_GetAdditionalSlotsRemaining()))
-            
-            -- The label won't update automatically, but we need to recommit the scroll list once it does to ensure that all characters in the
-            -- list can be selected.
-            local oldUpdateFn = label:GetHandler("OnUpdate")
-            label:SetHandler("OnUpdate", function(...)
-                    if oldUpdateFn then
-                        oldUpdateFn(...)
-                    end
+            ZO_CharacterSelectExtraCharacterSlots:SetHidden(false)
+            ZO_CharacterSelectExtraCharacterSlots:SetText(zo_strformat(SI_ADDITIONAL_CHARACTER_SLOTS_DESCRIPTION, ZO_CharacterSelect_GetAdditionalSlotsRemaining()))
+            ZO_CharacterSelectCharacterSlots:SetAnchor(TOP, nil, TOP, 0, 10)
+        else
+            ZO_CharacterSelectExtraCharacterSlots:SetHidden(true)
+            ZO_CharacterSelectCharacterSlots:SetAnchor(TOP, nil, TOP, 0, 31)
+        end
 
-                    if label:GetHeight() ~= labelHeight then
-                        -- Recommit and recenter scroll list
-                        ZO_ScrollList_Commit(ZO_CharacterSelectScrollList)
-                        local characterData = ZO_CharacterSelect_GetBestSelectionData()
-                        if characterData then
-                            ZO_ScrollList_ScrollDataToCenter(ZO_CharacterSelectScrollList, characterData.index)
-                        end
+        local chapterUpgradeId = GetCurrentChapterUpgradeId()
+        if chapterUpgradeId == 0 or IsChapterOwned(chapterUpgradeId) then
+            ZO_CharacterSelectChapterUpgrade:SetHidden(true)
+        else
+            local chapterCollectibleId = GetChapterCollectibleId(chapterUpgradeId)
+            ZO_CharacterSelectChapterUpgradeTitle:SetText(zo_strformat(SI_CHARACTER_SELECT_CHAPTER_LOCKED_FORMAT, GetCollectibleName(chapterCollectibleId)))
+            ZO_CharacterSelectChapterUpgradeImage:SetTexture(GetCurrentChapterMediumLogoFileIndex())
 
-                        label:SetHandler("OnUpdate", oldUpdateFn)
-                    end
-                end)
+            ZO_CharacterSelectChapterUpgrade:SetHidden(false)
         end
     end
 
     local list = ZO_CharacterSelectScrollList
-    ZO_ScrollList_AddDataType(list, CHARACTER_DATA, "ZO_CharacterEntry", 80, SetupCharacterEntry)
+    ZO_ScrollList_AddDataType(list, CHARACTER_DATA, "ZO_CharacterEntry", ZO_CHARACTER_SELECT_ENTRY_HEIGHT, SetupCharacterEntry)
     ZO_ScrollList_EnableSelection(list, "ZO_TallListHighlight", OnCharacterSelectionChanged)
     ZO_ScrollList_EnableHighlight(list, "ZO_TallListHighlight")
     ZO_ScrollList_SetDeselectOnReselect(list, false)
@@ -333,11 +365,18 @@ function ZO_CharacterSelect_Initialize(self)
     self:RegisterForEvent(EVENT_CHARACTER_SELECTED_FOR_PLAY, ContextFilter(OnCharacterSelectedForPlay))
     self:RegisterForEvent(EVENT_CHARACTER_RENAME_RESULT, ContextFilter(OnCharacterRenamed))
 
+    self:SetHandler("OnUpdate", function(_, timeS)
+        ZO_CharacterSelect_OnUpdate(timeS)
+    end)
+
     CALLBACK_MANAGER:RegisterCallback("OnCharacterConstructionReady", ContextFilter(OnCharacterConstructionReady))
-    CALLBACK_MANAGER:RegisterCallback("PregameCharacterListReceived", ContextFilter(OnPregameCharacterListReceived))
     CALLBACK_MANAGER:RegisterCallback("PregameFullyLoaded", ContextFilter(OnPregameFullyLoaded))
 
     CHARACTER_SELECT_FRAGMENT = ZO_FadeSceneFragment:New(self, 300)
+end
+
+function ZO_CharacterOrderDivider_Initialize()
+    g_characterOrderDividerHalfHeight = ZO_CharacterOrderDivider:GetHeight() / 2
 end
 
 function ZO_CharacterSelect_SetupAddonManager()
@@ -376,6 +415,34 @@ function ZO_CharacterSelect_Login(option)
     end
 end
 
+do
+    local DRAG_GRACE_DISTANCE = 50
+    function ZO_CharacterSelect_OnUpdate(timeS)
+        if g_characterSelectStartDragOrder then
+            local control = WINDOW_MANAGER:GetMouseOverControl()
+            if control and control.dataEntry then -- make sure we are looking at a control in the scroll list
+                ZO_CharacterOrderDivider:ClearAnchors()
+                ZO_CharacterOrderDivider:SetHidden(false)
+                local centerX, centerY = control:GetCenter()
+                local mouseX, mouseY = GetUIMousePosition()
+                if mouseY > centerY then
+                    ZO_CharacterOrderDivider:SetAnchor(TOP, control, BOTTOM, 0, -g_characterOrderDividerHalfHeight)
+                else
+                    ZO_CharacterOrderDivider:SetAnchor(BOTTOM, control, TOP, 0 , g_characterOrderDividerHalfHeight)
+                end
+                g_selectedOrderControl = control
+            elseif g_selectedOrderControl then
+                local mouseX = GetUIMousePosition()
+                if g_selectedOrderControl:GetLeft() - mouseX > DRAG_GRACE_DISTANCE then
+                    g_selectedOrderControl = nil
+                    ZO_CharacterOrderDivider:ClearAnchors()
+                    ZO_CharacterOrderDivider:SetHidden(true)
+                end
+            end
+        end
+    end
+end
+
 function ZO_CharacterSelect_GetSelectedCharacterData()
     return ZO_ScrollList_GetSelectedData(ZO_CharacterSelectScrollList)
 end
@@ -383,13 +450,20 @@ end
 local function ChangeSelectedCharacter(direction)
     local list = ZO_CharacterSelectScrollList
     local selectedData = ZO_ScrollList_GetSelectedData(list)
-    if(PregameStateManager_GetCurrentState() == "CharacterSelect" and selectedData ~= nil) then
+    if PregameStateManager_GetCurrentState() == "CharacterSelect" and selectedData ~= nil then
         local dataList = ZO_ScrollList_GetDataList(list)
-        local selectedDataIndex = selectedData.index
+        local selectedDataIndex
+        for index, dataEntry in ipairs(dataList) do
+            if dataEntry.data == selectedData then
+                selectedDataIndex = index
+                break
+            end
+        end
         local nextDataIndex = selectedDataIndex + direction
-        if(nextDataIndex >= 1 and nextDataIndex <= #dataList) then
+        if nextDataIndex >= 1 and nextDataIndex <= #dataList then
             local nextDataEntry = dataList[nextDataIndex]
             ZO_CharacterSelect_SetPlayerSelectedCharacterId(nextDataEntry.data.id)
+            ZO_ScrollList_ScrollDataIntoView(list, nextDataIndex)
             SelectCharacter(nextDataEntry.data)
         end
     end
@@ -428,6 +502,69 @@ function ZO_CharacterEntry_OnMouseClick(self)
     SelectCharacter(data)
 end
 
+function ZO_CharacterEntry_OnDragStart(self)
+    local data = ZO_ScrollList_GetData(self)
+    g_characterSelectStartDragOrder = data.order
+    ZO_CharacterSelect_RefreshCharacters()
+end
+
+function ZO_CharacterEntry_OnMouseUp(self)
+    if g_characterSelectStartDragOrder then
+        if g_selectedOrderControl then
+            local selectedData = ZO_CharacterSelect_GetSelectedCharacterData()
+            local endedOrder = g_selectedOrderControl.dataEntry.data.order
+            local centerX, centerY = g_selectedOrderControl:GetCenter()
+            local mouseX, mouseY = GetUIMousePosition()
+            -- correct end order based on mouse position and direction we are reordering
+            if endedOrder < g_characterSelectStartDragOrder and mouseY > centerY then
+                endedOrder = endedOrder + 1
+            elseif endedOrder > g_characterSelectStartDragOrder and mouseY <= centerY then
+                endedOrder = endedOrder - 1
+            end
+            ZO_CharacterSelect_ChangeCharacterOrders(g_characterSelectStartDragOrder, endedOrder)
+
+            g_selectedOrderControl = nil
+            g_characterSelectStartDragOrder = nil
+
+            ZO_ScrollList_Clear(ZO_CharacterSelectScrollList)
+            SetupScrollList()
+            SelectCharacter(selectedData)
+        else
+            g_characterSelectStartDragOrder = nil
+            g_selectedOrderControl = nil
+            ZO_CharacterSelect_RefreshCharacters()
+        end
+
+        ZO_CharacterOrderDivider:ClearAnchors()
+        ZO_CharacterOrderDivider:SetHidden(true)
+    end
+end
+
+function ZO_CharacterEntry_OnMouseDoubleClick(self, button)
+    if button == MOUSE_BUTTON_INDEX_LEFT then
+        local orderUpButton = self:GetNamedChild("OrderUp")
+        if MouseIsInside(orderUpButton) then
+            return
+        end
+        local orderDownButton = self:GetNamedChild("OrderDown")
+        if MouseIsInside(orderDownButton) then
+            return
+        end
+
+        ZO_CharacterSelect_Login(CHARACTER_OPTION_EXISTING_AREA)
+    end
+end
+
+function ZO_CharacterEntry_OnMouseEnter(self)
+    if not g_characterSelectStartDragOrder then
+        ZO_ScrollList_MouseEnter(ZO_CharacterSelectScrollList, self)
+    end
+end
+
+function ZO_CharacterEntry_OnMouseExit(self)
+    ZO_ScrollList_MouseExit(ZO_CharacterSelectScrollList, self)
+end
+
 function ZO_CharacterSelect_RefreshCharacters()
     ZO_ScrollList_RefreshVisible(ZO_CharacterSelectScrollList)
 end
@@ -449,6 +586,37 @@ end
 
 function ZO_CharacterSelectDelete_OnMouseExit()
     ClearTooltip(InformationTooltip)
+end
+
+function ZO_CharacterSelectChapterUpgradeRegisterButton_OnMouseEnter(control)
+    local platformServiceType = GetPlatformServiceType()
+    local upgradeMethodsStringId = ZO_PLATFORM_ALLOWS_CHAPTER_CODE_ENTRY[platformServiceType] and SI_CHARACTER_SELECT_CHAPTER_UPGRADE_REGISTER_TOOLTIP_UPGRADE_OR_CODE or SI_CHARACTER_SELECT_CHAPTER_UPGRADE_REGISTER_TOOLTIP_UPGRADE_ONLY
+    InitializeTooltip(InformationTooltip, control, BOTTOMLEFT, 5, 0, BOTTOMRIGHT)
+    InformationTooltip:AddLine(GetString(upgradeMethodsStringId), "", ZO_NORMAL_TEXT:UnpackRGB())
+end
+
+function ZO_CharacterSelectChapterUpgradeRegisterButton_OnMouseExit()
+    ClearTooltip(InformationTooltip)
+end
+
+function ZO_CharacterSelect_Move_Character_Up()
+    local selectedData = ZO_CharacterSelect_GetSelectedCharacterData()
+    if selectedData and selectedData.order > 1 then
+        ZO_CharacterSelect_OrderCharacterUp(selectedData.order)
+        ZO_ScrollList_Clear(ZO_CharacterSelectScrollList)
+        SetupScrollList()
+        SelectCharacter(selectedData)
+    end
+end
+
+function ZO_CharacterSelect_Move_Character_Down()
+    local selectedData = ZO_CharacterSelect_GetSelectedCharacterData()
+    if selectedData and selectedData.order < GetNumCharacters() then
+        ZO_CharacterSelect_OrderCharacterDown(selectedData.order)
+        ZO_ScrollList_Clear(ZO_CharacterSelectScrollList)
+        SetupScrollList()
+        SelectCharacter(selectedData)
+    end
 end
 
 -- Service Token Indicator Functions
@@ -513,21 +681,20 @@ function ServiceTokenIndicator:OnMouseEnter()
     InitializeTooltip(self.tooltip, self.control, BOTTOM, 0, -10, TOP)
     self.highlight:SetHidden(false)
 
-    local bodyText2
-    local bodyText2Color
-
+    local tokensAvailableText
+    local tokensAvailableTextColor
     local numTokens = GetNumServiceTokens(self.tokenType)
     if numTokens ~= 0 then
-        bodyText2 = zo_strformat(SI_SERVICE_TOOLTIP_SERVICE_TOKENS_AVAILABLE, numTokens, GetString("SI_SERVICETOKENTYPE", self.tokenType))
-        bodyText2Color = ZO_SUCCEEDED_TEXT
+        tokensAvailableText = zo_strformat(SI_SERVICE_TOOLTIP_SERVICE_TOKENS_AVAILABLE, numTokens, GetString("SI_SERVICETOKENTYPE", self.tokenType))
+        tokensAvailableTextColor = ZO_SUCCEEDED_TEXT
     else
-        bodyText2 = zo_strformat(SI_SERVICE_TOOLTIP_NO_SERVICE_TOKENS_AVAILABLE, GetString("SI_SERVICETOKENTYPE", self.tokenType))
-        bodyText2Color = ZO_ERROR_COLOR
+        tokensAvailableText = zo_strformat(SI_SERVICE_TOOLTIP_NO_SERVICE_TOKENS_AVAILABLE, GetString("SI_SERVICETOKENTYPE", self.tokenType))
+        tokensAvailableTextColor = ZO_ERROR_COLOR
     end
 
     self:AddHeader(self.tooltipHeaderText)
-    self:AddBodyText(self.tooltipBodyText1)
-    self:AddBodyText(bodyText2, bodyText2Color)
+    self:AddBodyText(self:GetDescription())
+    self:AddBodyText(tokensAvailableText, tokensAvailableTextColor)
 end
 
 local SET_TO_FULL_SIZE = true
@@ -557,7 +724,11 @@ function ServiceTokenIndicator:OnMouseExit()
 end
 
 function ServiceTokenIndicator:OnMouseUp()
-    -- to be overriden by subclasses to perform their action
+    -- to be overridden by subclasses to perform their action
+end
+
+function ServiceTokenIndicator:GetDescription()
+    return GetServiceTokenDescription(self.tokenType)
 end
 
 -- Name Change Tokens
@@ -570,8 +741,6 @@ end
 
 function NameChangeTokenIndicator:Initialize(control)
     ServiceTokenIndicator.Initialize(self, control, SERVICE_TOKEN_NAME_CHANGE, "EsoUI/Art/Icons/Token_NameChange.dds")
-
-    self.tooltipBodyText1 = GetString(SI_SERVICE_TOOLTIP_NAME_CHANGE_TOKEN_DESCRIPTION)
 end
 
 function NameChangeTokenIndicator:OnMouseUp()
@@ -600,8 +769,6 @@ end
 
 function RaceChangeTokenIndicator:Initialize(control)
     ServiceTokenIndicator.Initialize(self, control, SERVICE_TOKEN_RACE_CHANGE, "EsoUI/Art/Icons/Token_RaceChange.dds")
-
-    self.tooltipBodyText1 = GetString(SI_SERVICE_TOOLTIP_RACE_CHANGE_TOKEN_DESCRIPTION)
 end
 
 function RaceChangeTokenIndicator:OnMouseUp()
@@ -626,8 +793,6 @@ end
 
 function AppearanceChangeTokenIndicator:Initialize(control)
     ServiceTokenIndicator.Initialize(self, control, SERVICE_TOKEN_APPEARANCE_CHANGE, "EsoUI/Art/Icons/Token_AppearanceChange.dds")
-
-    self.tooltipBodyText1 = GetString(SI_SERVICE_TOOLTIP_APPEARANCE_CHANGE_TOKEN_DESCRIPTION)
 end
 
 function AppearanceChangeTokenIndicator:OnMouseUp()

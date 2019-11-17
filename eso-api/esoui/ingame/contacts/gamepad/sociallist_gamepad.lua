@@ -9,7 +9,7 @@ ZO_GAMEPAD_SOCIAL_LIST_CHAMPION_POINTS_ICON_OFFSET_X = 20
 -- Social List
 -----------------
 
-ZO_GamepadSocialListPanel = ZO_Object.MultiSubclass(ZO_GamepadInteractiveSortFilterList, ZO_SocialOptionsDialogGamepad)
+ZO_GamepadSocialListPanel = ZO_Object.MultiSubclass(ZO_GamepadInteractiveSortFilterList, ZO_SocialOptionsDialogGamepad, ZO_SocialListDirtyLogic_Shared)
 
 function ZO_GamepadSocialListPanel:New(...)
     return ZO_GamepadInteractiveSortFilterList.New(self, ...)
@@ -18,6 +18,7 @@ end
 function ZO_GamepadSocialListPanel:Initialize(control, socialManager, rowTemplate)
     ZO_GamepadInteractiveSortFilterList.Initialize(self, control)
     ZO_SocialOptionsDialogGamepad.Initialize(self)
+    self:InitializeDirtyLogic(self.listFragment)
     self.socialManager = socialManager
     ZO_ScrollList_AddDataType(self.list, ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_PRIMARY_DATA_TYPE, rowTemplate, ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_ROW_HEIGHT, function(control, data) self:SetupRow(control, data) end)
     self:SetMasterList(socialManager:GetMasterList())
@@ -45,7 +46,6 @@ function ZO_GamepadSocialListPanel:RefreshTooltip()
 
     if data and (zo_strlen(data.characterName) > 0) then
         GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_RIGHT_TOOLTIP)
-        GAMEPAD_TOOLTIPS:SetBottomRailHidden(GAMEPAD_RIGHT_TOOLTIP, true)
         self:LayoutTooltip(GAMEPAD_TOOLTIPS, GAMEPAD_RIGHT_TOOLTIP, data)
         GAMEPAD_TOOLTIPS:ShowBg(GAMEPAD_RIGHT_TOOLTIP)
     else
@@ -57,8 +57,8 @@ function ZO_GamepadSocialListPanel:LayoutTooltip(tooltipManager, tooltip, data)
     -- This function is meant to be overridden in subclasses to display the appropriate toolip information
 end
 
-function ZO_GamepadSocialListPanel:EntrySelectionCallback(oldData, newData)
-    ZO_GamepadInteractiveSortFilterList.EntrySelectionCallback(self, oldData, newData)
+function ZO_GamepadSocialListPanel:OnSelectionChanged(oldData, newData)
+    ZO_GamepadInteractiveSortFilterList.OnSelectionChanged(self, oldData, newData)
     self:SetupOptions(newData)
     self:RefreshTooltip()
 end
@@ -93,24 +93,24 @@ function ZO_GamepadSocialListPanel:InitializeKeybinds()
         self:AddUniversalKeybind(addKeybind)
     end
 
-	local hideOfflineKeybind = 
-	{
-		alignment = KEYBIND_STRIP_ALIGN_LEFT,
-		name = function()
-			if GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE) then
-				return GetString(SI_SOCIAL_LIST_SHOW_OFFLINE)
-			else
-				return GetString(SI_SOCIAL_LIST_HIDE_OFFLINE)
-			end
-		end,
-		keybind = "UI_SHORTCUT_RIGHT_STICK",
-		callback = function()
-			SetSetting(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE, tostring(not GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE)))
-			self:RefreshFilters()
-			self:UpdateKeybinds()
-		end,
-	}
-	self:AddUniversalKeybind(hideOfflineKeybind)
+    local hideOfflineKeybind = 
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        name = function()
+            if GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE) then
+                return GetString(SI_SOCIAL_LIST_SHOW_OFFLINE)
+            else
+                return GetString(SI_SOCIAL_LIST_HIDE_OFFLINE)
+            end
+        end,
+        keybind = "UI_SHORTCUT_RIGHT_STICK",
+        callback = function()
+            SetSetting(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE, tostring(not GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE)))
+            self:RefreshFilters()
+            self:UpdateKeybinds()
+        end,
+    }
+    self:AddUniversalKeybind(hideOfflineKeybind)
 end
 
 function ZO_GamepadSocialListPanel:InitializeDropdownFilter()
@@ -141,18 +141,22 @@ function ZO_GamepadSocialListPanel:GetAddKeybind()
     -- this function is meant be overridden in a subclass
 end
 
+function ZO_GamepadSocialListPanel:ShouldShowData(data)
+    local hideOffline = GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE)
+
+    return not hideOffline or data.online
+end
+
 function ZO_GamepadSocialListPanel:FilterScrollList()
     local scrollData = ZO_ScrollList_GetDataList(self.list)
     ZO_ClearNumericallyIndexedTable(scrollData)
 
     local searchTerm = self:GetCurrentSearch()
-	local hideOffline = GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SOCIAL_LIST_HIDE_OFFLINE)
-    
     for _, data in ipairs(self.masterList) do
         if(searchTerm == "" or self:IsMatch(searchTerm, data)) then
-			if not hideOffline or data.online then
-				table.insert(scrollData, ZO_ScrollList_CreateDataEntry(ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_PRIMARY_DATA_TYPE, data))
-			end
+            if self:ShouldShowData(data) then
+                table.insert(scrollData, ZO_ScrollList_CreateDataEntry(ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_PRIMARY_DATA_TYPE, data))
+            end
         end
     end
 end

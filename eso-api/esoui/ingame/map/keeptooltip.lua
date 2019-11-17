@@ -8,10 +8,10 @@ local KEEP_TOOLTIP_ATTACK_LINE = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COL
 local KEEP_TOOLTIP_NORMAL_LINE = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_NORMAL_LINE))
 local KEEP_TOOLTIP_ACCESSIBLE = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_ACCESSIBLE))
 local KEEP_TOOLTIP_NOT_ACCESSIBLE = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_NOT_ACCESSIBLE))
+local KEEP_TOOLTIP_UNIDIRECTIONALLY_ACCESSIBLE = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_UNIDIRECTIONALLY_ACCESSIBLE))
 local KEEP_TOOLTIP_AT_KEEP = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_AT_KEEP))
 local KEEP_TOOLTIP_OWNER = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_OWNER))
 local KEEP_TOOLTIP_UNCLAIMED = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_KEEP_TOOLTIP, KEEP_TOOLTIP_COLOR_UNCLAIMED))
-local IMPERIAL_CITY_TOOLTIP_COLLECTIBLE_LOCKED = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_MARKET_COLORS, MARKET_COLORS_ON_SALE))
 
 local SMALL_KEEP_ICON_STRING = zo_iconFormatInheritColor("EsoUI/Art/AvA/AvA_tooltipIcon_keep.dds", 32, 32)
 
@@ -60,9 +60,8 @@ local function Reset(self)
     self.historyPercent = 1.0
 end
 
-local KEYBOARD_TEL_VAR_ICON_TEXT = zo_iconFormat("EsoUI/Art/currency/currency_telvar.dds", 16, 16)
-local GAMEPAD_TEL_VAR_ICON_TEXT = zo_iconFormat("EsoUI/Art/currency/currency_telvar_32.dds", 24, 24)
 local DISTRICT_BONUS_VALUE_FORMAT = GetString(SI_TOOLTIP_DISTRICT_TEL_VAR_BONUS_FORMAT)
+local KEEP_CAPTURE_BONUS_VALUE_FORMAT = GetString(SI_TOOLTIP_KEEP_CAPTURE_BONUS_FORMAT)
 local DISTRICT_BONUS_RESTRICTION_TEXT = GetString(SI_TOOLTIP_DISTRICT_TEL_VAR_BONUS_RESTRICTION_TEXT)
 
 local function GetDistrictTelVarBonusText(keepId, battlegroundContext, keepAlliance)
@@ -74,6 +73,35 @@ local function GetDistrictTelVarBonusText(keepId, battlegroundContext, keepAllia
         return color:Colorize(telVarBonusText)
     end
     return nil
+end
+
+local function GetKeepCaptureBonusText(keepId, battlegroundContext, keepAlliance)
+    local pointBonus = GetKeepCaptureBonusPercent(keepId, battlegroundContext)
+    if pointBonus > 0 then
+        local pointBonusText = zo_strformat(KEEP_CAPTURE_BONUS_VALUE_FORMAT, pointBonus)
+        local captured = keepAlliance == GetUnitAlliance("player")
+        local color = captured and KEEP_TOOLTIP_ACCESSIBLE or KEEP_TOOLTIP_UNCLAIMED
+        return color:Colorize(pointBonusText)
+    end
+    return nil
+end
+
+local function GetPassableKeepStatusText(keepId, battlegroundContext, keepType)
+    if IsKeepTypePassable(keepType) then
+        local directionalAccess = GetKeepDirectionalAccess(keepId, battlegroundContext)
+        if directionalAccess == KEEP_PIECE_DIRECTIONAL_ACCESS_BIDIRECTIONAL then
+            local statusText = GetString(SI_MAP_KEEP_PASSABLE_STATUS_CAN_PASS)
+            return KEEP_TOOLTIP_ACCESSIBLE:Colorize(statusText)
+        elseif directionalAccess == KEEP_PIECE_DIRECTIONAL_ACCESS_BLOCKED then
+            local statusText = GetString(SI_MAP_KEEP_PASSABLE_STATUS_CANNOT_PASS)
+            return KEEP_TOOLTIP_NOT_ACCESSIBLE:Colorize(statusText)
+        elseif directionalAccess == KEEP_PIECE_DIRECTIONAL_ACCESS_UNIDIRECTIONAL then
+            if keepType == KEEPTYPE_MILEGATE then
+                local statusText = GetString(SI_MAP_KEEP_MILEGATE_UNIDIRECTIONALLY_PASSABLE)
+                return KEEP_TOOLTIP_UNIDIRECTIONALLY_ACCESSIBLE:Colorize(statusText)
+            end
+        end
+    end
 end
 
 -- Keep Layout --
@@ -92,26 +120,29 @@ local function LayoutKeepTooltip(self, keepId, battlegroundContext, historyPerce
         nameControl:SetColor(KEEP_TOOLTIP_NAME:UnpackRGBA())
         local width, height = nameControl:GetTextDimensions()
         self.width = width
-        self.height = height                
+        self.height = height
+
+        local keepType = GetKeepType(keepId)
+        local alliance = GetHistoricalKeepAlliance(keepId, battlegroundContext, historyPercent)
     
         --Alliance Owner Name
-        local alliance = GetHistoricalKeepAlliance(keepId, battlegroundContext, historyPercent)
-        local allianceName
-        local allianceColor = GetAllianceColor(alliance)
-        if(alliance == ALLIANCE_NONE) then
-            allianceName = GetString(SI_KEEP_UNCLAIMED)
-        else
-            allianceName = GetAllianceName(alliance)
+        if IsKeepTypeCapturable(keepType) then
+            local allianceName
+            local allianceColor = GetAllianceColor(alliance)
+            if(alliance == ALLIANCE_NONE) then
+                allianceName = GetString(SI_KEEP_UNCLAIMED)
+            else
+                allianceName = GetAllianceName(alliance)
+            end
+            local text = zo_strformat(GetString(SI_TOOLTIP_KEEP_ALLIANCE_OWNER), allianceColor:Colorize(allianceName))
+            AddLine(self, text, KEEP_TOOLTIP_NORMAL_LINE)
         end
-        local text = zo_strformat(GetString(SI_TOOLTIP_KEEP_ALLIANCE_OWNER), allianceColor:Colorize(allianceName))
-        AddLine(self, text, KEEP_TOOLTIP_NORMAL_LINE)
 
         local notHistorical = historyPercent >= 1.0
         if notHistorical then
-            local keepType = GetKeepType(keepId)
 
             --Guild Owner Name
-            if(IsKeepTypeClaimable(keepType)) then
+            if IsKeepTypeClaimable(keepType) then
                 local guildName = GetClaimedKeepGuildName(keepId, battlegroundContext)
                 local color = KEEP_TOOLTIP_NAME
                 if(guildName == "") then
@@ -124,7 +155,7 @@ local function LayoutKeepTooltip(self, keepId, battlegroundContext, historyPerce
             end
 
             -- siege weapons
-            if(keepType ~= KEEPTYPE_ARTIFACT_GATE and keepType ~= KEEPTYPE_IMPERIAL_CITY_DISTRICT) then
+            if DoesKeepTypeHaveSiegeLimit(keepType) then
                 local playerAlliance = GetUnitAlliance("player")
                 local playerAllianceName = zo_strformat(SI_MAP_KEEP_INFO_ALLIANCE_TOOLTIP_FORMAT, GetColoredAllianceName(playerAlliance))
                 local maxSiegeWeapons = GetMaxKeepSieges(keepId, battlegroundContext)
@@ -146,11 +177,11 @@ local function LayoutKeepTooltip(self, keepId, battlegroundContext, historyPerce
             end
 
             --Artifact Info
-            if(keepType == KEEPTYPE_ARTIFACT_KEEP) then
+            if keepType == KEEPTYPE_ARTIFACT_KEEP then
                 local objectiveId = GetKeepArtifactObjectiveId(keepId)
                 if(objectiveId ~= 0) then
                     local text
-                    local _, artifactType, artifactState, alliance1, alliance2 = GetAvAObjectiveInfo(keepId, objectiveId, battlegroundContext)
+                    local _, artifactType, artifactState = GetObjectiveInfo(keepId, objectiveId, battlegroundContext)
                     if(artifactType == OBJECTIVE_ARTIFACT_OFFENSIVE) then
                         text = zo_strformat(SI_TOOLTIP_ARTIFACT_TYPE_OFFENSIVE)
                     else
@@ -169,37 +200,58 @@ local function LayoutKeepTooltip(self, keepId, battlegroundContext, historyPerce
             if(keepType == KEEPTYPE_IMPERIAL_CITY_DISTRICT) then
                 local telVarBonusText = GetDistrictTelVarBonusText(keepId, battlegroundContext, alliance)
                 if telVarBonusText then
-                    local finalBonusText = zo_strformat(SI_TOOLTIP_DISTRICT_TEL_VAR_BONUS_TEXT, telVarBonusText, KEYBOARD_TEL_VAR_ICON_TEXT)
+                    local finalBonusText = zo_strformat(SI_TOOLTIP_DISTRICT_TEL_VAR_BONUS_TEXT, telVarBonusText, ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_TELVAR_STONES))
                     AddLine(self, finalBonusText, KEEP_TOOLTIP_NORMAL_LINE)
                     AddLine(self, DISTRICT_BONUS_RESTRICTION_TEXT, KEEP_TOOLTIP_NORMAL_LINE)
                 end
             end
 
+            --Keep Capture Bonus Info
+            if keepType == KEEPTYPE_KEEP then
+                local pointBonusText = GetKeepCaptureBonusText(keepId, battlegroundContext, alliance)
+                if pointBonusText then
+                    local finalBonusText = zo_strformat(SI_TOOLTIP_KEEP_CAPTURE_BONUS_TEXT, pointBonusText, ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_ALLIANCE_POINTS))
+                    AddLine(self, finalBonusText, KEEP_TOOLTIP_NORMAL_LINE)
+                end
+            end
+
+            local statusText = GetPassableKeepStatusText(keepId, battlegroundContext, keepType)
+            if statusText then
+                AddLine(self, zo_strformat(SI_TOOLTIP_KEEP_PASSABLE_STATUS, statusText), KEEP_TOOLTIP_NORMAL_LINE)
+            end
+
             --Keep Fast Travel Status
             local startingKeep = GetKeepFastTravelInteraction()
-            if(startingKeep) then
+            local isUsingKeepRecallStone = ZO_WorldMap_GetMode() == MAP_MODE_AVA_KEEP_RECALL
+            if startingKeep or isUsingKeepRecallStone then
                 AddVerticalSpace(self, 5)
-                if(keepId == startingKeep) then
+                if keepId == startingKeep then
                     AddLine(self, GetString(SI_TOOLTIP_KEEP_STARTING_KEEP), KEEP_TOOLTIP_AT_KEEP)
                 else
-                    local bgContext =  ZO_WorldMap_GetBattlegroundQueryType()
+                    local bgContext = ZO_WorldMap_GetBattlegroundQueryType()
+                    local isKeepAccessible = isUsingKeepRecallStone and GetKeepRecallAvailable(keepId, bgContext) or CanKeepBeFastTravelledTo(keepId, bgContext)
 
-                    if(GetKeepAccessible(keepId, bgContext)) then
+                    if isKeepAccessible then
                         AddLine(self, GetString(SI_TOOLTIP_KEEP_ACCESSIBLE), KEEP_TOOLTIP_ACCESSIBLE)
                     else
                         local playerAlliance = GetUnitAlliance("player")
-                        if(keepType ~= KEEPTYPE_KEEP and keepType ~= KEEPTYPE_BORDER_KEEP and keepType ~= KEEPTYPE_OUTPOST) then
+                        if keepType ~= KEEPTYPE_KEEP and keepType ~= KEEPTYPE_BORDER_KEEP and keepType ~= KEEPTYPE_OUTPOST and keepType ~= KEEPTYPE_TOWN then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE), KEEP_TOOLTIP_NOT_ACCESSIBLE)
-                        elseif(playerAlliance ~= alliance) then
+                        elseif playerAlliance ~= alliance then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_WRONG_OWNER), KEEP_TOOLTIP_NOT_ACCESSIBLE)
-                        elseif(showUnderAttackLine) then
+                        elseif IsKeepTravelBlockedByDaedricArtifact(keepId) then
+                            AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_CARRYING_DAEDRIC_ARTIFACT), KEEP_TOOLTIP_NOT_ACCESSIBLE)
+                        elseif GetKeepUnderAttack(keepId, bgContext) then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_UNDER_ATTACK), KEEP_TOOLTIP_NOT_ACCESSIBLE)
                             showUnderAttackLine = false
                         elseif GetKeepUnderAttack(startingKeep, battlegroundContext) then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_STARTING_KEEP_UNDER_ATTACK), KEEP_TOOLTIP_NOT_ACCESSIBLE)
-                        elseif(not GetKeepHasResourcesForTravel(keepId, bgContext)) then
+                        elseif isUsingKeepRecallStone then
+                            local keepRecallUseResult = CanUseKeepRecallStone()
+                            AddLine(self, GetString("SI_KEEPRECALLSTONEUSERESULT", keepRecallUseResult), KEEP_TOOLTIP_NOT_ACCESSIBLE)
+                        elseif not GetKeepHasResourcesForTravel(keepId, bgContext) then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_RESOURCES), KEEP_TOOLTIP_NOT_ACCESSIBLE)
-                        elseif(not GetKeepHasResourcesForTravel(startingKeep, bgContext)) then
+                        elseif not GetKeepHasResourcesForTravel(startingKeep, bgContext) then
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_STARTING_KEEP_RESOURCES), KEEP_TOOLTIP_NOT_ACCESSIBLE)
                         else
                             AddLine(self, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_NETWORK), KEEP_TOOLTIP_NOT_ACCESSIBLE)
@@ -274,14 +326,16 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                     elseif playerAlliance ~= keepAlliance then
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_WRONG_OWNER), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
+                    elseif IsKeepTravelBlockedByDaedricArtifact(keepId) then
+                        self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_CARRYING_DAEDRIC_ARTIFACT), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                     elseif showUnderAttackLine then
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_UNDER_ATTACK), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                         showUnderAttackLine = false
                     elseif GetKeepUnderAttack(startingKeep, battlegroundContext) then
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_STARTING_KEEP_UNDER_ATTACK), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
-                    elseif(not GetKeepHasResourcesForTravel(keepId, bgContext)) then
+                    elseif not GetKeepHasResourcesForTravel(keepId, bgContext) then
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_RESOURCES), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
-                    elseif(not GetKeepHasResourcesForTravel(startingKeep, bgContext)) then
+                    elseif not GetKeepHasResourcesForTravel(startingKeep, bgContext) then
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_STARTING_KEEP_RESOURCES), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                     else
                         self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_NOT_ACCESSIBLE_NETWORK), self.tooltip:GetStyle("mapKeepInaccessible"), self.tooltip:GetStyle("keepBaseTooltipContent"))
@@ -291,7 +345,7 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
         end
 
         --Keep Under Attack
-        if(showUnderAttackLine) then
+        if showUnderAttackLine then
             self:LayoutIconStringLine(keepSection, nil, GetString(SI_TOOLTIP_KEEP_IN_COMBAT), self.tooltip:GetStyle("mapKeepUnderAttack"))
         end
 
@@ -301,12 +355,14 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
         end
 
         --Alliance Owner Name
-        if(keepAlliance == ALLIANCE_NONE) then
-            LayoutKeepOwnerSection_Gamepad(self, keepSection, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_ALLIANCE_OWNER), nil, GetString(SI_KEEP_UNCLAIMED), self.tooltip:GetStyle("mapLocationKeepUnclaimed"))
-        else
-            local allianceIcon = GetLargeAllianceSymbolIcon(keepAlliance)
-            local allianceName = zo_strformat(SI_MAP_KEEP_INFO_ALLIANCE_TOOLTIP_FORMAT, GetColoredAllianceName(keepAlliance))
-            LayoutKeepOwnerSection_Gamepad(self, keepSection, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_ALLIANCE_OWNER), allianceIcon, allianceName, self.tooltip:GetStyle("mapLocationKeepClaimed"))
+        if IsKeepTypeCapturable(keepType) then
+            if keepAlliance == ALLIANCE_NONE then
+                LayoutKeepOwnerSection_Gamepad(self, keepSection, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_ALLIANCE_OWNER), nil, GetString(SI_KEEP_UNCLAIMED), self.tooltip:GetStyle("mapLocationKeepUnclaimed"))
+            else
+                local allianceIcon = GetLargeAllianceSymbolIcon(keepAlliance)
+                local allianceName = zo_strformat(SI_MAP_KEEP_INFO_ALLIANCE_TOOLTIP_FORMAT, GetColoredAllianceName(keepAlliance))
+                LayoutKeepOwnerSection_Gamepad(self, keepSection, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_ALLIANCE_OWNER), allianceIcon, allianceName, self.tooltip:GetStyle("mapLocationKeepClaimed"))
+            end
         end
         
         local notHistorical = historyPercent >= 1.0
@@ -322,7 +378,7 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
             end
 
             -- Siege Weapons
-            if(keepType ~= KEEPTYPE_ARTIFACT_GATE and keepType ~= KEEPTYPE_IMPERIAL_CITY_DISTRICT) then
+            if DoesKeepTypeHaveSiegeLimit(keepType) then
                 local maxSiegeWeapons = GetMaxKeepSieges(keepId, battlegroundContext)
 
                 -- Always show players alliance weapons.
@@ -355,12 +411,20 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
                 keepSection:AddSection(weaponsSection)
             end
 
+            local statusText = GetPassableKeepStatusText(keepId, battlegroundContext, keepType)
+            if statusText then
+                local passableSection = keepSection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
+                self:LayoutIconStringLine(passableSection, nil, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_KEEP_PASSABLE), self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
+                self:LayoutIconStringLine(passableSection, allianceIcon, statusText, self.tooltip:GetStyle("mapLocationKeepClaimed"))
+                keepSection:AddSection(passableSection)
+            end
+
             --Artifact Info
             if(keepType == KEEPTYPE_ARTIFACT_KEEP) then
                 local objectiveId = GetKeepArtifactObjectiveId(keepId)
                 if(objectiveId ~= 0) then
                     local text
-                    local artifactName, artifactType, artifactState, alliance1, alliance2 = GetAvAObjectiveInfo(keepId, objectiveId, battlegroundContext)
+                    local artifactName, artifactType, artifactState = GetObjectiveInfo(keepId, objectiveId, battlegroundContext)
                     if(artifactType == OBJECTIVE_ARTIFACT_OFFENSIVE) then
                         text = GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_SCROLL_OFFENSIVE)
                     else
@@ -374,7 +438,7 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
                     if isStolen then
                         self:LayoutIconStringLine(artifactSection, nil, GetString(SI_TOOLTIP_ARTIFACT_TAKEN), colorStyle, self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
                     else
-                        self:LayoutIconStringLine(artifactSection, nil, zo_strformat(SI_AVA_OBJECTIVE_ARTIFACT_TOOLTIP, artifactName), colorStyle, self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
+                        self:LayoutIconStringLine(artifactSection, nil, zo_strformat(SI_AVA_OBJECTIVE_DISPLAY_NAME_TOOLTIP, artifactName), colorStyle, self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
                     end
                     self:LayoutIconStringLine(artifactSection, nil, text, colorStyle, self.tooltip:GetStyle("mapLocationKeepElderScrollInfo"))
                     keepSection:AddSection(artifactSection)
@@ -382,14 +446,26 @@ local function LayoutKeepTooltip_Gamepad(self, keepId, battlegroundContext, hist
             end
 
             --Tel Var Bonus Info
-            if(keepType == KEEPTYPE_IMPERIAL_CITY_DISTRICT) then
+            if keepType == KEEPTYPE_IMPERIAL_CITY_DISTRICT then
                 local telVarBonusText = GetDistrictTelVarBonusText(keepId, battlegroundContext, keepAlliance)
                 if telVarBonusText then
-                    local finalBonusText = zo_strformat(SI_GAMEPAD_WORLD_MAP_TOOLTIP_DISTRICT_TEL_VAR_BONUS_TEXT_FORMAT, telVarBonusText, GAMEPAD_TEL_VAR_ICON_TEXT)
+                    local finalBonusText = zo_strformat(SI_GAMEPAD_WORLD_MAP_TOOLTIP_DISTRICT_TEL_VAR_BONUS_TEXT_FORMAT, telVarBonusText, ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_TELVAR_STONES))
                     local cityBonusSection = keepSection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
                     self:LayoutIconStringLine(cityBonusSection, nil, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_DISTRICT_TEL_VAR_BONUS_HEADER), self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
                     self:LayoutIconStringLine(cityBonusSection, nil, finalBonusText, self.tooltip:GetStyle("mapLocationKeepClaimed"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                     self:LayoutIconStringLine(cityBonusSection, nil, DISTRICT_BONUS_RESTRICTION_TEXT, self.tooltip:GetStyle("mapLocationKeepClaimed"), self.tooltip:GetStyle("keepBaseTooltipContent"))
+                    keepSection:AddSection(cityBonusSection)
+                end
+            end
+
+            --Keep Capture Bonus Info
+            if keepType == KEEPTYPE_KEEP then
+                local pointBonusText = GetKeepCaptureBonusText(keepId, battlegroundContext, keepAlliance)
+                if pointBonusText then
+                    local finalBonusText = zo_strformat(SI_GAMEPAD_WORLD_MAP_TOOLTIP_KEEP_CAPTURE_BONUS_TEXT_FORMAT, pointBonusText, ZO_Currency_GetPlatformFormattedCurrencyIcon(CURT_ALLIANCE_POINTS))
+                    local cityBonusSection = keepSection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
+                    self:LayoutIconStringLine(cityBonusSection, nil, GetString(SI_GAMEPAD_WORLD_MAP_TOOLTIP_KEEP_CAPTURE_BONUS_HEADER), self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
+                    self:LayoutIconStringLine(cityBonusSection, nil, finalBonusText, self.tooltip:GetStyle("mapLocationKeepClaimed"), self.tooltip:GetStyle("keepBaseTooltipContent"))
                     keepSection:AddSection(cityBonusSection)
                 end
             end
@@ -402,139 +478,6 @@ end
 local function RefreshKeepInfo(self)
     if(self.keepId and self.battlegroundContext and self.historyPercent) then
         LayoutKeepTooltip(self, self.keepId, self.battlegroundContext, self.historyPercent)
-    end
-end
-
--- Imperial City Layout --
---------------------------
-local function GetImperialCityStrings(campaignId, isLockedByLinkedCollectible)
-    --Name--
-    local name = zo_strformat(SI_TOOLTIP_KEEP_NAME, GetMapNameByIndex(GetImperialCityMapIndex()))
-
-    --Access rule--
-    local rulesetId = GetCampaignRulesetId(campaignId)
-    local accessType = GetCampaignRulesetImperialAccessRule(rulesetId)
-    local ruleText = GetString("SI_IMPERIALCITYACCESSRULESTYPE", accessType)
-    if accessType ~= IMPERIAL_CITY_ACCESS_RULE_TYPE_MAJORITY_KEEPS then
-        local totalNativeKeeps = select(4, GetAvAKeepScore(campaignId, GetUnitAlliance("player")))
-        ruleText = zo_strformat(ruleText, totalNativeKeeps)
-    end
-
-    --Locked--
-    local lockedText
-    if isLockedByLinkedCollectible then
-        local collectibleId = GetImperialCityCollectibleId()
-        local categoryName, collectibleName = ZO_GetCollectibleCategoryAndName(collectibleId)
-        lockedText = zo_strformat(SI_TOOLTIP_POI_LINKED_COLLECTIBLE_LOCKED, collectibleName, categoryName)
-    end
-
-    return name, ruleText, lockedText
-end
-
-local function LayoutImperialCityTooltip(self, battlegroundContext, isLockedByLinkedCollectible, historyPercent)
-    self:Reset()
-    self.battlegroundContext = battlegroundContext
-    self.isLockedByLinkedCollectible = isLockedByLinkedCollectible
-    self.historyPercent = historyPercent
-
-    local campaignId = GetPreferredCampaign()
-    local name, ruleText, lockedText = GetImperialCityStrings(campaignId, isLockedByLinkedCollectible)
-
-    --Name--
-    local nameControl = GetControl(self, "Name")
-    nameControl:SetText(name)
-    nameControl:SetColor(KEEP_TOOLTIP_NAME:UnpackRGBA())
-    local width, height = nameControl:GetTextDimensions()
-    self.width = width
-    self.height = height
-
-    --Access rule--
-    AddLine(self, ruleText, KEEP_TOOLTIP_NORMAL_LINE)
-
-    --Alliance access to city rows--
-    for i = 1, NUM_ALLIANCES do
-        local allianceColor = GetAllianceColor(i)
-        local allianceIcon = zo_iconFormatInheritColor(GetAllianceSymbolIcon(i), 28, 28)
-        allianceIcon = allianceColor:Colorize(allianceIcon)
-        local allianceName = GetAllianceName(i)
-        local hasAccess = DoesAllianceHaveImperialCityAccess(campaignId, i)
-        local accessColor = hasAccess and KEEP_TOOLTIP_ACCESSIBLE or KEEP_TOOLTIP_NOT_ACCESSIBLE
-
-        if accessType == IMPERIAL_CITY_ACCESS_RULE_TYPE_MAJORITY_KEEPS then
-            local keepsHeld = accessColor:Colorize(GetAvAKeepsHeld(campaignId, i))
-            local keepIcon = allianceColor:Colorize(SMALL_KEEP_ICON_STRING)
-            AddLine(self, zo_strformat(SI_TOOLTIP_IMPERIAL_CITY_ACCESS_ROW_MAJORITY, allianceName, keepsHeld, keepIcon), KEEP_TOOLTIP_OWNER)
-        else
-            local accessText = GetString(hasAccess and SI_TOOLTIP_IMPERIAL_CITY_UNLOCKED or SI_TOOLTIP_IMPERIAL_CITY_LOCKED)
-            accessText = accessColor:Colorize(accessText)
-            AddLine(self, zo_strformat(SI_TOOLTIP_IMPERIAL_CITY_ACCESS_ROW_NATIVE, allianceIcon, allianceName, accessText), KEEP_TOOLTIP_OWNER)
-        end
-    end
-
-    if lockedText then
-        AddLine(self, lockedText, IMPERIAL_CITY_TOOLTIP_COLLECTIBLE_LOCKED)
-    end
-
-    self.width = self.width + BORDER * 2
-    self.height = self.height + BORDER * 2
-    self:SetDimensions(self.width, self.height)
-end
-
-local function LayoutImperialCityTooltip_Gamepad(self, battlegroundContext, isLockedByLinkedCollectible, historyPercent)
-    local citySection = self.tooltip:AcquireSection(self.tooltip:GetStyle("mapKeepSection"))
-    local campaignId = GetPreferredCampaign()
-    local name, ruleText, lockedText = GetImperialCityStrings(campaignId, isLockedByLinkedCollectible)
-
-    --Name--
-    self:LayoutIconStringLine(citySection, nil, name, self.tooltip:GetStyle("mapTitle"))
-
-    --Access rule--
-    local accessRuleSection = citySection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
-    self:LayoutIconStringLine(accessRuleSection, nil, ruleText, self.tooltip:GetStyle("keepBaseTooltipContent"))
-    citySection:AddSection(accessRuleSection)
-
-    --Alliance access to city rows--
-    local unlockedSection
-    local lockedSection
-    for i = 1, NUM_ALLIANCES do
-        local allianceIcon = GetLargeAllianceSymbolIcon(i)
-        local allianceName = zo_strformat(SI_MAP_KEEP_INFO_ALLIANCE_TOOLTIP_FORMAT, GetColoredAllianceName(i))
-        local hasAccess = DoesAllianceHaveImperialCityAccess(campaignId, i)
-
-        if hasAccess then
-            if not unlockedSection then
-                unlockedSection = citySection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
-                self:LayoutIconStringLine(unlockedSection, nil, GetString(SI_TOOLTIP_IMPERIAL_CITY_UNLOCKED), self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
-            end
-            self:LayoutIconStringLine(unlockedSection, allianceIcon, allianceName, self.tooltip:GetStyle("mapLocationKeepClaimed"))
-        else
-            if not lockedSection then
-                lockedSection = citySection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
-                self:LayoutIconStringLine(lockedSection, nil, GetString(SI_TOOLTIP_IMPERIAL_CITY_LOCKED), self.tooltip:GetStyle("mapLocationTooltipContentHeader"))
-            end
-            self:LayoutIconStringLine(lockedSection, allianceIcon, allianceName, self.tooltip:GetStyle("mapLocationKeepClaimed"))
-        end
-    end
-
-    if unlockedSection then
-        citySection:AddSection(unlockedSection)
-    end
-
-    if lockedSection then
-        citySection:AddSection(lockedSection)
-    end
-
-    if lockedText then
-        local collectibleLockedSection = citySection:AcquireSection(self.tooltip:GetStyle("mapKeepGroupSection"))
-        self:LayoutIconStringLine(collectibleLockedSection, ZO_GAMEPAD_CURRENCY_ICON_CROWNS_TEXTURE, lockedText, self.tooltip:GetStyle("mapLocationTooltipWayshrineLinkedCollectibleLockedText"))
-        citySection:AddSection(collectibleLockedSection)
-    end
-    self.tooltip:AddSection(citySection)
-end
-
-local function RefreshCityInfo(self)
-    if(self.battlegroundContext and self.historyPercent) then
-        LayoutImperialCityTooltip(self, self.battlegroundContext, self.isLockedByLinkedCollectible, self.historyPercent)
     end
 end
 
@@ -627,19 +570,8 @@ function ZO_KeepTooltip_OnInitialized(self)
     self.Reset = Reset
 end
 
-function ZO_ImperialCityTooltip_OnInitialized(self)
-    self.linePool = ZO_ControlPool:New("ZO_KeepTooltipLine", self, "Line")
-    self.SetCity = LayoutImperialCityTooltip
-    self.RefreshCityInfo = RefreshCityInfo
-    self.SetOwner = SetOwner
-    self.GetWidth = GetWidth
-    self.Reset = Reset
-end
-
 function ZO_KeepTooltip_Gamepad_OnInitialized(self)
     self.SetKeep = LayoutKeepTooltip_Gamepad
     self.RefreshKeepInfo = RefreshKeepInfo
     self.SetForwardCamp = LayoutForwardCamp_Gamepad
-    self.SetCity = LayoutImperialCityTooltip_Gamepad
-    self.RefreshCityInfo = RefreshCityInfo
 end

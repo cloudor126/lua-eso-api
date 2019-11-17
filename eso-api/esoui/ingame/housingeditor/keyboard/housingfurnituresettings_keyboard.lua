@@ -11,7 +11,7 @@ function ZO_HousingFurnitureSettings_Keyboard:Initialize(...)
     ZO_HousingFurnitureSettings_Base.Initialize(self, ...)
     ZO_HousingBrowserList.Initialize(self, ...)
 
-    self.settingsTreeData = ZO_FurnitureCategory:New()
+    self.settingsTreeData = ZO_RootFurnitureCategory:New()
         
     for name,topLevelSetting in pairs(ZO_FURNITURE_SETTINGS) do
         local subsettingsTreeData = ZO_FurnitureCategory:New(self.settingsTreeData, name)
@@ -36,18 +36,15 @@ function ZO_HousingFurnitureSettings_Keyboard:InitializeSettingsPanels()
     local generalOptionsScrollChild = GetControl(self.generalOptionsScrollList, "ScrollChild")
 
     local function OnPrimaryResidenceClicked(button)
-        if self.currentHouse ~= self.primaryResidence then
-            local collectibleId = GetCollectibleIdForHouse(self.currentHouse)
-            local name = GetCollectibleName(collectibleId)
-            local nickname = GetCollectibleNickname(collectibleId)
-            ZO_Dialogs_ShowDialog("CONFIRM_PRIMARY_RESIDENCE", { currentHouse = self.currentHouse}, { mainTextParams = { name, nickname} })
-        end
+        self:SetPrimaryResidence()
     end
 
     self.primaryResidenceSetting = self.generalOptionsPanel:GetNamedChild("PrimaryResidence")
     self.primaryResidenceSetting:SetParent(generalOptionsScrollChild)
     self.primaryResidenceButton = self.primaryResidenceSetting:GetNamedChild("Button")
     self.primaryResidenceButton:SetHandler("OnClicked", OnPrimaryResidenceClicked)
+    local primaryResidenceButtonLabel = self.primaryResidenceButton:GetLabelControl()
+    primaryResidenceButtonLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
 
     self.defaultAccessSetting = self.generalOptionsPanel:GetNamedChild("DefaultAccess")
     self.defaultAccessSetting:SetParent(generalOptionsScrollChild)
@@ -92,7 +89,7 @@ function ZO_HousingFurnitureSettings_Keyboard:InitializeKeybindStrip()
             keybind = "UI_SHORTCUT_SECONDARY",
         
             callback = function()
-                local data = { activePanel = self.activePanel.list, currentHouse = self.currentHouse }
+                local data = { activePanel = self.activePanel.list, currentHouse = GetCurrentZoneHouseId() }
                 if self.activePanel == self.visitorsOptionsPanel then
                     ZO_Dialogs_ShowDialog("REQUEST_ADD_INDIVIDUAL_PERMISSION", data)
                 elseif self.activePanel == self.banListOptionsPanel then
@@ -127,11 +124,12 @@ end
 
 function ZO_HousingFurnitureSettings_Keyboard:UpdateGeneralSettings()
     self.primaryResidence = GetHousingPrimaryHouse()
+    local currentHouse = GetCurrentZoneHouseId()
 
     self:UpdateButtonSettings(self.primaryResidenceSetting)
-    self.primaryResidenceButton:SetEnabled(self.primaryResidence ~= self.currentHouse)
+    self.primaryResidenceButton:SetEnabled(self.primaryResidence ~= currentHouse)
 
-    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(self.currentHouse)
+    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(currentHouse)
     self.comboBox:SetSelectedItemText(GetString("SI_HOUSEPERMISSIONDEFAULTACCESSSETTING", defaultAccess))
 end
 
@@ -186,11 +184,11 @@ do
         local function OnPresetSelected(_, entryText, entry)
             comboBox:SetSelectedItemText(entry.name)
             local canAccess, preset = HOUSE_SETTINGS_MANAGER:GetHousingPermissionsFromDefaultAccess(entry.defaultAccess)
-            AddHousingPermission(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_GENERAL, canAccess, preset, false)
+            AddHousingPermission(GetCurrentZoneHouseId(), HOUSE_PERMISSION_USER_GROUP_GENERAL, canAccess, preset, false)
         end
 
         local allDefaultAccessSettings = HOUSE_SETTINGS_MANAGER:GetAllDefaultAccessSettings()
-        for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MIN_VALUE, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MAX_VALUE do
+        for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_BEGIN, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_END do
             local entry = comboBox:CreateItemEntry(allDefaultAccessSettings[i], OnPresetSelected)
             entry.defaultAccess = i
             comboBox:AddItem(entry)
@@ -225,13 +223,13 @@ do
 end
 
 function ZO_HousingFurnitureSettings_Keyboard:ShowDefaultAccessTooltip(control)
-    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(self.currentHouse)
+    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(GetCurrentZoneHouseId())
     InitializeTooltip(InformationTooltip, control, BOTTOMLEFT, 0, -2, TOPLEFT)
     local r,g,b = ZO_NORMAL_TEXT:UnpackRGB()
     InformationTooltip:AddLine(GetString(SI_HOUSING_FURNITURE_SETTINGS_GENERAL_DEFAULT_ACCESS_TOOLTIP_TEXT), "", r, g, b)
 
     local selectionTitle = GetString("SI_HOUSEPERMISSIONDEFAULTACCESSSETTING",  defaultAccess)
-    local selectionDescription = GetString("SI_HOUSING_PERMISSIONS_DEFAULT_ACCESS_DESCRIPTION", defaultAccess)
+    local selectionDescription = GetString("SI_HOUSEPERMISSIONDEFAULTACCESSSETTING_DESCRIPTION", defaultAccess)
 
     InformationTooltip:AddLine(selectionTitle)
     InformationTooltip:AddLine(selectionDescription, "", r, g, b)
@@ -239,7 +237,9 @@ end
 
 function ZO_HousingFurnitureSettings_Keyboard:ShowPrimaryResidenceTooltip(control)
     InitializeTooltip(InformationTooltip, control, BOTTOMLEFT, 0, -2, TOPLEFT)
-    SetTooltipText(InformationTooltip, GetString(SI_HOUSING_FURNITURE_SETTINGS_GENERAL_PRIMARY_RESIDENCE_TOOLTIP_TEXT))
+
+    InformationTooltip:AddLine(GetString(SI_HOUSING_FURNITURE_SETTINGS_GENERAL_PRIMARY_RESIDENCE_BUTTON_TEXT))
+    InformationTooltip:AddLine(GetString(SI_HOUSING_FURNITURE_SETTINGS_GENERAL_PRIMARY_RESIDENCE_TOOLTIP_TEXT), "", ZO_NORMAL_TEXT:UnpackRGB())
 end
 
 function ZO_HousingFurnitureSettings_Keyboard:ShowHomeShowTooltip(control)
@@ -333,7 +333,7 @@ do
     local function SetupHousesComboBox(dialog)
         local housesComboBoxControl = GetControl(dialog, "HousesComboBox")
         dialog.housesComboBox = ZO_ComboBox_ObjectFromContainer(housesComboBoxControl)
-        dialog.housesComboBox:SetSortsItems(false)
+        dialog.housesComboBox:SetSortsItems(false) -- sorted on setup
     end
 
     local function SetupChangePermissionsDialog(dialog)

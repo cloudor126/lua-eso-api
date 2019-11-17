@@ -15,12 +15,16 @@ function ZO_ComboBox:New(container)
     return comboBox
 end
 
-function ZO_ComboBox:AddMenuItems()
-    for i = 1, #self.m_sortedItems
-    do
-        -- The variable item must be defined locally here, otherwise it won't work as an upvalue to the selection helper
-        local item = self.m_sortedItems[i]
-        AddMenuItem(item.name, function() self:ItemSelectedClickHelper(item) end, nil, self.m_font, self.m_normalColor, self.m_highlightColor)
+do
+    --Padding is handled using SetSpacing
+    local NO_PADDING_Y = 0
+
+    function ZO_ComboBox:AddMenuItems()
+        for i = 1, #self.m_sortedItems do
+            -- The variable item must be defined locally here, otherwise it won't work as an upvalue to the selection helper
+            local item = self.m_sortedItems[i]
+            AddMenuItem(item.name, function() self:ItemSelectedClickHelper(item) end, MENU_ADD_OPTION_LABEL, self.m_font, self.m_normalColor, self.m_highlightColor, NO_PADDING_Y, self.horizontalAlignment)
+        end
     end
 end
 
@@ -38,7 +42,7 @@ function ZO_ComboBox:ShowDropdownInternal()
     
     self:AddMenuItems()
     SetMenuHiddenCallback(function() GlobalMenuClearCallback(self) end)
-    ShowMenu(self.m_container, nil, MENU_TYPE_COMBO_BOX)
+    ShowMenu(self.m_container, nil, self:GetMenuType())
     AnchorMenu(self.m_container, OFFSET_Y)
     self:SetVisible(true)
 end
@@ -46,10 +50,21 @@ end
 function ZO_ComboBox:HideDropdownInternal()
     ClearMenu()
     self:SetVisible(false)
+    if self.onHideDropdownCallback then
+        self.onHideDropdownCallback()
+    end
 end
 
 function ZO_ComboBox_DropdownClicked(container)
     ZO_ComboBox_OpenDropdown(container)
+end
+
+function ZO_ComboBox:GetMenuType()
+    return MENU_TYPE_COMBO_BOX
+end
+
+function ZO_ComboBox:SetHideDropdownCallback(callback)
+    self.onHideDropdownCallback = callback
 end
 
 --[[
@@ -68,7 +83,8 @@ local DEFAULT_TEXT_HIGHLIGHT = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR
 local ENTRY_ID = 1
 local LAST_ENTRY_ID = 2
 local SCROLLABLE_ENTRY_TEMPLATE = "ZO_ScrollableComboBoxItem"
-local SCROLLABLE_ENTRY_TEMPLATE_HEIGHT = 25
+ZO_SCROLLABLE_ENTRY_TEMPLATE_HEIGHT = 25
+ZO_SCROLLABLE_COMBO_BOX_LIST_PADDING_Y = 5
 
 ZO_ScrollableComboBox = ZO_ComboBox:Subclass()
 
@@ -90,23 +106,27 @@ function ZO_ScrollableComboBox:Initialize(container)
     self:SetupScrollList()
 end
 
+function ZO_ScrollableComboBox:GetEntryTemplateHeightWithSpacing()
+    return ZO_SCROLLABLE_ENTRY_TEMPLATE_HEIGHT + self.m_spacing
+end
+
 local function SetupScrollableEntry(control, data, list)
     control.m_owner = data.m_owner
     control.m_data = data
     control.m_label = control:GetNamedChild("Label")
-    
-    control:SetHeight(SCROLLABLE_ENTRY_TEMPLATE_HEIGHT)
+
     control.m_label:SetText(data.name)
     control.m_label:SetFont(control.m_owner.m_font)
     control.m_label:SetColor(control.m_owner.m_normalColor:UnpackRGBA())
 end
 
 function ZO_ScrollableComboBox:SetupScrollList()
+    local entryHeight = self:GetEntryTemplateHeightWithSpacing()
     -- To support spacing like regular combo boxes, a separate template needs to be stored for the last entry.
-    ZO_ScrollList_AddDataType(self.m_scroll, ENTRY_ID, SCROLLABLE_ENTRY_TEMPLATE, SCROLLABLE_ENTRY_TEMPLATE_HEIGHT, SetupScrollableEntry)
-    ZO_ScrollList_AddDataType(self.m_scroll, LAST_ENTRY_ID, SCROLLABLE_ENTRY_TEMPLATE, SCROLLABLE_ENTRY_TEMPLATE_HEIGHT, SetupScrollableEntry)
+    ZO_ScrollList_AddDataType(self.m_scroll, ENTRY_ID, SCROLLABLE_ENTRY_TEMPLATE, entryHeight, SetupScrollableEntry)
+    ZO_ScrollList_AddDataType(self.m_scroll, LAST_ENTRY_ID, SCROLLABLE_ENTRY_TEMPLATE, entryHeight, SetupScrollableEntry)
 
-    ZO_ScrollList_EnableSelection(self.m_scroll, "ZO_TallListHighlight")
+    ZO_ScrollList_EnableSelection(self.m_scroll, "ZO_TallListSelectedHighlight")
     ZO_ScrollList_EnableHighlight(self.m_scroll, "ZO_TallListHighlight")
 end
 
@@ -129,7 +149,7 @@ end
 function ZO_ScrollableComboBox:SetSpacing(spacing)
     ZO_ComboBox.SetSpacing(self, spacing)
 
-    local newHeight = SCROLLABLE_ENTRY_TEMPLATE_HEIGHT + self.m_spacing
+    local newHeight = self:GetEntryTemplateHeightWithSpacing()
     ZO_ScrollList_UpdateDataTypeHeight(self.m_scroll, ENTRY_ID, newHeight)
 end
 
@@ -164,6 +184,19 @@ function ZO_ScrollableComboBox:AddMenuItems()
         table.insert(dataList, entry)
     end
 
+    local maxHeight = self.m_height
+    -- get the height of all the entries we are going to show
+    -- the last entry uses a separate entry template that does not include the spacing in its height
+    local allItemsHeight = self:GetEntryTemplateHeightWithSpacing() * (numItems - 1) + ZO_SCROLLABLE_ENTRY_TEMPLATE_HEIGHT + (ZO_SCROLLABLE_COMBO_BOX_LIST_PADDING_Y * 2)
+
+    local desiredHeight = maxHeight
+    if allItemsHeight < desiredHeight then
+        desiredHeight = allItemsHeight
+    end
+
+    self.m_dropdown:SetHeight(desiredHeight)
+    ZO_ScrollList_SetHeight(self.m_scroll, desiredHeight)
+
     ZO_ScrollList_Commit(self.m_scroll)
 end
 
@@ -190,6 +223,9 @@ function ZO_ScrollableComboBox:HideDropdownInternal()
     self.m_dropdown:UnregisterForEvent(EVENT_GLOBAL_MOUSE_UP)
     self.m_dropdown:SetHidden(true)
     self:SetVisible(false)
+    if self.onHideDropdownCallback then
+        self.onHideDropdownCallback()
+    end
 end
 
 function ZO_ScrollableComboBox_Entry_OnMouseEnter(entry)
@@ -210,4 +246,134 @@ function ZO_ScrollableComboBox_Entry_OnSelected(entry)
     if entry.m_owner then
         entry.m_owner:SetSelected(entry.m_data.m_index)
     end
+end
+
+--[[
+    multiselect combo box ui widget for keyboard screens.
+    Similar to the standard combo box, this object allows for multiple entries to be selected
+    at the same time. 
+--]]
+
+ZO_MultiSelectComboBox = ZO_ComboBox:Subclass()
+
+function ZO_MultiSelectComboBox:New(container)
+    return ZO_ComboBox.New(self, container)
+end
+
+function ZO_MultiSelectComboBox:Initialize(container)
+    ZO_ComboBox.Initialize(self, container)
+
+    self.m_selectedItemData = {}
+end
+
+do
+    --Padding is handled using SetSpacing
+    local NO_PADDING_Y = 0
+
+    -- Overridden function
+    function ZO_MultiSelectComboBox:AddMenuItems()
+        for i, item in ipairs(self.m_sortedItems) do
+            local function OnMenuItemSelected()
+                self:SelectItem(item)
+            end
+            local needsHighlight = self:IsItemSelected(item)
+            AddMenuItem(item.name, OnMenuItemSelected, MENU_ADD_OPTION_LABEL, self.m_font, self.m_normalColor, self.m_highlightColor, NO_PADDING_Y, self.horizontalAlignment, needsHighlight)
+        end
+    end
+end
+
+function ZO_MultiSelectComboBox:SetNoSelectionText(text)
+    self.noSelectionText = text
+    self:RefreshSelectedItemText()
+end
+
+function ZO_MultiSelectComboBox:SetMultiSelectionTextFormatter(textFormatter)
+    self.multiSelectionTextFormatter = textFormatter
+    self:RefreshSelectedItemText()
+end
+
+function ZO_MultiSelectComboBox:RefreshSelectedItemText()
+    local numSelectedEntries = self:GetNumSelectedEntries()
+    if numSelectedEntries > 0 then
+        if self.multiSelectionTextFormatter then
+            self:SetSelectedItemText(zo_strformat(self.multiSelectionTextFormatter, numSelectedEntries))
+        else
+            internalassert(false) -- need to define the formatter
+        end
+    elseif self.noSelectionText then
+        self:SetSelectedItemText(self.noSelectionText)
+    else
+        internalassert(false) -- need to define the no selection text
+    end
+end
+
+function ZO_MultiSelectComboBox:GetNumSelectedEntries()
+    return #self.m_selectedItemData
+end
+
+-- Overridden function
+function ZO_MultiSelectComboBox:GetMenuType()
+    return MENU_TYPE_MULTISELECT_COMBO_BOX
+end
+
+-- Overridden function
+function ZO_MultiSelectComboBox:ClearItems()
+    ZO_ComboBox.ClearItems(self)
+    self.m_selectedItemData = {}
+end
+
+-- Overridden function
+function ZO_MultiSelectComboBox:SelectItem(item, ignoreCallback)
+    local newSelectionStatus = not self:IsItemSelected(item)
+    if newSelectionStatus then
+        self:AddItemToSelected(item)
+    else
+        self:RemoveItemFromSelected(item)
+    end
+    PlaySound(SOUNDS.COMBO_CLICK)
+
+    if item.callback and not ignoreCallback then
+        item.callback(self, item.name, item)
+    end
+    self:RefreshSelectedItemText()
+end
+
+-- Overridden function
+function ZO_MultiSelectComboBox:ShowDropdownInternal()
+    ZO_Menu_SetUseUnderlay(true)
+    ZO_ComboBox.ShowDropdownInternal(self)
+end
+
+-- Overridden function
+function ZO_MultiSelectComboBox:HideDropdownInternal()
+    ZO_Menu_SetUseUnderlay(false)
+    ZO_ComboBox.HideDropdownInternal(self)
+end
+
+function ZO_MultiSelectComboBox:AddItemToSelected(item)
+    table.insert(self.m_selectedItemData, item)
+end
+
+function ZO_MultiSelectComboBox:RemoveItemFromSelected(item)
+    for i, itemData in ipairs(self.m_selectedItemData) do
+        if itemData == item then
+            table.remove(self.m_selectedItemData, i)
+            return
+        end
+    end
+end
+
+function ZO_MultiSelectComboBox:IsItemSelected(item)
+    for i, itemData in ipairs(self.m_selectedItemData) do
+        if itemData == item then
+            return true
+        end
+    end
+
+    return false
+end
+
+function ZO_MultiSelectComboBox:ClearAllSelections()
+    self.m_selectedItemData = {}
+    self:RefreshSelectedItemText()
 end

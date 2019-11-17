@@ -1,36 +1,5 @@
 
----
---@type Matrix33
 
----
---@field [parent=#Matrix33] #number _11
-
----
---@field [parent=#Matrix33] #number _12
-
----
---@field [parent=#Matrix33] #number _13
-
----
---@field [parent=#Matrix33] #number _21
-
----
---@field [parent=#Matrix33] #number _22
-
----
---@field [parent=#Matrix33] #number _23
-
----
---@field [parent=#Matrix33] #number _31
-
----
---@field [parent=#Matrix33] #number _32
-
----
---@field [parent=#Matrix33] #number _33
-
----
--- @param #Matrix33 m
 function zo_setToIdentityMatrix33(m)
     m._11 = 1
     m._12 = 0
@@ -43,8 +12,6 @@ function zo_setToIdentityMatrix33(m)
     m._33 = 1
 end
 
----
--- @param #Matrix33 m
 function zo_setToRotationMatrix2D(m, radians)
     local cosResult = math.cos(radians)
     local sinResult = math.sin(radians)
@@ -60,9 +27,7 @@ function zo_setToRotationMatrix2D(m, radians)
     m._33 = 1
 end
 
----
--- @param #Matrix33 m
-function zo_setToTranslationMatrix2D(m, x, y)
+function zo_setToTranslationMatrix2D(m , x, y)
     m._11 = 1
     m._12 = 0
     m._13 = x
@@ -74,9 +39,7 @@ function zo_setToTranslationMatrix2D(m, x, y)
     m._33 = 1
 end
 
----
--- @param #Matrix33 m
-function zo_setToScaleMatrix2D(m, scale)
+function zo_setToScaleMatrix2D(m , scale)
     m._11 = scale
     m._12 = 0
     m._13 = 0
@@ -88,10 +51,6 @@ function zo_setToScaleMatrix2D(m, scale)
     m._33 = 1
 end
 
----
--- @param #Matrix33 a
--- @param #Matrix33 b
--- @param #Matrix33 result
 function zo_matrixMultiply33x33(a , b , result )
     local _11 = a._11 * b._11 + a._12 * b._21 + a._13 * b._31
     local _12 = a._11 * b._12 + a._12 * b._22 + a._13 * b._32

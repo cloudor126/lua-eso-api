@@ -144,23 +144,22 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeKeybindStripDescriptors()
                 local pendingCost = GetPendingHeraldryCost()
                 local heraldryFunds = GetHeraldryGuildBankedMoney()
 
-                if IsCreatingHeraldryForFirstTime() then
-                    if heraldryFunds and pendingCost <= heraldryFunds then
-                        return zo_strformat(SI_GUILD_HERALDRY_PURCHASE_HERALDRY, pendingCost)
-                    else
-                        return zo_strformat(SI_GUILD_HERALDRY_PURCHASE_HERALDRY_NOT_ENOUGH, pendingCost)
-                    end
+                local format
+                if heraldryFunds and pendingCost <= heraldryFunds then
+                    format = ZO_CURRENCY_FORMAT_WHITE_AMOUNT_ICON
                 else
-                    if heraldryFunds and pendingCost <= heraldryFunds then
-                        return zo_strformat(SI_GUILD_HERALDRY_APPLY_CHANGES, pendingCost)
-                    else
-                        return zo_strformat(SI_GUILD_HERALDRY_APPLY_CHANGES_NOT_ENOUGH, pendingCost)
-                    end
+                    format = ZO_CURRENCY_FORMAT_ERROR_AMOUNT_ICON
+                end
+
+                if IsCreatingHeraldryForFirstTime() then
+                    return zo_strformat(SI_GUILD_HERALDRY_PURCHASE_HERALDRY, ZO_Currency_FormatKeyboard(CURT_MONEY, pendingCost, format))
+                else
+                    return zo_strformat(SI_GUILD_HERALDRY_APPLY_CHANGES, ZO_Currency_FormatKeyboard(CURT_MONEY, pendingCost, format))
                 end
             end,
 
             keybind = "UI_SHORTCUT_SECONDARY",
-        
+
             callback = function()
                 local pendingCost = GetPendingHeraldryCost()
                 local heraldryFunds = GetHeraldryGuildBankedMoney()
@@ -179,10 +178,10 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeKeybindStripDescriptors()
                 return HasPendingHeraldryChanges()
             end,
 
-			enabled = function()
+            enabled = function()
                 local pendingCost = GetPendingHeraldryCost()
                 local heraldryFunds = GetHeraldryGuildBankedMoney()
-				return heraldryFunds and (pendingCost <= heraldryFunds)
+                return heraldryFunds and (pendingCost <= heraldryFunds)
             end,
         },
 
@@ -191,7 +190,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeKeybindStripDescriptors()
             name = GetString(SI_GUILD_HERALDRY_UNDO_CHANGES),
 
             keybind = "UI_SHORTCUT_NEGATIVE",
-        
+
             callback = function()
                 RevertToSavedHeraldry(false)
                 self:SetSelectedHeraldryIndices()
@@ -209,7 +208,6 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeKeybindStripDescriptors()
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             name = GetString(SI_EXIT_BUTTON),
             keybind = "UI_SHORTCUT_EXIT",
-            ethereal = true,
             callback = function()
                 self:AttemptSaveAndExit()
             end,
@@ -287,7 +285,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         pressedIcon = "EsoUI/Art/Guild/guildHeraldry_indexIcon_background_down.dds",
         mouseoverIcon = "EsoUI/Art/Guild/guildHeraldry_indexIcon_background_over.dds",
     }
-    local parent = self.navigationTree:AddNode("ZO_IconHeader", bgMenuData, nil, SOUNDS.GUILD_HERALDRY_CATEGORY_SELECTED)
+    local parent = self.navigationTree:AddNode("ZO_IconHeader", bgMenuData)
 
     local function LayoutStyles()
         local function AnchorHeraldryStyle(currentAnchor, style, index)
@@ -325,7 +323,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         styleHeaderName = GetString(SI_GUILD_HERALDRY_PATTERN_HEADER),
     }
 
-    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgStyleData, parent, SOUNDS.GUILD_HERALDRY_SUBCATEGORY_SELECTED)
+    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgStyleData, parent)
 
     local bgPrimaryColorData = {
         name = GetString(SI_GUILD_HERALDRY_PRIMARY_COLOR),
@@ -336,7 +334,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         getSelectedColor = function() return self.selectedBackgroundPrimaryColor end,
     }
 
-    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgPrimaryColorData, parent, SOUNDS.GUILD_HERALDRY_SUBCATEGORY_SELECTED)
+    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgPrimaryColorData, parent)
 
     local bgSecondaryColorData = {
         name = GetString(SI_GUILD_HERALDRY_SECONDARY_COLOR),
@@ -347,7 +345,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         getSelectedColor = function() return self.selectedBackgroundSecondaryColor end,
     }
 
-    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgSecondaryColorData, parent, SOUNDS.GUILD_HERALDRY_SUBCATEGORY_SELECTED)
+    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", bgSecondaryColorData, parent)
 
     local crestMenuData = {
         name = GetString(SI_GUILD_HERALDRY_CREST),
@@ -356,7 +354,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         mouseoverIcon = "EsoUI/Art/Guild/guildHeraldry_indexIcon_crest_over.dds",
     }
 
-    parent = self.navigationTree:AddNode("ZO_IconHeader", crestMenuData, nil, SOUNDS.GUILD_HERALDRY_CATEGORY_SELECTED)
+    parent = self.navigationTree:AddNode("ZO_IconHeader", crestMenuData)
 
     local crestStyleData = {
         name = GetString(SI_GUILD_HERALDRY_STYLE),
@@ -375,7 +373,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         styleHeaderName = GetString(SI_GUILD_HERALDRY_DESIGN_HEADER),
     }
 
-    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", crestStyleData, parent, SOUNDS.GUILD_HERALDRY_SUBCATEGORY_SELECTED)
+    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", crestStyleData, parent)
 
      local crestColorData = {
         name = GetString(SI_GUILD_HERALDRY_COLOR),
@@ -386,7 +384,7 @@ function ZO_GuildHeraldryManager_Keyboard:InitializeCategories()
         getSelectedColor = function() return self.selectedCrestColor end,
     }
 
-    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", crestColorData, parent, SOUNDS.GUILD_HERALDRY_SUBCATEGORY_SELECTED)
+    self.navigationTree:AddNode("ZO_GuildHeraldry_ChildEntry", crestColorData, parent)
 
     self.navigationTree:Commit()
 end

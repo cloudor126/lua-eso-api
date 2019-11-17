@@ -19,16 +19,55 @@ end
 function ZO_HousingFurnitureProducts_Gamepad:InitializeKeybindStripDescriptors()
     ZO_HousingFurnitureList_Gamepad.InitializeKeybindStripDescriptors(self)
 
+    -- purchase
     self:AddFurnitureListKeybind(
-        -- Primary
         {
             name = GetString(SI_HOUSING_FURNITURE_BROWSER_PURCHASE_KEYBIND),
             keybind = "UI_SHORTCUT_PRIMARY",
+            callback = function()
+                local targetData = self.furnitureList.list:GetTargetData()
+                if targetData then
+                    local furnitureObject = targetData.furnitureObject
+                    local IS_PURCHASE = false
+                    RequestPurchaseMarketProduct(furnitureObject.marketProductId, furnitureObject.presentationIndex, IS_PURCHASE)
+                end
+            end,
+            enabled = function()
+                local targetData = self.furnitureList.list:GetTargetData()
+                if targetData == nil then
+                    return false
+                else
+                    local furnitureObject = targetData.furnitureObject
+                    if not furnitureObject:CanBePurchased() then
+                        local expectedPurchaseResult = CouldPurchaseMarketProduct(furnitureObject.marketProductId, furnitureObject.presentationIndex)
+                        return false, GetString("SI_MARKETPURCHASABLERESULT", expectedPurchaseResult)
+                    end
+                end
+
+                return true
+            end,
+        }
+    )
+
+    -- gift
+    self:AddFurnitureListKeybind(
+        {
+            name = GetString(SI_HOUSING_FURNITURE_BROWSER_GIFT_KEYBIND),
+            keybind = "UI_SHORTCUT_RIGHT_STICK",
+            visible =  function()
+                            local targetData = self.furnitureList.list:GetTargetData()
+                            if targetData then
+                                local furnitureObject = targetData.furnitureObject
+                                return IsMarketProductGiftable(furnitureObject.marketProductId, furnitureObject.presentationIndex)
+                            end
+                            return false
+                        end,
             callback =  function()
                             local targetData = self.furnitureList.list:GetTargetData()
                             if targetData then
                                 local furnitureObject = targetData.furnitureObject
-                                RequestPurchaseMarketProduct(furnitureObject.marketProductId, furnitureObject.presentationIndex)
+                                local IS_GIFT = true
+                                RequestPurchaseMarketProduct(furnitureObject.marketProductId, furnitureObject.presentationIndex, IS_GIFT)
                             end
                         end,
         }
@@ -69,6 +108,8 @@ end
 
 function ZO_HousingFurnitureProducts_Gamepad:OnShowing()
     ZO_HousingFurnitureList_Gamepad.OnShowing(self)
+
+    UpdateMarketDisplayGroup(MARKET_DISPLAY_GROUP_HOUSE_EDITOR)
     MARKET_CURRENCY_GAMEPAD:Show()
     self:OnCurrencyUpdated()
 end

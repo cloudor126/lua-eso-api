@@ -4,7 +4,7 @@
 
         <Label name="ZO_GuildHistoryLabel" font="ZoFontGame" wrapMode="ELLIPSIS" virtual="true"/>
         <Control name="ZO_GuildHistoryRow" mouseEnabled="true" virtual="true">
-            <Dimensions y="45"/>
+            <Dimensions y="60"/>
             <Controls>
                 <Texture name="$(parent)BG" inherits="ZO_ThinListBgStrip" />
                 
@@ -30,6 +30,7 @@
                     <Anchor point="TOPLEFT" offsetX="-10" offsetY="75"/>
                 </Label>
                 <Control name="$(parent)Categories">
+                    <Dimensions x="ZO_GUILD_HISTORY_KEYBOARD_CATEGORY_TREE_WIDTH" />
                     <Anchor point="TOPLEFT" relativeTo="$(parent)CategoriesHeader" relativePoint="BOTTOMLEFT" offsetY="10"/>
                 </Control>
 
@@ -41,6 +42,10 @@
                     <Anchor point="TOPLEFT" relativeTo="$(parent)ActivityLogHeader" relativePoint="BOTTOMLEFT" offsetY="10"/>
                     <Anchor point="BOTTOMRIGHT" offsetX="-35" offsetY="-32"/>
                 </Control>
+
+                <Label name="$(parent)NoEntriesMessage" font="ZoFontWinH4" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_SELECTED" horizontalAlignment="CENTER" hidden="true">
+                    <Anchor point="TOP" relativeTo="$(parent)List" />
+                </Label>
 
                 <Control name="$(parent)Loading" inherits="ZO_Loading">
                     <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)List" relativePoint="TOPRIGHT" offsetX="-20" offsetY="-12"/>

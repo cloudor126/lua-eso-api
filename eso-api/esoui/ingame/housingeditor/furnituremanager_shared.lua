@@ -3,6 +3,27 @@ ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY = "NEEDS_CATEGORY"
 ZO_PLACEABLE_TYPE_ITEM = 1
 ZO_PLACEABLE_TYPE_COLLECTIBLE = 2
 
+ZO_PLACEABLE_FURNITURE_BAGS =
+{
+    [BAG_BACKPACK] = true,
+    [BAG_BANK] = true,
+    [BAG_SUBSCRIBER_BANK] = true,
+    [BAG_HOUSE_BANK_ONE] = true,
+    [BAG_HOUSE_BANK_TWO] = true,
+    [BAG_HOUSE_BANK_THREE] = true,
+    [BAG_HOUSE_BANK_FOUR] = true,
+    [BAG_HOUSE_BANK_FIVE] = true,
+    [BAG_HOUSE_BANK_SIX] = true,
+    [BAG_HOUSE_BANK_SEVEN] = true,
+    [BAG_HOUSE_BANK_EIGHT] = true,
+    [BAG_HOUSE_BANK_NINE] = true,
+    [BAG_HOUSE_BANK_TEN] = true,
+}
+
+-- Make sure no new bags have been added since the last time we updated ZO_PLACEABLE_FURNITURE_BAGS
+-- If a new bag was added and it's possible to place furniture from it add it to the table
+internalassert(BAG_MAX_VALUE == 17, "Update ZO_SharedFurnitureManager to handle new bag")
+
 local FURNITURE_COMMAND_REMOVE = 1
 
 local function GetNextPlacedFurnitureIdIter(state, var1)
@@ -27,18 +48,22 @@ function ZO_SharedFurnitureManager:Initialize()
         [ZO_PLACEABLE_TYPE_COLLECTIBLE] = {},
         [ZO_PLACEABLE_TYPE_ITEM] = {},
     }
-    self.placeableFurnitureCategoryTreeData = ZO_FurnitureCategory:New()
+    self.placeableFurnitureCategoryTreeData = ZO_RootFurnitureCategory:New("placeable")
     self.inProgressPlaceableFurnitureTextFilterTaskIds = { }
     self.completePlaceableFurnitureTextFilterTaskIds = { }
     self.placeableTextFilter = ""
 
-    self.retrievableFurnitureCategoryTreeData = ZO_FurnitureCategory:New()
+    self.retrievableFurnitureCategoryTreeData = ZO_RootFurnitureCategory:New("retrievable")
     self.retrievableFurniture = {}
     self.retrievableTextFilter = ""
 
-    self.marketProductCategoryTreeData = ZO_FurnitureCategory:New()
+    self.marketProductCategoryTreeData = ZO_RootFurnitureCategory:New("market")
     self.marketProducts = {}
+    self.marketProductIdToMarketProduct = {}
     self.marketProductTextFilter = ""
+
+    self.placementFurnitureTheme = FURNITURE_THEME_TYPE_ALL
+    self.purchaseFurnitureTheme = FURNITURE_THEME_TYPE_ALL
 
     local function CreateMarketProduct(objectPool)
         return ZO_HousingMarketProduct:New()
@@ -56,8 +81,7 @@ end
 function ZO_SharedFurnitureManager:RegisterForEvents()
     SHARED_INVENTORY:RegisterCallback("FullInventoryUpdate", function(bagId) self:OnFullInventoryUpdate(bagId) end)
     SHARED_INVENTORY:RegisterCallback("SingleSlotInventoryUpdate", function(...) self:OnSingleSlotInventoryUpdate(...) end)
-    COLLECTIONS_INVENTORY_SINGLETON:RegisterCallback("FullCollectionsInventoryUpdate", function() self:OnFullCollectionUpdate() end)
-    COLLECTIONS_INVENTORY_SINGLETON:RegisterCallback("SingleCollectionsInventoryUpdate", function(collectibleId) self:OnSingleCollectibleUpdate(collectibleId) end)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectionUpdated", function(...) self:OnCollectionUpdated(...) end)
 
     local function ApplyFurnitureCommand(categoryTreeData, furnitureCommand)
         if furnitureCommand.command == FURNITURE_COMMAND_REMOVE then
@@ -71,33 +95,10 @@ function ZO_SharedFurnitureManager:RegisterForEvents()
         RefreshAll = function()
             self.placeableFurnitureCategoryTreeData:Clear()
             local itemFurnitureCache = self:GetPlaceableFurnitureCache(ZO_PLACEABLE_TYPE_ITEM)
-            local foundBankInventory = false
             for bagId, bagEntries in pairs(itemFurnitureCache) do
-                self:BuildCategoryTreeData(self.placeableFurnitureCategoryTreeData, bagEntries)
-                if bagId == BAG_BANK then
-                    foundBankInventory = true
-                end
+                self:BuildCategoryTreeData(self.placeableFurnitureCategoryTreeData, bagEntries, self.placementFurnitureTheme)
             end
-            -- it's very possible that we do not have the banks contents created at this point in the inventory cache
-            -- so in the case that we did not have it yet, we need to create the data and put it in the category tree
-            if not foundBankInventory then
-                local filteredDataTable = SHARED_INVENTORY:GenerateFullSlotData(PlaceableFurnitureFilter, BAG_BANK)
-                for _, itemData in pairs(filteredDataTable) do
-                    self:CreateOrUpdateItemDataEntry(itemData.bagId, itemData.slotIndex)
-                end
-                -- maybe we don't actually have anything in our bank though, so only try to add bank items if there are bank items to add
-                if itemFurnitureCache[BAG_BANK] then
-                    --this filter operation will be late since we are already building the list and the text filter is async, but it will
-                    --trigger a rebuild of the categories once it completes
-                    --but only do this if we have a search string, otherwise this could cause the callback to make the placement list build twice
-                    if self.placeableTextFilter ~= "" then
-                        self:RequestApplyPlaceableTextFilterToData()
-                    end
-                    self:BuildCategoryTreeData(self.placeableFurnitureCategoryTreeData, itemFurnitureCache[BAG_BANK])
-                end
-            end
-
-            self:BuildCategoryTreeData(self.placeableFurnitureCategoryTreeData, self:GetPlaceableFurnitureCache(ZO_PLACEABLE_TYPE_COLLECTIBLE))
+            self:BuildCategoryTreeData(self.placeableFurnitureCategoryTreeData, self:GetPlaceableFurnitureCache(ZO_PLACEABLE_TYPE_COLLECTIBLE), self.placementFurnitureTheme)
             self.placeableFurnitureCategoryTreeData:SortCategoriesRecursive()
         end,
         RefreshSingle = function(furnitureCommand)
@@ -121,7 +122,7 @@ function ZO_SharedFurnitureManager:RegisterForEvents()
     {
         RefreshAll = function()
             self.marketProductCategoryTreeData:Clear()
-            self:BuildCategoryTreeData(self.marketProductCategoryTreeData, self:GetMarketProductCache())
+            self:BuildCategoryTreeData(self.marketProductCategoryTreeData, self:GetMarketProductCache(), self.purchaseFurnitureTheme)
             self.marketProductCategoryTreeData:SortCategoriesRecursive()
         end,
     })
@@ -144,6 +145,11 @@ function ZO_SharedFurnitureManager:RegisterForEvents()
         self:InitializeFurnitureCaches()
         if GetCurrentZoneHouseId() ~= 0 then
             EVENT_MANAGER:RegisterForUpdate("SharedFurniture", 100, InHouseOnUpdate)
+
+            -- make sure all furniture found in house banks are populated in this manager
+            for bagId = BAG_HOUSE_BANK_ONE, BAG_HOUSE_BANK_TEN do
+                SHARED_INVENTORY:GetOrCreateBagCache(bagId)
+            end
         else
             EVENT_MANAGER:UnregisterForUpdate("SharedFurniture")
         end
@@ -156,11 +162,19 @@ function ZO_SharedFurnitureManager:RegisterForEvents()
 
     local function OnMarketStateUpdated(displayGroup, marketState)
         if displayGroup == MARKET_DISPLAY_GROUP_HOUSE_EDITOR then
-            self:CreateOrUpdateMarketProductCache()
+            self:BuildMarketProductCache()
         end
     end
     EVENT_MANAGER:RegisterForEvent("SharedFurniture", EVENT_MARKET_STATE_UPDATED, function(eventId, ...) OnMarketStateUpdated(...) end)
-    EVENT_MANAGER:RegisterForEvent("SharedFurniture", EVENT_MARKET_PURCHASE_RESULT, function(eventId, ...) self:CreateOrUpdateMarketProductCache() end)
+
+    local function OnMarketProductAvailabilityUpdated(displayGroup)
+        if displayGroup == MARKET_DISPLAY_GROUP_HOUSE_EDITOR then
+            self:BuildMarketProductCache()
+        end
+    end
+
+    EVENT_MANAGER:RegisterForEvent("SharedFurniture", EVENT_MARKET_PRODUCT_AVAILABILITY_UPDATED, function(eventId, ...) OnMarketProductAvailabilityUpdated(...) end)
+    EVENT_MANAGER:RegisterForEvent("SharedFurniture", EVENT_MARKET_PURCHASE_RESULT, function(eventId, ...) self:UpdateMarketProductCache() end)
 
     EVENT_MANAGER:RegisterForEvent("SharedFurniture", EVENT_BACKGROUND_LIST_FILTER_COMPLETE, function(eventId, ...) self:OnBackgroundListFilterComplete(...) end)
 
@@ -170,6 +184,7 @@ end
 
 function ZO_SharedFurnitureManager:SetPlayerWaypointTo(retrievableFurniture)
     local furnitureId = retrievableFurniture:GetRetrievableFurnitureId()
+    SetHousingEditorTrackedFurnitureId(furnitureId)
     local worldX, worldY, worldZ = HousingEditorGetFurnitureWorldPosition(furnitureId)
     if SetPlayerWaypointByWorldLocation(worldX, worldY, worldZ) then
         ZO_Alert(UI_ALERT_CATEGORY_ALERT, nil, GetString(SI_HOUSING_FURNIUTRE_SET_WAYPOINT_SUCCESS))
@@ -189,6 +204,7 @@ function ZO_SharedFurnitureManager:OnMapPing(pingEventType, pingType, pingTag, x
             --Otherwise something else removed the player waypoint so clear out our state info.
             if not self.ourWaypointAdd then
                 self.waypointToFurnitureId = nil
+                ResetHousingEditorTrackedFurnitureId()
             end
         end
     end
@@ -198,6 +214,7 @@ function ZO_SharedFurnitureManager:OnHousingEditorModeChanged(oldMode, newMode)
     --If they picked up the furniture clear the player waypoint if it was showing the location of that furniture
     if newMode == HOUSING_EDITOR_MODE_PLACEMENT and self.waypointToFurnitureId and HousingEditorGetSelectedFurnitureId() == self.waypointToFurnitureId then
         RemovePlayerWaypoint()
+        ResetHousingEditorTrackedFurnitureId()
     end
 end
 
@@ -207,8 +224,8 @@ end
 
 function ZO_SharedFurnitureManager:InitializeFurnitureCaches()
     --setup just the placeable collections, SharedInventory will tell us when its ready to query placeable items
-    self:OnFullCollectionUpdate()
-    self:CreateOrUpdateMarketProductCache()
+    self:CreateOrUpdateCollectibleCache()
+    self:BuildMarketProductCache()
 
     ZO_ClearTable(self.retrievableFurniture)
 
@@ -241,6 +258,13 @@ function ZO_SharedFurnitureManager:OnFurnitureRemovedFromHouse(furnitureId, coll
     if collectibleId ~= 0 then
         self.placeableFurniture[ZO_PLACEABLE_TYPE_COLLECTIBLE][collectibleId] = ZO_PlaceableFurnitureCollectible:New(collectibleId)
         self:RequestApplyPlaceableTextFilterToData()
+
+        --If we removed a house bank, tell the player that they need to re-place it to get those items
+        local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+        if collectibleData and collectibleData:GetCategoryType() == COLLECTIBLE_CATEGORY_TYPE_HOUSE_BANK then
+            local NO_SOUND = nil
+            ZO_Alert(UI_ALERT_CATEGORY_ALERT, NO_SOUND, zo_strformat(SI_HOUSING_FURNITURE_PUT_AWAY_HOUSE_BANK_WARNING, collectibleData:GetName()))
+        end
     end
 
     --if an item just remove, the inventory update will handle the placeable list changes
@@ -253,89 +277,87 @@ function ZO_SharedFurnitureManager:OnFurnitureRemovedFromHouse(furnitureId, coll
     if self.waypointToFurnitureId then
         if AreId64sEqual(furnitureId, self.waypointToFurnitureId) then
             RemovePlayerWaypoint()
+            ResetHousingEditorTrackedFurnitureId()
         end
     end
 end
 
 function ZO_SharedFurnitureManager:OnFullInventoryUpdate(bagId)
-    self:CreateOrUpdateItemCache(bagId)
+    if ZO_PLACEABLE_FURNITURE_BAGS[bagId] then
+        self:CreateOrUpdateItemCache(bagId)
+    end
 end
 
 function ZO_SharedFurnitureManager:OnSingleSlotInventoryUpdate(bagId, slotIndex, previousSlotData)
-    local slotData = SHARED_INVENTORY:GenerateSingleSlotData(bagId, slotIndex)
-    if slotData and slotData.isPlaceableFurniture then
-        self:CreateOrUpdateItemDataEntry(bagId, slotIndex)
-        self:RequestApplyPlaceableTextFilterToData()
-    elseif not slotData and previousSlotData and previousSlotData.isPlaceableFurniture then
-        --the item was deleted
-        local bag = self.placeableFurniture[ZO_PLACEABLE_TYPE_ITEM][bagId]
-        if bag then
-            local itemToRemove = bag[slotIndex]
-            if self:CanAddFurnitureDataToRefresh(self.placeableFurnitureCategoryTreeData, itemToRemove) then
-                self.refreshGroups:RefreshSingle("UpdatePlacementFurniture", { target = itemToRemove, command = FURNITURE_COMMAND_REMOVE })
+    if ZO_PLACEABLE_FURNITURE_BAGS[bagId] then
+        local slotData = SHARED_INVENTORY:GenerateSingleSlotData(bagId, slotIndex)
+        if slotData and slotData.isPlaceableFurniture then
+            self:CreateOrUpdateItemDataEntry(bagId, slotIndex)
+            self:RequestApplyPlaceableTextFilterToData()
+        elseif not slotData and previousSlotData and previousSlotData.isPlaceableFurniture then
+            --the item was deleted
+            local bag = self.placeableFurniture[ZO_PLACEABLE_TYPE_ITEM][bagId]
+            if bag then
+                local itemToRemove = bag[slotIndex]
+                if self:CanAddFurnitureDataToRefresh(self.placeableFurnitureCategoryTreeData, itemToRemove) then
+                    self.refreshGroups:RefreshSingle("UpdatePlacementFurniture", { target = itemToRemove, command = FURNITURE_COMMAND_REMOVE })
+                end
+                bag[slotIndex] = nil
+                --No need to run the text filter since this is just a remove. We can notify others immediately.
+                self:FireCallbacks("PlaceableFurnitureChanged")
             end
-            bag[slotIndex] = nil
-            --No need to run the text filter since this is just a remove. We can notify others immediately.
-            self:FireCallbacks("PlaceableFurnitureChanged")
         end
     end
 end
 
-function ZO_SharedFurnitureManager:OnFullCollectionUpdate()
-    self:CreateOrUpdateCollectibleCache()
-end
+function ZO_SharedFurnitureManager:OnCollectionUpdated(collectionUpdateType, collectiblesByNewUnlockState)
+    if collectionUpdateType == ZO_COLLECTION_UPDATE_TYPE.REBUILD then
+        self:CreateOrUpdateCollectibleCache()
+    else
+        local requestApplyPlaceableTextFilterToData = false
+        local fireRetrievableFurnitureChanged = false
+        for _, unlockStateTable in pairs(collectiblesByNewUnlockState) do
+            for _, collectibleData in ipairs(unlockStateTable) do
+                if collectibleData:IsPlaceableFurniture() then
+                    local collectibleId = collectibleData:GetId()
+                    if self:CreateOrUpdateCollectibleDataEntry(collectibleId) then
+                        requestApplyPlaceableTextFilterToData = true
+                    end
+                    --Update retrievable furniture that is backed by a collectible
+                    for _, furnitureData in pairs(self.retrievableFurniture) do
+                        if furnitureData:GetCollectibleId() == collectibleId then
+                            furnitureData:RefreshInfo(furnitureData:GetRetrievableFurnitureId())
+                            fireRetrievableFurnitureChanged = true
+                            break
+                        end
+                    end
+                end
+            end
+        end
 
-function ZO_SharedFurnitureManager:OnSingleCollectibleUpdate(collectibleId)
-    local collectibleData = COLLECTIONS_INVENTORY_SINGLETON:GetSingleCollectibleData(collectibleId, IsCollectibleCategoryPlaceableFurniture)
-    if collectibleData then
-        if self:CreateOrUpdateCollectibleDataEntry(collectibleId) then
+        if requestApplyPlaceableTextFilterToData then
             self:RequestApplyPlaceableTextFilterToData()
         end
-    else
-        --something made the collectible no longer valid
-        placeableCollectible = self.placeableFurniture[ZO_PLACEABLE_TYPE_COLLECTIBLE][collectibleId]
-        if placeableCollectible and self:CanAddFurnitureDataToRefresh(self.placeableFurnitureCategoryTreeData, placeableCollectible) then
-            self.refreshGroups:RefreshSingle("UpdatePlacementFurniture", { target=placeableCollectible, command=FURNITURE_COMMAND_REMOVE })
+
+        if fireRetrievableFurnitureChanged then
+            self:FireCallbacks("RetrievableFurnitureChanged")
         end
-        self.placeableFurniture[ZO_PLACEABLE_TYPE_COLLECTIBLE][collectibleId] = nil
-        --No need to run the text filter since this is just a remove. We can notify others immediately.
-        self:FireCallbacks("PlaceableFurnitureChanged")
     end
-end 
+    self:UpdateMarketProductCache()
+end
 
 do
     local function AddEntryToCategory(categoryTreeData, entry)
         local categoryId, subcategoryId = entry:GetCategoryInfo()
-        if categoryId and categoryId > 0 then
-            local categoryData = categoryTreeData:GetSubcategory(categoryId)
-            if not categoryData then
-                categoryTreeData:AddSubcategory(categoryId, ZO_FurnitureCategory:New(categoryTreeData, categoryId))
-                categoryData = categoryTreeData:GetSubcategory(categoryId)
-            end
 
-            if subcategoryId and subcategoryId > 0 then
-                local subcategoryData = categoryData:GetSubcategory(subcategoryId)
-                if not subcategoryData then
-                    categoryData:AddSubcategory(subcategoryId, ZO_FurnitureCategory:New(categoryData, subcategoryId))
-                    subcategoryData = categoryData:GetSubcategory(subcategoryId)
-                end
-                subcategoryData:AddEntry(entry)
-            else
-                categoryData:AddEntry(entry)
-            end
-        else
-            local categoryData = categoryTreeData:GetSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY)
-            if not categoryData then
-                categoryTreeData:AddSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY, ZO_FurnitureCategory:New(categoryTreeData, ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY))
-                categoryData = categoryTreeData:GetSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY)
-            end
-            categoryData:AddEntry(entry)
-        end
+        local categoryData = categoryTreeData:GetOrCreateMostSpecificCategory(categoryId, subcategoryId)
+        categoryData:AddEntry(entry)
     end
 
-    function ZO_SharedFurnitureManager:BuildCategoryTreeData(categoryTreeData, data)
+    function ZO_SharedFurnitureManager:BuildCategoryTreeData(categoryTreeData, data, theme)
+        local furnitureTheme = theme or FURNITURE_THEME_TYPE_ALL
         for _, furniture in pairs(data) do
-            if furniture:GetPassesTextFilter() then
+            if furniture:GetPassesTextFilter() and furniture:PassesTheme(furnitureTheme) then
                 AddEntryToCategory(categoryTreeData, furniture)
             end
         end
@@ -349,12 +371,24 @@ do
         local categoryId, subcategoryId = furniture:GetCategoryInfo()
         if categoryId and categoryId > 0 then
             local categoryData = categoryTreeData:GetSubcategory(categoryId)
-
-            if subcategoryId and subcategoryId > 0 then
-                local subcategoryData = categoryData:GetSubcategory(subcategoryId)
-                subcategoryData:RemoveEntry(furniture)
+            local couldntFindExpectedCategory = false
+            if categoryData then
+                if subcategoryId and subcategoryId > 0 then
+                    local subcategoryData = categoryData:GetSubcategory(subcategoryId)
+                    if subcategoryData then
+                        subcategoryData:RemoveEntry(furniture)
+                    else
+                        couldntFindExpectedCategory = true
+                    end
+                else
+                    categoryData:RemoveEntry(furniture)
+                end
             else
-                categoryData:RemoveEntry(furniture)
+                couldntFindExpectedCategory = true
+            end
+
+            if couldntFindExpectedCategory then
+                internalassert(false, string.format("Removing non-existant furniture from %s.", categoryTreeData:GetRootCategoryName()))
             end
         else
             local categoryData = categoryTreeData:GetSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY)
@@ -410,18 +444,20 @@ end
 function ZO_SharedFurnitureManager:CreateOrUpdateCollectibleCache()
     local collectibleCache = self.placeableFurniture[ZO_PLACEABLE_TYPE_COLLECTIBLE]
     ZO_ClearTable(collectibleCache)
-    
-    local filteredDataTable = COLLECTIONS_INVENTORY_SINGLETON:GetCollectionsData(IsCollectibleCategoryPlaceableFurniture)
+
+    local SORTED = true
+    local filteredDataTable = ZO_COLLECTIBLE_DATA_MANAGER:GetAllCollectibleDataObjects({ ZO_CollectibleCategoryData.IsStandardCategory }, { ZO_CollectibleData.IsPlaceableFurniture, ZO_CollectibleData.IsUnlocked }, SORTED)
     for _, collectibleData in pairs(filteredDataTable) do
-        self:CreateOrUpdateCollectibleDataEntry(collectibleData.collectibleId)
+        self:CreateOrUpdateCollectibleDataEntry(collectibleData:GetId())
     end
     self.refreshGroups:RefreshAll("UpdatePlacementFurniture")
     self:RequestApplyPlaceableTextFilterToData()
 end
 
-function ZO_SharedFurnitureManager:CreateOrUpdateMarketProductCache()
+function ZO_SharedFurnitureManager:BuildMarketProductCache()
     local productCache = self.marketProducts
-    ZO_ClearTable(productCache)
+    ZO_ClearNumericallyIndexedTable(productCache)
+    ZO_ClearTable(self.marketProductIdToMarketProduct)
     self.housingMarketProductPool:ReleaseAllObjects()
 
     local NO_SUBCATEGORY = nil
@@ -444,6 +480,15 @@ function ZO_SharedFurnitureManager:CreateOrUpdateMarketProductCache()
     self:RequestApplyMarketProductTextFilterToData()
 end
 
+function ZO_SharedFurnitureManager:UpdateMarketProductCache()
+    for index, marketHousingProduct in ipairs(self.marketProducts) do
+        marketHousingProduct:RefreshInfo(marketHousingProduct.marketProductId, marketHousingProduct.presentationIndex)
+    end
+
+    self.refreshGroups:RefreshAll("UpdateMarketProducts")
+    self:RequestApplyMarketProductTextFilterToData()
+end
+
 function ZO_SharedFurnitureManager:CreateOrUpdateItemDataEntry(bagId, slotIndex)
     local itemCache = self.placeableFurniture[ZO_PLACEABLE_TYPE_ITEM]
     local bag = itemCache[bagId]
@@ -457,7 +502,6 @@ function ZO_SharedFurnitureManager:CreateOrUpdateItemDataEntry(bagId, slotIndex)
         placeableItem:RefreshInfo(bagId, slotIndex)
     else
         bag[slotIndex] = ZO_PlaceableFurnitureItem:New(bagId, slotIndex)
-        placeableItem = bag[slotIndex]
     end
 end
 
@@ -486,6 +530,7 @@ function ZO_SharedFurnitureManager:CreateMarketProductEntry(marketProductId, pre
     local marketHousingProduct = self.housingMarketProductPool:AcquireObject()
     marketHousingProduct:RefreshInfo(marketProductId, presentationIndex)
     table.insert(self.marketProducts, marketHousingProduct)
+    self.marketProductIdToMarketProduct[marketProductId] = marketHousingProduct
 end
 
 function ZO_SharedFurnitureManager:DoesPlayerHavePlaceableFurniture()
@@ -553,6 +598,30 @@ do
     end
 end
 
+function ZO_SharedFurnitureManager:GetPlacementFurnitureTheme()
+    return self.placementFurnitureTheme
+end
+
+function ZO_SharedFurnitureManager:SetPlacementFurnitureTheme(theme)
+    if self.placementFurnitureTheme ~= theme then
+        self.placementFurnitureTheme = theme
+        self.refreshGroups:RefreshAll("UpdatePlacementFurniture")
+        self:FireCallbacks("PlaceableFurnitureChanged")
+    end
+end
+
+function ZO_SharedFurnitureManager:GetPurchaseFurnitureTheme()
+    return self.purchaseFurnitureTheme
+end
+
+function ZO_SharedFurnitureManager:SetPurchaseFurnitureTheme(theme)
+    if self.purchaseFurnitureTheme ~= theme then
+        self.purchaseFurnitureTheme = theme
+        self.refreshGroups:RefreshAll("UpdateMarketProducts")
+        self:FireCallbacks("MarketProductsChanged")
+    end
+end
+
 function ZO_SharedFurnitureManager:GetPlaceableTextFilter()
     return self.placeableTextFilter
 end
@@ -604,6 +673,12 @@ end
 
 --Starts a background task to filter the placeable list entries using the text input. This will eventually result in the category list being marked dirty
 --and others being notified to update once the filter completes.
+
+function ZO_SharedFurnitureManager:CanFilterByText(text)
+    -- Very broad searches have bad performance implications: The search itself is asynchronous (and snappy), but updating UI to reflect the search is not
+    return ZoUTF8StringLength(text) >= 2
+end
+
 function ZO_SharedFurnitureManager:RequestApplyPlaceableTextFilterToData()
     --Cancel any in progress filtering so we can do a new one
     for _, taskId in pairs(self.inProgressPlaceableFurnitureTextFilterTaskIds) do
@@ -611,11 +686,12 @@ function ZO_SharedFurnitureManager:RequestApplyPlaceableTextFilterToData()
     end
         
     --If we have filter text than create the tasks
-    if self.placeableTextFilter ~= "" then
+    if self:CanFilterByText(self.placeableTextFilter) then
         --Inventory Items
         local itemTaskId = CreateBackgroundListFilter(BACKGROUND_LIST_FILTER_TARGET_BAG_SLOT, self.placeableTextFilter)
         self.inProgressPlaceableFurnitureTextFilterTaskIds[ZO_PLACEABLE_TYPE_ITEM] = itemTaskId
         AddBackgroundListFilterType(itemTaskId, BACKGROUND_LIST_FILTER_TYPE_NAME)
+        AddBackgroundListFilterType(itemTaskId, BACKGROUND_LIST_FILTER_TYPE_FURNITURE_KEYWORDS)
         for bagId, slots in pairs(self.placeableFurniture[ZO_PLACEABLE_TYPE_ITEM]) do
             for slotId, slotData in pairs(slots) do
                 slotData:SetPassesTextFilter(false)
@@ -628,6 +704,7 @@ function ZO_SharedFurnitureManager:RequestApplyPlaceableTextFilterToData()
         local collectibleTaskId = CreateBackgroundListFilter(BACKGROUND_LIST_FILTER_TARGET_COLLECTIBLE_ID, self.placeableTextFilter)
         self.inProgressPlaceableFurnitureTextFilterTaskIds[ZO_PLACEABLE_TYPE_COLLECTIBLE] = collectibleTaskId
         AddBackgroundListFilterType(collectibleTaskId, BACKGROUND_LIST_FILTER_TYPE_NAME)
+        AddBackgroundListFilterType(collectibleTaskId, BACKGROUND_LIST_FILTER_TYPE_FURNITURE_KEYWORDS)
         for collectibleId, collectibleData in pairs(self.placeableFurniture[ZO_PLACEABLE_TYPE_COLLECTIBLE]) do
             collectibleData:SetPassesTextFilter(false)
             AddBackgroundListFilterEntry(collectibleTaskId, collectibleId)
@@ -661,7 +738,7 @@ function ZO_SharedFurnitureManager:RequestApplyRetrievableTextFilterToData()
     end
 
     --If we have filter text than create the task
-    if self.retrievableTextFilter ~= "" then
+    if self:CanFilterByText(self.retrievableTextFilter) then
         local furnitureTaskId = CreateBackgroundListFilter(BACKGROUND_LIST_FILTER_TARGET_FURNITURE_ID, self.retrievableTextFilter)
         self.inProgressRetrievableFurnitureTextFilterTaskId = furnitureTaskId
         AddBackgroundListFilterType(furnitureTaskId, BACKGROUND_LIST_FILTER_TYPE_NAME)
@@ -689,12 +766,13 @@ function ZO_SharedFurnitureManager:RequestApplyMarketProductTextFilterToData()
     end
 
     --If we have filter text than create the task
-    if self.marketProductTextFilter ~= "" then
+    if self:CanFilterByText(self.marketProductTextFilter) then
         local marketProductTaskId = CreateBackgroundListFilter(BACKGROUND_LIST_FILTER_TARGET_MARKET_PRODUCT_ID, self.marketProductTextFilter)
         self.inProgressMarketProductTextFilterTaskId = marketProductTaskId
         AddBackgroundListFilterType(marketProductTaskId, BACKGROUND_LIST_FILTER_TYPE_NAME)
         AddBackgroundListFilterType(marketProductTaskId, BACKGROUND_LIST_FILTER_TYPE_DESCRIPTION)
         AddBackgroundListFilterType(marketProductTaskId, BACKGROUND_LIST_FILTER_TYPE_SEARCH_KEYWORDS)
+        AddBackgroundListFilterType(marketProductTaskId, BACKGROUND_LIST_FILTER_TYPE_FURNITURE_KEYWORDS)
         for i, marketProductData in ipairs(self.marketProducts) do
             marketProductData:SetPassesTextFilter(false)
             AddBackgroundListFilterEntry(marketProductTaskId, marketProductData:GetMarketProductId())
@@ -749,15 +827,11 @@ function ZO_SharedFurnitureManager:OnBackgroundListFilterComplete(taskId)
     elseif taskId == self.inProgressMarketProductTextFilterTaskId then
         self.inProgressMarketProductTextFilterTaskId = nil
 
-        local marketProductDataCache = self.marketProducts
-        if marketProductDataCache then
-            for i = 1, GetNumBackgroundListFilterResults(taskId) do
-                local marketProductId = GetBackgroundListFilterResult(taskId, i)
-                for _, marketProductData in ipairs(marketProductDataCache) do
-                    if marketProductData:GetMarketProductId() == marketProductId then
-                        marketProductData:SetPassesTextFilter(true)
-                    end
-                end
+        for i = 1, GetNumBackgroundListFilterResults(taskId) do
+            local marketProductId = GetBackgroundListFilterResult(taskId, i)
+            local marketProductData = self.marketProductIdToMarketProduct[marketProductId]
+            if marketProductData then
+                marketProductData:SetPassesTextFilter(true)
             end
         end
         DestroyBackgroundListFilter(taskId)

@@ -12,7 +12,7 @@ ZO_KEYBOARD_GROUP_LIST_ROLES_WIDTH = 80 - ZO_KEYBOARD_GROUP_LIST_PADDING_X
 --Group List Keyboard
 ----------------------------------
 
-local ZO_GroupList_Keyboard = ZO_SortFilterList:Subclass()
+local ZO_GroupList_Keyboard = ZO_Object.MultiSubclass(ZO_SortFilterList, ZO_SocialListDirtyLogic_Shared)
 
 local GROUP_DATA = 1
 
@@ -44,17 +44,19 @@ function ZO_GroupList_Keyboard:Initialize(control)
     end
 
     ZO_ScrollList_EnableHighlight(self.list, "ZO_ThinListHighlight")
-    
+
     GROUP_LIST_FRAGMENT = ZO_FadeSceneFragment:New(control)
-    GROUP_LIST_FRAGMENT:RegisterCallback("StateChange",  function(oldState, newState)
-                                                            if(newState == SCENE_SHOWING) then
-                                                                KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
-                                                            elseif(newState == SCENE_SHOWN) then
-                                                                self:RefreshData()
-                                                            elseif(newState == SCENE_HIDDEN) then
-                                                                KEYBIND_STRIP:RemoveKeybindButtonGroup(self.keybindStripDescriptor)
-                                                            end
-                                                        end)
+    GROUP_LIST_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
+        if newState == SCENE_FRAGMENT_SHOWING then
+            KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
+        elseif newState == SCENE_FRAGMENT_SHOWN then
+            self:RefreshData()
+            TriggerTutorial(TUTORIAL_TRIGGER_YOUR_GROUP_OPENED)
+        elseif newState == SCENE_FRAGMENT_HIDDEN then
+            KEYBIND_STRIP:RemoveKeybindButtonGroup(self.keybindStripDescriptor)
+        end
+    end)
+    self:InitializeDirtyLogic(GROUP_LIST_FRAGMENT)
 
     self.activeColor = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_TEXT_COLORS, INTERFACE_TEXT_COLOR_NORMAL))
     self.inactiveColor = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_TEXT_COLORS, INTERFACE_TEXT_COLOR_DISABLED))
@@ -68,7 +70,7 @@ function ZO_GroupList_Keyboard:Initialize(control)
         pressedIcon = "EsoUI/Art/LFG/LFG_indexIcon_group_down.dds",
         mouseoverIcon = "EsoUI/Art/LFG/LFG_indexIcon_group_over.dds",
     }
-    GROUP_MENU_KEYBOARD:AddCategory(data)
+    GROUP_MENU_KEYBOARD:AddCategory(data, ZO_ACTIVITY_FINDER_SORT_PRIORITY.GROUP)
 end
 
 function ZO_GroupList_Keyboard:InitializeKeybindDescriptors()
@@ -138,7 +140,7 @@ function ZO_GroupList_Keyboard:GroupListRow_OnMouseUp(control, button, upInside)
         local data = ZO_ScrollList_GetData(control)
         if data then
             if data.isPlayer then
-                AddMenuItem(GetString(SI_GROUP_LIST_MENU_LEAVE_GROUP), function() GroupLeave() end)
+                AddMenuItem(GetString(SI_GROUP_LIST_MENU_LEAVE_GROUP), function() ZO_Dialogs_ShowDialog("GROUP_LEAVE_DIALOG") end)
             elseif data.online then
                 if IsChatSystemAvailableForCurrentPlatform() then
                     AddMenuItem(GetString(SI_SOCIAL_LIST_PANEL_WHISPER), function() StartChatInput("", CHAT_CHANNEL_WHISPER, data.characterName) end)
@@ -147,25 +149,30 @@ function ZO_GroupList_Keyboard:GroupListRow_OnMouseUp(control, button, upInside)
                 AddMenuItem(GetString(SI_SOCIAL_MENU_JUMP_TO_PLAYER), function() JumpToGroupMember(data.characterName) end)
             end
 
-            local modicationRequiresVoting = DoesGroupModificationRequireVote()
-            if(self.playerIsLeader) then
-                if data.isPlayer then
-                    if not modicationRequiresVoting then
-                        AddMenuItem(GetString(SI_GROUP_LIST_MENU_DISBAND_GROUP), function() ZO_Dialogs_ShowDialog("GROUP_DISBAND_DIALOG") end)
+            if IsGroupModificationAvailable() then
+                local modicationRequiresVoting = DoesGroupModificationRequireVote()
+                if self.playerIsLeader then
+                    if data.isPlayer then
+                        if not modicationRequiresVoting then
+                            AddMenuItem(GetString(SI_GROUP_LIST_MENU_DISBAND_GROUP), function() ZO_Dialogs_ShowDialog("GROUP_DISBAND_DIALOG") end)
+                        end
+                    else
+                        
+                        if not modicationRequiresVoting then
+                            AddMenuItem(GetString(SI_GROUP_LIST_MENU_KICK_FROM_GROUP), function() GroupKick(data.unitTag) end)
+                        end
                     end
-                else
-                    if data.online then
-                        AddMenuItem(GetString(SI_GROUP_LIST_MENU_PROMOTE_TO_LEADER), function() GroupPromote(data.unitTag) end)
-                    end
-                    if not modicationRequiresVoting then
-                        AddMenuItem(GetString(SI_GROUP_LIST_MENU_KICK_FROM_GROUP), function() GroupKick(data.unitTag) end)
-                    end
+                end
+
+                --Cannot vote for yourself
+                if modicationRequiresVoting and not data.isPlayer then
+                    AddMenuItem(GetString(SI_GROUP_LIST_MENU_VOTE_KICK_FROM_GROUP), function() BeginGroupElection(GROUP_ELECTION_TYPE_KICK_MEMBER, ZO_GROUP_ELECTION_DESCRIPTORS.NONE, data.unitTag) end)
                 end
             end
 
-            --Cannot vote for yourself
-            if modicationRequiresVoting and not data.isPlayer then
-                AddMenuItem(GetString(SI_GROUP_LIST_MENU_VOTE_KICK_FROM_GROUP), function() BeginGroupElection(GROUP_ELECTION_TYPE_KICK_MEMBER, ZO_GROUP_ELECTION_DESCRIPTORS.NONE, data.unitTag) end)
+            --Per design, promoting doesn't expressly fall under the mantle of "group modification"
+            if self.playerIsLeader and not data.isPlayer and data.online then
+                AddMenuItem(GetString(SI_GROUP_LIST_MENU_PROMOTE_TO_LEADER), function() GroupPromote(data.unitTag) end)
             end
 
             self:ShowMenu(control)
@@ -274,6 +281,8 @@ function ZO_GroupList_Keyboard:RefreshData()
     if not self.control:IsHidden() then
         ZO_SortFilterList.RefreshData(self)
     end
+
+    PREFERRED_ROLES:RefreshRadioButtonGroupEnabledState()
 end
 
 

@@ -6,6 +6,8 @@ SOUNDS = {
     NEGATIVE_CLICK                  = "Click_Negative",
     POSITIVE_CLICK                  = "Click_Positive",
     MENU_BAR_CLICK                  = "Click_MenuBar",
+    TREE_HEADER_CLICK               = "Click_TreeHeader",
+    TREE_SUBCATEGORY_CLICK          = "Click_TreeSubcategory",
 
     -- Window Sounds
     DEFAULT_WINDOW_OPEN             = "Window_Open",
@@ -71,6 +73,8 @@ SOUNDS = {
     GAMEPAD_MENU_DOWN               = "Console_Menu_Down",
     GAMEPAD_MENU_JUMP_UP            = "Console_Menu_Jump_Up",
     GAMEPAD_MENU_JUMP_DOWN          = "Console_Menu_Jump_Down",
+    GAMEPAD_MENU_LEFT               = "Console_Menu_Left",
+    GAMEPAD_MENU_RIGHT              = "Console_Menu_Right",
 
     -- Dialog sounds
     DIALOG_SHOW                     = "Dialog_Show",
@@ -85,11 +89,6 @@ SOUNDS = {
     --chat sounds
     CHAT_MINIMIZED = "Chat_Min",
     CHAT_MAXIMIZED = "Chat_Max",
-
-    --Scroll Sounds
-    SCROLL_UP                       = "Scroll_Up",
-    SCROLL_DOWN                     = "Scroll_Down",
-    SCROLL_END                      = "Scroll_Down",
 
     -- Spinner Sounds
     SPINNER_UP                      = "Spinner_Up",
@@ -156,9 +155,6 @@ SOUNDS = {
     GENERAL_FAILED_REQUIREMENTS     = "General_FailedRequirements",
     GENERAL_ALERT_ERROR             = "General_Alert_Error",
 
-    -- Campaign sounds
-    CAMPAIGN_BLADE_SELECTED         = "Campaign_BladeSelected",
-
     -- Notification sounds
     NEW_NOTIFICATION                = "New_Notification",
     QUEST_SHARE_ACCEPTED            = "QuestShare_Accepted",
@@ -180,23 +176,10 @@ SOUNDS = {
 
     -- Achievement sounds
     ACHIEVEMENT_AWARDED             = "Achievement_Awarded",
-    ACHIEVEMENT_CATEGORY_SELECTED   = "Achievement_CategorySelected",
-    ACHIEVEMENT_SUB_CATEGORY_SELECTED = "Achievement_SubCategorySelected",
     ACHIEVEMENT_EXPANDED            = "Achievement_Expanded",
     ACHIEVEMENT_COLLAPSED           = "Achievement_Collapsed",
 
-    --Journal progress summary sounds
-    JOURNAL_PROGRESS_CATEGORY_SELECTED   = "Journal_Progress_CategorySelected",
-    JOURNAL_PROGRESS_SUB_CATEGORY_SELECTED = "Journal_Progress_SubCategorySelected",
-
-
-    --Leaderboard sounds
-    LEADERBOARD_CATEGORY_SELECTED   = "Leaderboard_CategorySelected",
-    LEADERBOARD_SUBCATEGORY_SELECTED= "Leaderboard_SubCategorySelected",
-
     --Guild Heraldry sounds
-    GUILD_HERALDRY_CATEGORY_SELECTED    = "Guild_Heraldry_CategorySelected",
-    GUILD_HERALDRY_SUBCATEGORY_SELECTED = "Guild_Heraldry_SubCategorySelected",
     GUILD_HERALDRY_STYLE_SELECTED       = "Guild_Heraldry_StyleSelected",
     GUILD_HERALDRY_APPLIED              = "Guild_Heraldry_Applied",
     GUILD_HERALDRY_UNDO_CHANGES         = "Guild_Heraldry_UndoChanges",
@@ -204,7 +187,6 @@ SOUNDS = {
     --Quest sounds
     QUEST_ACCEPTED                  = "Quest_Accept",
     QUEST_ABANDONED                 = "Quest_Abandon",
-    QUEST_BLADE_SELECTED            = "Quest_Blade_Selected",
     QUEST_COMPLETED                 = "Quest_Complete",
     QUEST_OBJECTIVE_STARTED         = "Quest_ObjectivesStarted",
     QUEST_OBJECTIVE_INCREMENT       = "Quest_ObjectivesIncrement",
@@ -217,10 +199,6 @@ SOUNDS = {
     OBJECTIVE_ACCEPTED              = "Objective_Accept",
     OBJECTIVE_COMPLETED             = "Objective_Complete",
     OBJECTIVE_DISCOVERED            = "Objective_Discovered",
-
-    --Help Sounds
-    HELP_BLADE_SELECTED             = "Help_BladeSelected",
-    HELP_ITEM_SELECTED              = "Help_ItemSelected",
 
     --Inventory sounds
     INVENTORY_DESTROY_JUNK          = "Inventory_DestroyJunk",
@@ -254,8 +232,11 @@ SOUNDS = {
     TELVAR_MULTIPLIERMAX            = "Telvar_MultiplierMax",
     TELVAR_TRANSACT                 = "Telvar_Transact",
 
-	-- Writ voucher sounds
-	WRIT_VOUCHER_TRANSACT			= "WritVoucher_Transact",
+    -- Writ voucher sounds
+    WRIT_VOUCHER_TRANSACT           = "WritVoucher_Transact",
+
+    -- Undaunted key sounds
+    UNDAUNTED_KEY_TRANSACT           = "Undaunted_Transact",
 
     --Justice sounds
     JUSTICE_STATE_CHANGED           = "Justice_StateChanged",
@@ -283,7 +264,6 @@ SOUNDS = {
     --LFG sounds
     LFG_SEARCH_STARTED              = "LFG_Search_Started",
     LFG_SEARCH_FINISHED             = "LFG_Search_Finished",
-    LFG_JUMP_DUNGEON                = "LFG_Jump_Dungeon",
     LFG_READY_CHECK                 = "LFG_Ready_Check",
     LFG_FIND_REPLACEMENT            = "LFG_Find_Replacement",
     LFG_COMPLETE_ANNOUNCEMENT       = "LFG_Complete_Announcement",
@@ -295,21 +275,46 @@ SOUNDS = {
     GROUP_ELECTION_RESULT_LOST      = "GroupElection_ResultLost",
 
     --Battleground sounds
-    FLAG_ASSAULTED_ALLIANCE1        = "Flag_AssaultedByAlliance1",
-    FLAG_CAPUTURED_ALLIANCE1        = "AvA_Resource_Captured_ByAldmeri",
-    FLAG_ATTACKED_ALLIANCE1         = "Flag_AttackedByAlliance1",
-    FLAG_LOST_ALLIANCE1             = "Flag_LostByAlliance1",
+    BATTLEGROUND_INACTIVITY_WARNING = "Battleground_InactivityWarning",
+    BATTLEGROUND_MEDAL_RECEIVED = "BG_MedalReceived",
+    BATTLEGROUND_NEARING_VICTORY = "BG_VictoryNear",
+    BATTLEGROUND_COUNTDOWN_FINISH = "BG_Countdown_Finish",
+    BATTLEGROUND_MATCH_WON = "BG_MatchWon",
+    BATTLEGROUND_MATCH_LOST = "BG_MatchLost",
+    BATTLEGROUND_ONE_MINUTE_WARNING = "BG_One_Minute_Warning",
 
-    FLAG_ASSAULTED_ALLIANCE2        = "Flag_AssaultedByAlliance2",
-    FLAG_CAPUTURED_ALLIANCE2        = "AvA_Resource_Captured_ByEbonheart",
-    FLAG_ATTACKED_ALLIANCE2         = "Flag_AttackedByAlliance2",
-    FLAG_LOST_ALLIANCE2             = "Flag_LostByAlliance2",
+    -- Battleground capture flag objective sounds
+    BATTLEGROUND_CAPTURE_FLAG_TAKEN_OWN_TEAM = "BG_CTF_FlagTaken_OwnTeam",
+    BATTLEGROUND_CAPTURE_FLAG_TAKEN_OTHER_TEAM = "BG_CTF_FlagTaken_OtherTeam",
+    BATTLEGROUND_CAPTURE_FLAG_DROPPED_OWN_TEAM = "BG_CTF_FlagDropped_OwnTeam",
+    BATTLEGROUND_CAPTURE_FLAG_DROPPED_OTHER_TEAM = "BG_CTF_FlagDropped_OtherTeam",
+    BATTLEGROUND_CAPTURE_FLAG_RETURNED = "BG_CTF_FlagReturned",
+    BATTLEGROUND_CAPTURE_FLAG_CAPTURED_BY_OTHER_TEAM = "BG_CTF_FlagCaptured",
+    BATTLEGROUND_CAPTURE_FLAG_CAPTURED_BY_OWN_TEAM = "BG_CTF_TeamFlagCapture",
 
-    FLAG_ASSAULTED_ALLIANCE3        = "Flag_AssaultedByAlliance3",
-    FLAG_CAPUTURED_ALLIANCE3        = "AvA_Resource_Captured_ByDaggerfall",
-    FLAG_ATTACKED_ALLIANCE3         = "Flag_AttackedByAlliance3",
-    FLAG_LOST_ALLIANCE3             = "Flag_LostByAlliance3",
+    -- Battleground murderball objective sounds
+    BATTLEGROUND_MURDERBALL_TAKEN_OWN_TEAM = "BG_MB_BallTaken_OwnTeam",
+    BATTLEGROUND_MURDERBALL_TAKEN_OTHER_TEAM = "BG_MB_BallTaken_OtherTeam",
+    BATTLEGROUND_MURDERBALL_DROPPED_OWN_TEAM = "BG_MB_BallDropped_OwnTeam",
+    BATTLEGROUND_MURDERBALL_DROPPED_OTHER_TEAM = "BG_MB_BallDropped_OtherTeam",
+    BATTLEGROUND_MURDERBALL_RETURNED = "BG_MB_BallReturned",
 
+    -- Battleground capture area sounds
+    BATTLEGROUND_CAPTURE_AREA_CAPTURED_OWN_TEAM = "BG_CA_AreaCaptured_OwnTeam",
+    BATTLEGROUND_CAPTURE_AREA_CAPTURED_OTHER_TEAM = "BG_CA_AreaCaptured_OtherTeam",
+    BATTLEGROUND_CAPTURE_METER_CONTESTING = "BG_CM_ContestingArea",
+    BATTLEGROUND_CAPTURE_METER_CAPTURING = "BG_CM_CapturingArea",
+    BATTLEGROUND_CAPTURE_AREA_SPAWNED = "BG_CA_AreaCaptured_Spawned",
+    BATTLEGROUND_CAPTURE_AREA_MOVED = "BG_CA_AreaCaptured_Moved",
+
+    -- Battleground kill sounds
+    BATTLEGROUND_KILL_KILLING_BLOW = "BG_Kill_KillingBlow",
+    BATTLEGROUND_KILL_ASSIST = "BG_Kill_Assist",
+    BATTLEGROUND_KILL_KILLED_BY_MY_TEAM = "BG_Kill_KilledByMyTeam",
+    BATTLEGROUND_KILL_STOLEN_BY_ENEMY_TEAM = "BG_Kill_StolenByEnemyTeam",
+    BATTLEGROUND_KILL_KILLED_BY_ENEMY_TEAM = "BG_Kill_KilledByEnemyTeam",
+
+    -- AVA sounds
     ELDER_SCROLL_CAPTURED_BY_ALDMERI = "ElderScroll_Captured_Aldmeri",
     ELDER_SCROLL_CAPTURED_BY_EBONHEART = "ElderScroll_Captured_Ebonheart",
     ELDER_SCROLL_CAPTURED_BY_DAGGERFALL = "ElderScroll_Captured_Daggerfall",
@@ -327,18 +332,9 @@ SOUNDS = {
     EMPEROR_DEPOSED_DAGGERFALL = "Emperor_Deposed_Daggerfall",
     EMPEROR_ABDICATED = "Emperor_Abdicated",
 
-    IMPERIAL_CITY_ACCESS_GAINED_ALDMERI = "Imperial_City_Access_Gained_Aldmeri",
-    IMPERIAL_CITY_ACCESS_GAINED_EBONHEART = "Imperial_City_Access_Gained_Ebonheart",
-    IMPERIAL_CITY_ACCESS_GAINED_DAGGERFALL = "Imperial_City_Access_Gained_Daggerfall",
-    IMPERIAL_CITY_ACCESS_LOST_ALDMERI = "Imperial_City_Access_Lost_Aldmeri",
-    IMPERIAL_CITY_ACCESS_LOST_EBONHEART = "Imperial_City_Access_Lost_Ebonheart",
-    IMPERIAL_CITY_ACCESS_LOST_DAGGERFALL = "Imperial_City_Access_Lost_Daggerfall",
-
     GUILD_KEEP_CLAIMED = "Guild_Keep_Claimed",
     GUILD_KEEP_RELEASED = "Guild_Keep_Released",
     GUILD_KEEP_LOST = "Guild_Keep_Lost",
-
-    MEDAL_AWARDED                   = "MedalAwarded",
 
     -- Broadcast sounds
     MESSAGE_BROADCAST               = "System_Broadcast",
@@ -350,7 +346,7 @@ SOUNDS = {
     DUNGEON_DIFFICULTY_NORMAL       = "DungeonDifficultySetToNormal",
     RANK_UP                         = "RankUp",
     SKYSHARD_GAINED                 = "Skyshard_Gained",
-    SKILL_GAINED                    = "Skill_Gained",
+    SKILL_POINT_GAINED              = "Skill_Gained",
     SKILL_LINE_ADDED                = "SkillLine_Added",
     SKILL_LINE_LEVELED_UP           = "SkillLine_Leveled",
     ENLIGHTENED_STATE_GAINED        = "EnlightenedState_Gained",
@@ -361,13 +357,12 @@ SOUNDS = {
     SCRIPTED_EVENT_COMPLETION       = "ScriptedEvent_Completion",
 
     -- Guild
-    GUILD_HISTORY_BLADE_SELECTED    = "GuildHistory_Blade_Selected",
-    GUILD_HISTORY_ENTRY_SELECTED    = "GuildHistory_Entry_Selected",
     GUILD_RANK_CREATED              = "GuildRank_Created",
     GUILD_RANK_DELETED              = "GuildRank_Deleted",
     GUILD_RANK_SELECTED             = "GuildRank_Selected",
     GUILD_RANK_REORDERED            = "GuildRank_Reordered",
     GUILD_RANK_LOGO_SELECTED        = "GuildRankLogo_Selected",
+    GUILD_RANK_PERMISSION_TOGGLE    = "GuildRank_PermissionToggle",
     GUILD_RANK_SAVED                = "GuildRank_Saved",
     GUILD_ROSTER_ADDED              = "GuildRoster_Added",
     GUILD_ROSTER_REMOVED            = "GuildRoster_Removed",
@@ -376,19 +371,26 @@ SOUNDS = {
     GUILD_ROSTER_DEMOTE             = "GuildRoster_Demote",
     GUILD_ROSTER_PROMOTE            = "GuildRoster_Promote",
 
-
     --Ability slotting sounds
     ABILITY_SLOT_MENU_OPEN          = "Ability_Slot_Menu_Open",
     ABILITY_SLOTTED                 = "Ability_Slotted",
     ABILITY_SLOT_CLEARED            = "Ability_Unslotted",
-    ABILITY_SKILL_PURCHASED         = "Ability_SkillPurchased",
-    ABILITY_MORPH_PURCHASED         = "Ability_MorphPurchased",
-    ABILITY_UPGRADE_PURCHASED       = "Ability_UpgradePurchased",
     ABILITY_MORPH_AVAILABLE         = "Ability_MorphAvailable",
     ABILITY_RANK_UP                 = "Ability_RankedUp",
     ABILITY_PICKED_UP               = "Ability_Picked_Up",
     ABILITY_ULTIMATE_READY          = "Ability_Ultimate_Ready_Sound",
     ABILITY_SYNERGY_READY           = "Ability_Synergy_Ready_Sound",
+
+    --Skill point allocation
+    SKILL_PURCHASED                     = "Ability_SkillPurchased",
+    SKILL_RESPEC_PURCHASED              = "Ability_Respec_SkillPurchased",
+    SKILL_SOLD                          = "Ability_SkillSold",
+    ACTIVE_SKILL_MORPH_CHOSEN           = "Ability_MorphPurchased",
+    ACTIVE_SKILL_RESPEC_MORPH_CHOSEN    = "Ability_Respec_MorphPurchased",
+    ACTIVE_SKILL_UNMORPHED              = "Ability_MorphSold",
+    PASSIVE_SKILL_RANK_INCREASED        = "Ability_UpgradePurchased",
+    PASSIVE_SKILL_RESPEC_RANK_INCREASED = "Ability_Respec_UpgradePurchased",
+    PASSIVE_SKILL_RANK_DECREASED        = "Ability_UpgradeSold",
 
     --Map sounds
     MAP_PING                        = "Map_Ping",
@@ -397,6 +399,8 @@ SOUNDS = {
     MAP_ZOOM_OUT                    = "Map_Zoom_Out",
     MAP_ZOOM_LEVEL_CLICKED          = "Map_Zoom_Level_Clicked",
     MAP_LOCATION_CLICKED            = "Map_Location_Clicked",
+    MAP_AUTO_NAVIGATION_MAP_CHANGE  = "Map_Auto_Navigation_Map_Change",
+    MAP_AUTO_NAVIGATION_BEGIN_ZOOM  = "Map_Auto_Navigation_Begin_Zoom",
     GAMEPAD_MAP_START_MAP_CHANGE    = "Console_Map_Start_Map_Change",
     GAMEPAD_MAP_COMPLETE_MAP_CHANGE = "Console_Map_Complete_Map_Change",
 
@@ -406,16 +410,15 @@ SOUNDS = {
     BOOK_PAGE_TURN                  = "Book_PageTurn",
     BOOK_OPEN                       = "Book_Open",
     BOOK_CLOSE                      = "Book_Close",
-    LORE_BLADE_SELECTED             = "Lore_BladeSelected",
-    LORE_ITEM_SELECTED              = "Lore_ItemSelected",
     NOTE_PAGE_TURN                  = "Note_PageTurn",
     NOTE_OPEN                       = "Note_Open",
     NOTE_CLOSE                      = "Note_Close",
     TABLET_PAGE_TURN                = "Tablet_PageTurn",
     TABLET_OPEN                     = "Tablet_Open",
     TABLET_CLOSE                    = "Tablet_Close",
-    CADWELL_BLADE_SELECTED          = "Cadwell_BladeSelected",
-    CADWELL_ITEM_SELECTED           = "Cadwell_ItemSelected",
+    BOOK_METAL_PAGE_TURN            = "Book_Metal_PageTurn",
+    BOOK_METAL_OPEN                 = "Book_Metal_Open",
+    BOOK_METAL_CLOSE                = "Book_Metal_Close",
 
     --Active combat tip sounds
     ACTIVE_COMBAT_TIP_SHOWN         = "ActiveCombatTip_Shown",
@@ -455,10 +458,6 @@ SOUNDS = {
     --General Settings Sounds
     SINGLE_SETTING_RESET_TO_DEFAULT = "Single_Setting_Reset",
 
-    --General Menu Sounds
-    MENU_HEADER_SELECTION           = "Menu_Header_Selection",
-    MENU_SUBCATEGORY_SELECTION      = "Menu_Subcategory_Selection",
-
     --Radial Menu Sounds
     RADIAL_MENU_OPEN                = "Radial_Menu_Open",
     RADIAL_MENU_CLOSE               = "Radial_Menu_Close",
@@ -476,21 +475,13 @@ SOUNDS = {
     QUICKSLOT_MOUSEOVER             = "Quickslot_Mouseover",
     QUICKSLOT_USE_EMPTY             = "Quickslot_Use_Empty",
 
-    --Skill Sounds
-    SKILL_TYPE_CLASS                = "SkillType_Class",
-    SKILL_TYPE_WEAPON               = "SkillType_Weapon",
-    SKILL_TYPE_ARMOR                = "SkillType_Armor",
-    SKILL_TYPE_WORLD                = "SkillType_World",
-    SKILL_TYPE_GUILD                = "SkillType_Guild",
-    SKILL_TYPE_AVA                  = "SkillType_AvA",
-    SKILL_TYPE_RACIAL               = "SkillType_Racial",
-    SKILL_TYPE_TRADESKILL			= "SkillType_Tradeskill",
-    SKILL_LINE_SELECT               = "SkillLine_Select",
-
     --Skill XP Sounds
     SKILL_XP_DARK_ANCHOR_CLOSED     = "SkillXP_DarkAnchorClosed",
     SKILL_XP_DARK_FISSURE_CLOSED    = "SkillXP_DarkFissureClosed",
     SKILL_XP_BOSS_KILLED            = "SkillXP_BossKilled",
+
+    --Skills Advisor Sounds
+    SKILLS_ADVISOR_SELECT           = "SkillsAdvisor_Select",
 
     --Stats Sounds
     STATS_PURCHASE                  = "Stats_Purchase",
@@ -613,12 +604,15 @@ SOUNDS = {
     UAV_POSSESSION_APPLIED_TARGET           = "Possession_Effect_Applied_Target",
     UAV_POSSESSION_REMOVED_TARGET           = "Possession_Effect_Removed_Target",
 
+    UAV_TRAUMA_ADDED                        = "Trauma_Effect_Added",
+    UAV_TRAUMA_LOST                         = "Trauma_Effect_Lost",
+
+    UAV_TRAUMA_ADDED_TARGET                 = "Trauma_Effect_Added_Target",
+    UAV_TRAUMA_LOST_TARGET                  = "Trauma_Effect_Lost_Target",
+
     -- Provisioning
     PROVISIONING_OPENED                     = "Provisioning_Opened",
     PROVISIONING_CLOSED                     = "Provisioning_Closed",
-
-    PROVISIONING_BLADE_SELECTED             = "Provisioning_BladeSelected",
-    PROVISIONING_ENTRY_SELECTED             = "Provisioning_EntrySelected",
 
     RECIPE_LEARNED                          = "Recipe_Learned",
     DEFAULT_RECIPE_CRAFTED                  = "Default_Recipe_Crafted",
@@ -640,6 +634,7 @@ SOUNDS = {
     ENCHANTING_WEAPON_GLYPH_REMOVED         = "Enchanting_WeaponGlyph_Removed",
     ENCHANTING_JEWELRY_GLYPH_PLACED         = "Enchanting_JewelryGlyph_Placed",
     ENCHANTING_JEWELRY_GLYPH_REMOVED        = "Enchanting_JewelryGlyph_Removed",
+    ENCHANTING_GENERIC_GLYPH_REMOVED        = "Enchanting_GenericGlyph_Removed",
 
     ENCHANTING_CREATE_TOOLTIP_GLOW          = "Enchanting_Create_Tooltip_Glow",
     ENCHANTING_EXTRACT_START_ANIM           = "Enchanting_Extract_Start_Anim",
@@ -673,30 +668,43 @@ SOUNDS = {
     BLACKSMITH_CREATE_TOOLTIP_GLOW          = "Blacksmith_Create_Tooltip_Glow",
     WOODWORKER_CREATE_TOOLTIP_GLOW          = "Woodworker_Create_Tooltip_Glow",
     CLOTHIER_CREATE_TOOLTIP_GLOW            = "Clothier_Create_Tooltip_Glow",
+    JEWELRYCRAFTER_CREATE_TOOLTIP_GLOW      = "JewelryCrafter_Create_Tooltip_Glow",
 
     BLACKSMITH_IMPROVE_TOOLTIP_GLOW_SUCCESS = "Blacksmith_Improve_Tooltip_Glow_Success",
     WOODWORKER_IMPROVE_TOOLTIP_GLOW_SUCCESS = "Woodworker_Improve_Tooltip_Glow_Success",
     CLOTHIER_IMPROVE_TOOLTIP_GLOW_SUCCESS   = "Clothier_Improve_Tooltip_Glow_Success",
+    JEWELRYCRAFTER_IMPROVE_TOOLTIP_GLOW_SUCCESS = "JewelryCrafter_Improve_Tooltip_Glow_Success",
 
     BLACKSMITH_IMPROVE_TOOLTIP_GLOW_FAIL    = "Blacksmith_Improve_Tooltip_Glow_Fail",
     WOODWORKER_IMPROVE_TOOLTIP_GLOW_FAIL    = "Woodworker_Improve_Tooltip_Glow_Fail",
     CLOTHIER_IMPROVE_TOOLTIP_GLOW_FAIL      = "Clothier_Improve_Tooltip_Glow_Fail",
+    JEWELRYCRAFTER_IMPROVE_TOOLTIP_GLOW_FAIL = "JewelryCrafter_Improve_Tooltip_Glow_Fail",
 
     BLACKSMITH_EXTRACTED_BOOSTER            = "Blacksmith_Extracted_Booster",
     WOODWORKER_EXTRACTED_BOOSTER            = "Woodworker_Extracted_Booster",
     CLOTHIER_EXTRACTED_BOOSTER              = "Clothier_Extracted_Booster",
+    JEWELRYCRAFTER_EXTRACTED_BOOSTER        = "JewelryCrafter_Extracted_Booster",
 
     BLACKSMITH_FAILED_EXTRACTION            = "Blacksmith_Failed_Extraction",
     WOODWORKER_FAILED_EXTRACTION            = "Woodworker_Failed_Extraction",
     CLOTHIER_FAILED_EXTRACTION              = "Clothier_Failed_Extraction",
+    JEWELRYCRAFTER_FAILED_EXTRACTION        = "JewelryCrafter_Failed_Extraction",
 
     BLACKSMITH_EXTRACT_START_ANIM           = "Blacksmith_Extract_Start_Anim",
     WOODWORKER_EXTRACT_START_ANIM           = "Woodworker_Extract_Start_Anim",
     CLOTHIER_EXTRACT_START_ANIM             = "Clothier_Extract_Start_Anim",
+    JEWELRYCRAFTER_EXTRACT_START_ANIM       = "JewelryCrafter_Extract_Start_Anim",
 
     -- Crafting
     CRAFTING_GAINED_INSPIRATION             = "Crafting_Gained_Inspiration",
     CRAFTING_CREATE_SLOT_ANIMATED           = "Crafting_Create_Slot_Animated",
+
+    -- Retraiting
+    RETRAITING_ITEM_TO_RETRAIT_PLACED       = "Retraiting_Item_To_Retrait_Placed",
+    RETRAITING_ITEM_TO_RETRAIT_REMOVED      = "Retraiting_Item_To_Retrait_Removed",
+
+    RETRAITING_RETRAIT_TOOLTIP_GLOW_SUCCESS = "Retraiting_Retrait_Tooltip_Glow_Success",
+    RETRAITING_START_RETRAIT                = "Retraiting_Start_Retrait",
 
     --Customer Service
     AGENT_CHAT_ACTIVE                       = "Agent_Chat_Active",
@@ -744,6 +752,31 @@ SOUNDS = {
 
     DYEING_ACCEPT_BINDING                   = "Dyeing_Accept_Binding",
 
+    -- Outfits
+    OUTFIT_CHANGES_APPLIED                  = "Outfit_Changes_Applied",
+    OUTFIT_GO_TO_STYLE                      = "Outfitting_GoToStyle",
+    OUTFIT_REMOVE_STYLE                     = "Outfitting_RemoveStyle",
+    OUTFIT_GAMEPAD_MENU_ENTER               = "Outfitting_Console_MenuEnter",
+    OUTFIT_GAMEPAD_MENU_EXIT                = "Outfitting_Console_MenuExit",
+    OUTFIT_GAMEPAD_UNDO_CHANGES             = "Outfitting_Console_UndoChanges",
+
+    OUTFIT_EQUIPPED_HIDE                    = "Outfitting_ArmorAdd_Hide",
+    OUTFIT_ARMOR_TYPE_LIGHT                 = "Outfitting_ArmorAdd_Light",
+    OUTFIT_ARMOR_TYPE_MEDIUM                = "Outfitting_ArmorAdd_Medium",
+    OUTFIT_ARMOR_TYPE_HEAVY                 = "Outfitting_ArmorAdd_Heavy",
+    OUTFIT_ARMOR_TYPE_UNDAUNTED             = "Outfitting_ArmorAdd_Undaunted",
+    OUTFIT_ARMOR_TYPE_CLOTHING              = "Outfitting_ArmorAdd_Clothing",
+    OUTFIT_ARMOR_TYPE_SIGNATURE             = "Outfitting_ArmorAdd_Signature",
+
+    OUTFIT_WEAPON_TYPE_AXE                  = "Outfitting_WeaponAdd_Axe",
+    OUTFIT_WEAPON_TYPE_MACE                 = "Outfitting_WeaponAdd_Mace",
+    OUTFIT_WEAPON_TYPE_SWORD                = "Outfitting_WeaponAdd_Sword",
+    OUTFIT_WEAPON_TYPE_DAGGER               = "Outfitting_WeaponAdd_Dagger",
+    OUTFIT_WEAPON_TYPE_BOW                  = "Outfitting_WeaponAdd_Bow",
+    OUTFIT_WEAPON_TYPE_STAFF                = "Outfitting_WeaponAdd_Staff",
+    OUTFIT_WEAPON_TYPE_SHIELD               = "Outfitting_WeaponAdd_Shield",
+    OUTFIT_WEAPON_TYPE_RUNE                 = "Outfitting_WeaponAdd_Rune",
+
     --Keybind Disabled
     KEYBIND_BUTTON_DISABLED                 = "Keybind_Button_Disabled",
 
@@ -790,10 +823,9 @@ SOUNDS = {
     -- Market Sounds
     MARKET_WINDOW_OPENED                = "Market_Opened",
     MARKET_WINDOW_CLOSED                = "Market_Closed",
-    MARKET_CATEGORY_SELECTED            = "Market_CategorySelected",
-    MARKET_SUB_CATEGORY_SELECTED        = "Market_SubCategorySelected",
     MARKET_PURCHASE_SELECTED            = "Market_PurchaseSelected",
     MARKET_PREVIEW_SELECTED             = "Market_PreviewSelected",
+    MARKET_GIFT_SELECTED                = "Market_GiftSelected",
     MARKET_CROWNS_SPENT                 = "Market_CrownsSpent",
     MARKET_CROWN_GEMS_SPENT             = "Market_CrownGemsSpent",
 
@@ -845,4 +877,45 @@ SOUNDS = {
     HOUSING_EDITOR_PICKUP_ITEM              = "Housing_PickupItem",
     HOUSING_EDITOR_RETRIEVE_ITEM            = "Housing_StoreItem",
     HOUSING_BUY_FOR_GOLD                    = "Housing_BuyForGold",
+
+    -- ESO+ Trial
+    ESO_PLUS_TRIAL_STARTED                  = "ESOPlus_TrialStarted",
+    ESO_PLUS_TRIAL_ENDED                    = "ESOPlus_TrialEnded",
+
+    -- CSA Countdown
+    COUNTDOWN_TICK                          = "Countdown_Tick",
+
+    --Level Up Reward
+    LEVEL_UP_REWARD_FANFARE                 = "LevelUpReward_Fanfare",
+    LEVEL_UP_REWARD_SECTION_APPEAR          = "LevelUpReward_SectionAppear",
+    LEVEL_UP_REWARD_CLAIM_APPEAR            = "LevelUpReward_ClaimAppear",
+    LEVEL_UP_REWARD_CLAIM                   = "LevelUpReward_Claim",
+
+    --Daily Login Rewards
+    DAILY_LOGIN_REWARDS_CLAIM_ANNOUNCEMENT  = "DailyLoginRewards_ClaimAnnouncement",
+    DAILY_LOGIN_REWARDS_CLAIM_FANFARE       = "DailyLoginRewards_ClaimFanfare",
+    DAILY_LOGIN_REWARDS_ACTION_CLAIM        = "DailyLoginRewards_ActionClaim",
+    DAILY_LOGIN_REWARDS_MONTH_CHANGE        = "DailyLoginRewards_MonthChange",
+
+    --Gifting
+    GIFT_INVENTORY_VIEW_FANFARE_BLAST       = "GiftInventoryView_FanfareBlast",
+    GIFT_INVENTORY_VIEW_FANFARE_SPARKS      = "GiftInventoryView_FanfareSparks",
+    GIFT_INVENTORY_VIEW_FANFARE_STARBURST   = "GiftInventoryView_FanfareStarburst",
+    GIFT_INVENTORY_ACTION_CLAIM             = "GiftInventory_ActionClaim",
+
+    --Zone Stories
+    ZONE_STORIES_TRACK_ACTIVITY             = "ZoneStories_TrackActivity",
+
+    --Guild Finder
+    GUILD_FINDER_SELECT_GUILD               = "GuildFinder_SelectGuild",
+    GUILD_FINDER_BACK_FROM_SELECTED_GUILD   = "GuildFinder_BackFromSelectedGuild",
+    GAMEPAD_GUILD_FINDER_TOGGLE_ACTIVITY    = "Gamepad_GuildFinder_ToggleActivity",
+    GAMEPAD_GUILD_FINDER_TOGGLE_ROLE        = "Gamepad_GuildFinder_ToggleRole",
+
+    --Daedric Artifacts
+    DAEDRIC_ENERGY_BURST                    = "DaedricEnergy_Burst",
+    DAEDRIC_ENERGY_LOW                      = "DaedricEnergy_Low",
+    DAEDRIC_ARTIFACT_SPAWNED                = "DaedricArtifact_Spawned",
+    DAEDRIC_ARTIFACT_REVEALED               = "DaedricArtifact_Revealed",
+    DAEDRIC_ARTIFACT_DESPAWNED              = "DaedricArtifact_Despawned",
 }

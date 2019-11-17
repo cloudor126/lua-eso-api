@@ -1,4 +1,3 @@
-local ACTIVE_CAMPAIGN_INDEX = 1
 local ICON_SIZE = 60
 
 local HOME_TAB = {
@@ -6,7 +5,7 @@ local HOME_TAB = {
     icon = zo_iconFormat("EsoUI/Art/Campaign/Gamepad/gp_overview_menuIcon_home.dds", ICON_SIZE, ICON_SIZE),
 }
 
-local GUEST_TAB = {
+local LOCAL_TAB = {
     queryType = BGQUERY_LOCAL,
     icon = zo_iconFormat("EsoUI/Art/Campaign/Gamepad/gp_overview_menuIcon_guest.dds", ICON_SIZE, ICON_SIZE),
 }
@@ -42,19 +41,17 @@ function ZO_LeaderboardCampaignSelector_Gamepad:NeedsData()
 end
 
 function ZO_LeaderboardCampaignSelector_Gamepad:RefreshQueryTypes()
-    local campaignName = GetCampaignName(self:GetCampaignId())
-
     if not self.selectedQueryType then
         if self:IsHomeSelectable() then
             self:OnQueryTypeChanged(HOME_TAB)
-        elseif self:IsGuestSelectable() then
-            self:OnQueryTypeChanged(GUEST_TAB)
+        elseif self:IsLocalSelectable() then
+            self:OnQueryTypeChanged(LOCAL_TAB)
         end
     else
         if self.selectedQueryType == HOME_TAB.queryType then
             self:OnQueryTypeChanged(HOME_TAB)
-        elseif GetCurrentCampaignId() ~= 0 and self.selectedQueryType == GUEST_TAB.queryType then
-            self:OnQueryTypeChanged(GUEST_TAB)
+        elseif GetCurrentCampaignId() ~= 0 and self.selectedQueryType == LOCAL_TAB.queryType then
+            self:OnQueryTypeChanged(LOCAL_TAB)
         end
     end
 end
@@ -86,7 +83,6 @@ function ZO_CampaignLeaderboardsManager_Gamepad:Initialize(control)
 
     GAMEPAD_CAMPAIGN_LEADERBOARD_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
                                                  if newState == SCENE_FRAGMENT_SHOWING then
-                                                     self:PerformDeferredInitialization(control)
                                                      self.selector.dataRegistration:Refresh()
                                                      self:SetActiveCampaign()
                                                  elseif newState == SCENE_FRAGMENT_HIDDEN then
@@ -95,7 +91,7 @@ function ZO_CampaignLeaderboardsManager_Gamepad:Initialize(control)
                                              end)
 
     SYSTEMS:RegisterGamepadObject(CAMPAIGN_LEADERBOARD_SYSTEM_NAME, self)
-    GAMEPAD_LEADERBOARDS:UpdateCategories()
+    GAMEPAD_LEADERBOARDS:RegisterLeaderboardSystemObject(self)
     self.selector = ZO_LeaderboardCampaignSelector_Gamepad:New(control)
 end
 
@@ -124,7 +120,7 @@ function ZO_CampaignLeaderboardsManager_Gamepad:RefreshHeaderTimer()
     local headerData = GAMEPAD_LEADERBOARD_LIST:GetContentHeaderData()
 
     if self.timerLabelData then
-        if self.timerLabelIdentifier == SI_CAMPAIGN_LEADERBOARDS_REOPENS_IN_TIMER then
+        if self.timerLabelIdentifier == SI_LEADERBOARDS_REOPENS_IN_TIMER then
             headerData.data3HeaderText = GetString(SI_GAMEPAD_LEADERBOARDS_REOPENS_IN_TIMER_LABEL)
         else
             headerData.data3HeaderText = GetString(SI_GAMEPAD_LEADERBOARDS_CLOSES_IN_TIMER_LABEL)
@@ -154,12 +150,12 @@ function ZO_CampaignLeaderboardsManager_Gamepad:InitializeKeybindStripDescriptor
         keybind = "UI_SHORTCUT_SECONDARY",
         callback = function()
             if self.selector.selectedQueryType == HOME_TAB.queryType then
-                self.selector:OnQueryTypeChanged(GUEST_TAB)
+                self.selector:OnQueryTypeChanged(LOCAL_TAB)
             else
                 self.selector:OnQueryTypeChanged(HOME_TAB)
             end
         end,
-        visible = function() return self.selector:IsHomeSelectable() and self.selector:IsGuestSelectable() end,
+        visible = function() return self.selector:IsHomeSelectable() and self.selector:IsLocalSelectable() end,
         sound = SOUNDS.DEFAULT_CLICK,
     }
 end

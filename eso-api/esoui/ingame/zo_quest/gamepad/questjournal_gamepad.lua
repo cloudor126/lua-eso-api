@@ -57,7 +57,7 @@ function ZO_QuestJournal_Gamepad:Initialize(control)
     self.conditionTextLabel:SetParent(questStepContainerScrollChild)
     self.conditionTextLabel:ClearAnchors()
     self.conditionTextLabel:SetAnchor(TOPLEFT, questStepContainerScrollChild, TOPLEFT, 50)
-    self.conditionTextLabel:SetAnchor(TOPRIGHT, questStepContainerScroll, TOPRIGHT)
+    self.conditionTextLabel:SetAnchor(RIGHT, questStepContainerScroll, RIGHT, 0, 0, ANCHOR_CONSTRAINS_X)
 
     self.conditionTextBulletList = ZO_BulletList:New(rightPaneContent:GetNamedChild("ConditionTextBulletList"), "ZO_QuestJournal_ConditionBulletLabel_Gamepad", nil, "ZO_QuestJournal_CompletedTaskIcon_Gamepad")
 
@@ -224,6 +224,7 @@ function ZO_QuestJournal_Gamepad:RegisterIcons()
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_PUBLIC_DUNGEON,   "EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_dungeon.dds")
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DELVE,            "EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_delve.dds")
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_HOUSING,          "EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_housing.dds")
+    self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_ZONE_STORY,       "EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_zoneStory.dds")
 end
 
 function ZO_QuestJournal_Gamepad:RegisterTooltips()
@@ -236,6 +237,7 @@ function ZO_QuestJournal_Gamepad:RegisterTooltips()
     local groupDelveIcon = zo_iconFormat("EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_groupDelve.dds", ICON_SIZE, ICON_SIZE)
     local delveIcon = zo_iconFormat("EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_delve.dds", ICON_SIZE, ICON_SIZE)
     local housingIcon = zo_iconFormat("EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_housing.dds", ICON_SIZE, ICON_SIZE)
+    local zoneStoryIcon = zo_iconFormat("EsoUI/Art/Journal/Gamepad/gp_questTypeIcon_zoneStory.dds", ICON_SIZE, ICON_SIZE)
 
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_SOLO,             zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_INSTANCE_TYPE_SOLO, soloIcon))
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DUNGEON,          zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_INSTANCE_TYPE_DUNGEON, dungeonIcon))
@@ -245,6 +247,7 @@ function ZO_QuestJournal_Gamepad:RegisterTooltips()
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_PUBLIC_DUNGEON,   zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_PUBLIC_DUNGEON, publicDungeonIcon))
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DELVE,            zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_DELVE, delveIcon))
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_HOUSING,          zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_HOUSING, housingIcon))
+    self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_ZONE_STORY,       zo_strformat(SI_GAMEPAD_QUEST_JOURNAL_ZONE_STORY, zoneStoryIcon))
 end
 
 function ZO_QuestJournal_Gamepad:GetQuestDataString()
@@ -343,11 +346,7 @@ function ZO_QuestJournal_Gamepad:InitializeKeybindStripDescriptors()
             end,
 
             visible = function()
-                local selectedQuestIndex = self:GetSelectedQuestIndex()
-                if selectedQuestIndex and (self:CanAbandonQuest() or self:CanShareQuest()) then
-                    return true
-                end
-                return false
+                return self:GetSelectedQuestIndex() ~= nil
             end
         },
     }
@@ -412,12 +411,6 @@ function ZO_QuestJournal_Gamepad:RefreshQuestCount()
     self:Update()
 end
 
-local function UpdateListAnchors(control, attachedTo)
-    control:ClearAnchors()
-    control:SetAnchor(TOPLEFT, attachedTo, BOTTOMLEFT, 50, yOffset)
-    control:SetAnchor(TOPRIGHT, attachedTo, BOTTOMRIGHT, 0, 21)
-end
-
 function ZO_QuestJournal_Gamepad:RefreshDetails()
     if not SCENE_MANAGER:IsShowing(self.sceneName) then
         self.listDirty = true
@@ -479,7 +472,9 @@ function ZO_QuestJournal_Gamepad:RefreshDetails()
             ZO_ClearNumericallyIndexedTable(questStrings)
 
             local anchorToControl = self.optionalStepTextLabel:IsControlHidden() and self.conditionTextBulletList.control or self.optionalStepTextBulletList.control
-            UpdateListAnchors(self.hintTextLabel, anchorToControl, 0)
+            self.hintTextLabel:ClearAnchors()
+            self.hintTextLabel:SetAnchor(TOPLEFT, anchorToControl, BOTTOMLEFT, 50, 21)
+            self.hintTextLabel:SetAnchor(TOPRIGHT, anchorToControl, BOTTOMRIGHT, 0, 21)
 
             self:BuildTextForStepVisibility(questIndex, QUEST_STEP_VISIBILITY_HINT)
             if self.hintTextLabel then
@@ -598,7 +593,8 @@ function ZO_QuestJournal_Gamepad:FocusQuestWithIndex(index)
     self:FireCallbacks("QuestSelected", index)
     -- The quest tracker performs focus logic on quest/remove/update, only force focus if the player has clicked on the quest through the journal UI
     if SCENE_MANAGER:IsShowing(self.sceneName) then
-        QUEST_TRACKER:ForceAssist(index)
+        ZO_ZoneStories_Manager.StopZoneStoryTracking()
+        FOCUSED_QUEST_TRACKER:ForceAssist(index)
     end
 
     self:RefreshQuestMasterList()

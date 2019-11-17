@@ -1,6 +1,11 @@
 local LIST_HEIGHT = 660
-local ROW_HEIGHT = 30
+ZO_ADDON_ROW_HEIGHT = 30
+ZO_ADDON_SECTION_HEADER_ROW_HEIGHT = 50
+
 local ADDON_DATA = 1
+local SECTION_HEADER_DATA = 2
+local IS_LIBRARY = true
+local IS_ADDON = false
 
 local AddOnManager = GetAddOnManager()
 
@@ -17,11 +22,23 @@ function ZO_AddOnManager:Initialize(control, allowReload)
     self.control:SetHandler("OnShow", function() self:OnShow() end)
 
     self.sizerLabel = CreateControlFromVirtual("", self.control, "ZO_AddOn_SizerLabel")
+    self.currentSortKey = "strippedAddOnName"
+    self.currentSortDirection = ZO_SORT_ORDER_UP
+    self.sortKeys =
+    {
+        addOnFileName = { },
+        strippedAddOnName = { tiebreaker = "addOnFileName" },
+    }
+    self.sortCallback = function(entry1, entry2)
+        return ZO_TableOrderingFunction(entry1, entry2, self.currentSortKey, self.sortKeys, self.currentSortDirection)
+    end
 
     ZO_ScrollList_SetHeight(self.list, LIST_HEIGHT)
-    ZO_ScrollList_AddDataType(self.list, ADDON_DATA, "ZO_AddOnRow", ROW_HEIGHT, self:GetRowSetupFunction())
+    ZO_ScrollList_AddDataType(self.list, ADDON_DATA, "ZO_AddOnRow", ZO_ADDON_ROW_HEIGHT, self:GetRowSetupFunction())
+    ZO_ScrollList_AddDataType(self.list, SECTION_HEADER_DATA, "ZO_AddOnSectionHeaderRow", ZO_ADDON_SECTION_HEADER_ROW_HEIGHT, function(...) self:SetupSectionHeaderRow(...) end)
 
     self.characterDropdown = ZO_ComboBox:New(GetControl(self.control, "CharacterSelectDropdown"))
+    self.characterDropdown:SetSortsItems(false)
 
     local function OnLoadOutOfDateAddonsClicked(checkButton, isChecked)
         AddOnManager:SetLoadOutOfDateAddOns(isChecked)
@@ -58,7 +75,8 @@ function ZO_AddOnManager:Initialize(control, allowReload)
                                                 end
                                             end)
 
-    self.control:RegisterForEvent(EVENT_SCREEN_RESIZED, function() self:RefreshData() end)
+    --Uses a namespace event registration because ZO_ReanchorControlForLeftSidePanel registers EVENT_SCREEN_RESIZED on the control
+    EVENT_MANAGER:RegisterForEvent("AddOnManager", EVENT_SCREEN_RESIZED, function() self:RefreshData() end)
     ZO_ReanchorControlForLeftSidePanel(self.control)
 end
 
@@ -66,8 +84,15 @@ local function GetCharacterNameFromDatum(datum)
     return zo_strformat(SI_UNIT_NAME, datum.name)
 end
 
+local g_uniqueNamesByCharacterName = {}
+
 local function CreateAddOnFilter(characterName)
-    return GetUniqueNameForCharacter(characterName)
+    local uniqueName = g_uniqueNamesByCharacterName[characterName]
+    if not uniqueName then
+        uniqueName = GetUniqueNameForCharacter(characterName)
+        g_uniqueNamesByCharacterName[characterName] = uniqueName
+    end
+    return uniqueName
 end
 
 local COMBINED_STATE_RESULT_NO_DEP_ERRORS = 1
@@ -140,19 +165,14 @@ function ZO_AddOnManager:GetRowSetupFunction()
         authorControl:SetColor(color:UnpackRGBA())
 
         nameControl:SetText(stripColorMarkup and data.strippedAddOnName or data.addOnName)
-        local author = stripColorMarkup and data.strippedAddOnAuthor or data.addOnAuthor
-        if author ~= "" then
-            authorControl:SetText(zo_strformat(SI_ADD_ON_AUTHOR_LINE, author))
-        else
-            authorControl:SetText("")
-        end
+        local authorByLine = stripColorMarkup and data.strippedAddOnAuthorByLine or data.addOnAuthorByLine
+        authorControl:SetText(authorByLine)
     end
 
     return function(control, data)
         control.owner = self
         control.data = data
         local name = control:GetNamedChild("Name")
-        local author = control:GetNamedChild("Author")
         local enabledControl = control:GetNamedChild("Enabled") 
         local state = control:GetNamedChild("State") 
         local description = control:GetNamedChild("Description") 
@@ -177,10 +197,10 @@ function ZO_AddOnManager:GetRowSetupFunction()
             description:SetAnchor(TOPLEFT, name, BOTTOMLEFT, 20, 0)
         end
 
-        local showDependencies = data.expanded and data.addonDependencyText ~= ""
+        local showDependencies = data.expanded and data.addOnDependencyText ~= ""
         dependencies:SetHidden(not showDependencies)
         if showDependencies then
-            dependencies:SetText(zo_strformat(SI_ADDON_MANAGER_DEPENDENCIES, data.addonDependencyText))
+            dependencies:SetText(GetString(SI_ADDON_MANAGER_DEPENDENCIES)..data.addOnDependencyText)
         else
             dependencies:SetText("")
         end
@@ -211,6 +231,10 @@ function ZO_AddOnManager:GetRowSetupFunction()
 
         SetupNotes(state, data)
     end
+end
+
+function ZO_AddOnManager:SetupSectionHeaderRow(control, data)
+    control:GetNamedChild("Text"):SetText(data.text)
 end
 
 function ZO_AddOnManager:GetCombinedAddOnStates(index)
@@ -283,25 +307,8 @@ function ZO_AddOnManager:GetCharacterInfo(characterIndex)
     end
 end
 
-do
-    local ENTRY_SORT_KEYS =
-    {
-        addOnFileName = { },
-        strippedAddOnName = { tiebreaker = "addOnFileName" },
-    }
-
-    function ZO_AddOnManager:SortScrollList()
-        local scrollData = ZO_ScrollList_GetDataList(self.list)
-
-        local function SortEntries(entry1, entry2)
-            return ZO_TableOrderingFunction(entry1.data, entry2.data, "strippedAddOnName", ENTRY_SORT_KEYS, ZO_SORT_ORDER_UP)
-        end
-        table.sort(scrollData, SortEntries)
-    end
-end
-
-function ZO_AddOnManager:OnCharacterChanged(name)
-    self.selectedCharacter = name
+function ZO_AddOnManager:OnCharacterChanged(name, entry)
+    self.selectedCharacterEntry = entry
     self:RefreshData()
 end
 
@@ -309,29 +316,34 @@ function ZO_AddOnManager:BuildCharacterDropdown()
     self.characterDropdown:ClearItems()
 
     local function OnCharacterChanged(comboBox, name, entry)
-        self:OnCharacterChanged(name)
+        self:OnCharacterChanged(name, entry)
     end
 
     if self.characterData then
         self.characterDropdown:GetContainer():SetHidden(false)
 
-        local all = GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL)
-        local entry = self.characterDropdown:CreateItemEntry(all, OnCharacterChanged)
-        self.characterDropdown:AddItem(entry)
-        self.characterDropdown:SetSelectedItemText(all)
+        local allCharactersEntry = self.characterDropdown:CreateItemEntry(GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL), OnCharacterChanged)
+        allCharactersEntry.allCharacters = true
+        self.characterDropdown:AddItem(allCharactersEntry)
 
-        self.selectedCharacter = nil
-        self.isAllFilterSelected = true
-
+        local characterNames = {}
         for i=1, self:GetNumCharacters() do
-            local entry = self.characterDropdown:CreateItemEntry(self:GetCharacterInfo(i), OnCharacterChanged)
+            local name = self:GetCharacterInfo(i)
+            table.insert(characterNames, name)
+        end
+        table.sort(characterNames)
+        for _, characterName in ipairs(characterNames) do
+            local entry = self.characterDropdown:CreateItemEntry(characterName, OnCharacterChanged)
+            entry.allCharacters = false
             self.characterDropdown:AddItem(entry)
         end
+
+        self.characterDropdown:SelectFirstItem()
     else
         self.characterDropdown:GetContainer():SetHidden(true)
 
         local playerName = GetUnitName("player")
-        self.selectedCharacter = playerName ~= "" and playerName or nil
+        self.selectedCharacterEntry = { name = playerName ~= "" and playerName or nil, allCharacters = false }
         self.isAllFilterSelected = false
     end
 end
@@ -369,7 +381,7 @@ function ZO_AddOnManager:SetupTypeId(description, dependencyText)
         dependencyHeight = self.sizerLabel:GetTextHeight() + 23
     end
 
-    local useHeight = zo_ceil(ROW_HEIGHT + descriptionHeight + dependencyHeight + 31)
+    local useHeight = zo_ceil(ZO_ADDON_ROW_HEIGHT + descriptionHeight + dependencyHeight + 31)
     local typeId = GetHeightTypeId(useHeight)
 
     local existingDataTypeTable = ZO_ScrollList_GetDataTypeTable(self.list, typeId)
@@ -383,7 +395,7 @@ function ZO_AddOnManager:SetupTypeId(description, dependencyText)
 end
 
 function ZO_AddOnManager:ResetDataTypes()
-    g_currentTypeId = 2
+    g_currentTypeId = 3
     heightIds = {}
 end
 
@@ -392,60 +404,95 @@ local function StripText(text)
 end
 
 function ZO_AddOnManager:BuildMasterList()
-    local scrollData = ZO_ScrollList_GetDataList(self.list)
-    ZO_ClearNumericallyIndexedTable(scrollData)
+    self.addonTypes = {}
+    self.addonTypes[IS_LIBRARY] = {}
+    self.addonTypes[IS_ADDON] = {}
 
-    self:ResetDataTypes()
-
-    if not self.selectedCharacter or self.selectedCharacter == GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL) then
+    if self.selectedCharacterEntry and not self.selectedCharacterEntry.allCharacters then
+        self.isAllFilterSelected = false
+        AddOnManager:SetAddOnFilter(CreateAddOnFilter(self.selectedCharacterEntry.name))
+    else
         self.isAllFilterSelected = true
         AddOnManager:RemoveAddOnFilter()
-    else
-        AddOnManager:SetAddOnFilter(CreateAddOnFilter(self.selectedCharacter))
-        self.isAllFilterSelected = false
     end
 
     for i = 1, AddOnManager:GetNumAddOns() do
-        local name, title, author, description, enabled, state, isOutOfDate = AddOnManager:GetAddOnInfo(i)
+        local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
         local entryData = {
             index = i,
             addOnFileName = name,
             addOnName = title,
             strippedAddOnName = StripText(title),
-            addOnAuthor = author,
-            strippedAddOnAuthor = StripText(author),
             addOnDescription = description,
             addOnEnabled = enabled,
             addOnState = state,
-            addOnSortName = addOnSortName,
-            isOutOfDate = isOutOfDate
+            isOutOfDate = isOutOfDate,
+            isLibrary = isLibrary,
         }
+
+        if author ~= "" then
+            local strippedAuthor = StripText(author)
+            entryData.addOnAuthorByLine = zo_strformat(SI_ADD_ON_AUTHOR_LINE, author)
+            entryData.strippedAddOnAuthorByLine = zo_strformat(SI_ADD_ON_AUTHOR_LINE, strippedAuthor)
+        else
+            entryData.addOnAuthorByLine = ""
+            entryData.strippedAddOnAuthorByLine = ""
+        end
 
         local dependencyText = ""
         for j = 1, AddOnManager:GetAddOnNumDependencies(i) do
-            local dependencyName, dependencyActive = AddOnManager:GetAddOnDependencyInfo(i, j)
-            if not self.isAllFilterSelected and not dependencyActive then
+            local dependencyName, dependencyExists, dependencyActive, dependencyMinVersion, dependencyVersion = AddOnManager:GetAddOnDependencyInfo(i, j)
+            local dependencyTooLowVersion = dependencyVersion < dependencyMinVersion
+            local dependencyInfoLine = dependencyName
+            if not self.isAllFilterSelected and (not dependencyActive or not dependencyExists or dependencyTooLowVersion) then
                 entryData.hasDependencyError = true
-                dependencyName = ZO_ERROR_COLOR:Colorize(dependencyName)
+                if not dependencyExists then
+                    dependencyInfoLine = zo_strformat(SI_ADDON_MANAGER_DEPENDENCY_MISSING, dependencyName)
+                elseif not dependencyActive then
+                    dependencyInfoLine = zo_strformat(SI_ADDON_MANAGER_DEPENDENCY_DISABLED, dependencyName)
+                elseif dependencyTooLowVersion then
+                    dependencyInfoLine = zo_strformat(SI_ADDON_MANAGER_DEPENDENCY_TOO_LOW_VERSION, dependencyName)
+                end
+                dependencyInfoLine = ZO_ERROR_COLOR:Colorize(dependencyInfoLine)
             end
-            dependencyText = dependencyText.."\n"..dependencyName
+            dependencyText = string.format("%s\n    %s  %s", dependencyText, GetString(SI_BULLET), dependencyInfoLine)
         end
-        entryData.addonDependencyText = dependencyText
+        entryData.addOnDependencyText = dependencyText
 
         entryData.expandable = (description ~= "") or (dependencyText ~= "")
+        
+        table.insert(self.addonTypes[isLibrary], entryData)
+    end
+end
 
-        if entryData.expandable and expandedAddons[i] then
+function ZO_AddOnManager:AddAddonTypeSection(isLibrary, sectionTitleText)
+    local addonEntries = self.addonTypes[isLibrary]
+    table.sort(addonEntries, self.sortCallback)
+
+    local scrollData = ZO_ScrollList_GetDataList(self.list)
+    scrollData[#scrollData + 1] = ZO_ScrollList_CreateDataEntry(SECTION_HEADER_DATA, { text = sectionTitleText })
+    for _, entryData in ipairs(addonEntries) do
+        if entryData.expandable and expandedAddons[entryData.index] then
             entryData.expanded = true
 
-            local useHeight, typeId = self:SetupTypeId(description, dependencyText)
+            local useHeight, typeId = self:SetupTypeId(entryData.addOnDescription, entryData.addOnDependencyText)
 
             entryData.height = useHeight
             scrollData[#scrollData + 1] = ZO_ScrollList_CreateDataEntry(typeId, entryData)
         else
-            entryData.height = ROW_HEIGHT
+            entryData.height = ZO_ADDON_ROW_HEIGHT
             scrollData[#scrollData + 1] = ZO_ScrollList_CreateDataEntry(ADDON_DATA, entryData)
         end
     end
+end
+
+function ZO_AddOnManager:SortScrollList()
+    self:ResetDataTypes()
+    local scrollData = ZO_ScrollList_GetDataList(self.list)        
+    ZO_ClearNumericallyIndexedTable(scrollData)
+
+    self:AddAddonTypeSection(IS_ADDON, GetString(SI_WINDOW_TITLE_ADDON_MANAGER))
+    self:AddAddonTypeSection(IS_LIBRARY, GetString(SI_ADDON_MANAGER_SECTION_LIBRARIES))
 end
 
 function ZO_AddOnManager:OnShow()
@@ -498,12 +545,12 @@ function ZO_AddOnManager:OnExpandButtonClicked(row)
         expandedAddons[data.index] = false
 
         data.expanded = false
-        data.height = ROW_HEIGHT
+        data.height = ZO_ADDON_ROW_HEIGHT
         scrollData[data.sortIndex] = ZO_ScrollList_CreateDataEntry(ADDON_DATA, data)
     else
         expandedAddons[data.index] = true
 
-        local useHeight, typeId = self:SetupTypeId(data.addOnDescription, data.addonDependencyText)
+        local useHeight, typeId = self:SetupTypeId(data.addOnDescription, data.addOnDependencyText)
 
         data.expanded = true
         data.height = useHeight

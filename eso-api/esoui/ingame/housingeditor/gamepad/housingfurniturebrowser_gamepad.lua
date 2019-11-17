@@ -143,6 +143,10 @@ function ZO_HousingFurnitureBrowser_Gamepad:RequestNewList()
     return newList
 end
 
+function ZO_HousingFurnitureBrowser_Gamepad:IsShowing()
+    return GAMEPAD_HOUSING_FURNITURE_BROWSER_SCENE:IsShowing()
+end
+
 function ZO_HousingFurnitureBrowser_Gamepad:OnShowing()
     ZO_Gamepad_ParametricList_Screen.OnShowing(self)
     ZO_HousingFurnitureBrowser_Base.OnShowing(self)
@@ -219,6 +223,5 @@ end
 --
 
 function ZO_HousingFurnitureBrowser_Gamepad_OnInitialize(control)
-    local gamepadBrowser = ZO_HousingFurnitureBrowser_Gamepad:New(control)
-    SYSTEMS:RegisterGamepadObject("housing_furniture_browser", gamepadBrowser)
+    GAMEPAD_HOUSING_FURNITURE_BROWSER = ZO_HousingFurnitureBrowser_Gamepad:New(control)
 end

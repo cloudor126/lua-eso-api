@@ -1,7 +1,7 @@
 local g_currentlySelectedCharacterData
 local g_lastSelectedData
 local g_canPlayCharacter = true
-local g_canCreateCharacter = true
+local g_maxCharacters
 
 ZO_CHARACTER_SELECT_DETAILS_VALUE_OFFSET_Y = -14
 ZO_GAMEPAD_CHARACTER_SELECT_LIST_ENTRY_CHAMPION_ICON_X_OFFSET = -20
@@ -11,6 +11,7 @@ local ACTIVATE_VIEWPORT = true
 local ENTRY_TYPE_EXTRA_INFO = 1
 local ENTRY_TYPE_CHARACTER = 2
 local ENTRY_TYPE_CREATE_NEW = 3
+local ENTRY_TYPE_CHAPTER = 4
 
 local CREATE_NEW_ICON = "EsoUI/Art/Buttons/Gamepad/gp_plus_large.dds"
 
@@ -28,12 +29,6 @@ local CHARACTER_DELETE_KEY_ICONS = {
                 KEY_GAMEPAD_LEFT_TRIGGER,
                 KEY_GAMEPAD_RIGHT_TRIGGER },
 }
-local CHARACTER_DELETE_TEXT_ANIM = {
-    ".",
-    "..",
-    "...",
-}
-local CHARACTER_DELETE_TEXT_ANIM_SPEED = 0.5
 
 local function ZO_CharacterSelect_Gamepad_GetKeyText(key)
     local path, width, height = ZO_Keybindings_GetTexturePathForKey(key)
@@ -164,6 +159,8 @@ function ZO_CharacterSelect_Gamepad_InitConfirmDeleteCustomDialog()
                 end,
             },
             {
+                --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+                name = "Character Select Delete Left Shoulder",
                 keybind = "DIALOG_LEFT_SHOULDER",
                 handlesKeyUp = true,
                 ethereal = true,
@@ -172,6 +169,8 @@ function ZO_CharacterSelect_Gamepad_InitConfirmDeleteCustomDialog()
                 end,
             },
             {
+                --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+                name = "Character Select Delete Right Shoulder",
                 keybind = "DIALOG_RIGHT_SHOULDER",
                 handlesKeyUp = true,
                 ethereal = true,
@@ -180,6 +179,8 @@ function ZO_CharacterSelect_Gamepad_InitConfirmDeleteCustomDialog()
                 end,
             },
             {
+                --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+                name = "Character Select Delete Left Trigger",
                 keybind = "DIALOG_LEFT_TRIGGER",
                 handlesKeyUp = true,
                 ethereal = true,
@@ -188,6 +189,8 @@ function ZO_CharacterSelect_Gamepad_InitConfirmDeleteCustomDialog()
                 end,
             },
             {
+                --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+                name = "Character Select Delete Right Trigger",
                 keybind = "DIALOG_RIGHT_TRIGGER",
                 handlesKeyUp = true,
                 ethereal = true,
@@ -205,189 +208,6 @@ function ZO_CharacterSelect_Gamepad_ShowDeleteScreen()
 end
 
 --[[ Character Select Screen ]]--
-
-local function InitKeybindingDescriptor(self)
-
-    local deleteKeybind = {
-        name = GetString(SI_CHARACTER_SELECT_GAMEPAD_DELETE),
-        keybind = "UI_SHORTCUT_SECONDARY",
-        disabledDuringSceneHiding = true,
-        callback = function()
-            self.characterList:Deactivate() -- So we can't select a different character
-            PlaySound(SOUNDS.GAMEPAD_MENU_FORWARD)
-            local numCharacterDeletesRemaining = GetNumCharacterDeletesRemaining()
-            local selectedData = self.characterList:GetTargetData()
-
-            if numCharacterDeletesRemaining == 0 then
-                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_NO_DELETES_LEFT_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorDefault})
-            elseif selectedData and selectedData.needsRename then
-                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorRename}, {mainTextParams = {numCharacterDeletesRemaining}})
-            else
-                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorDefault}, {mainTextParams = {numCharacterDeletesRemaining}})
-            end
-        end,
-    }
-
-    local optionsKeybind = {
-        name = GetString(SI_CHARACTER_SELECT_GAMEPAD_OPTIONS),
-        keybind = "UI_SHORTCUT_TERTIARY",
-
-        callback = function()
-            -- fix to keep both buttons from being pushable in the time it takes for the state to change
-            local state = PregameStateManager_GetCurrentState()
-            if(state == "CharacterSelect" or state == "CharacterSelect_FromCinematic") then
-                SCENE_MANAGER:Push("gamepad_options_root")
-            end
-        end,
-    }
-
-    self.charListKeybindStripDescriptorDefault =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        {
-            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_PLAY),
-            keybind = "UI_SHORTCUT_PRIMARY",
-            disabledDuringSceneHiding = true,
-            callback = function()
-                if ZO_CharacterSelect_Gamepad_Login(CHARACTER_OPTION_EXISTING_AREA) then
-                    self.characterList:Deactivate() -- So we can't select a different character
-                    PlaySound(SOUNDS.DIALOG_ACCEPT)
-                    ZO_CharacterSelect_Gamepad_ClearKeybindStrip()
-                end
-            end,
-        },
-        deleteKeybind,
-        optionsKeybind,
-        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end),
-    }
-    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorDefault, self.characterList)
-
-    self.charListKeybindStripDescriptorRename =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        {
-            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_RENAME),
-            keybind = "UI_SHORTCUT_PRIMARY",
-            disabledDuringSceneHiding = true,
-            callback = function()
-                self.characterList:Deactivate() -- So we can't select a different character
-
-                PlaySound(SOUNDS.DIALOG_ACCEPT)
-                SCENE_MANAGER:RemoveFragment(CHARACTER_SELECT_CHARACTERS_GAMEPAD_FRAGMENT)
-                ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(true)
-                ZO_CharacterSelect_Gamepad_BeginRename()
-            end,
-        },
-        deleteKeybind,
-        optionsKeybind,
-        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end),
-    }
-    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorRename, self.characterList)
-
-    -- Different keybinding for Create New option
-    self.charListKeybindStripDescriptorCreateNew =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        {
-            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_CREATE_NEW),
-            keybind = "UI_SHORTCUT_PRIMARY",
-            disabledDuringSceneHiding = true,
-
-            callback = function()
-                self.characterList:Deactivate() -- So we can't select a different character
-                PlaySound(SOUNDS.DIALOG_ACCEPT)
-                PlaySound(SOUNDS.GAMEPAD_MENU_FORWARD)
-                PregameStateManager_SetState("CharacterCreate")
-            end,
-        },
-        optionsKeybind,
-        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end),
-    }
-    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorCreateNew, self.characterList)
-
-    -- Keybinds for the additional character slot control
-    self.charListKeybindStripDescriptorAdditionalSlots =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        optionsKeybind,
-        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end),
-    }
-
-    -- Keybinds for service token controls
-    self.charListKeybindStripDescriptorServices =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        -- Select service
-        {
-            name = GetString(SI_SERVICE_USE_SERVICE_KEYBIND),
-            keybind = "UI_SHORTCUT_PRIMARY",
-            disabledDuringSceneHiding = true,
-            enabled = function()
-                local requestedServiceMode = ZO_CharacterSelect_Gamepad_GetSelectedServiceMode()
-                if requestedServiceMode ~= SERVICE_TOKEN_NONE then
-                    return GetNumServiceTokens(requestedServiceMode) > 0
-                end
-
-                return false
-            end,
-            callback = function()
-                local newServiceMode = ZO_CharacterSelect_Gamepad_GetSelectedServiceMode()
-                local RESET_LIST_TO_DEFAULT = true
-                ZO_CharacterSelect_Gamepad_ChangeServiceMode(newServiceMode, RESET_LIST_TO_DEFAULT)
-            end,
-        },
-        optionsKeybind,
-        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end),
-    }
-
-    -- Keybinds for using service tokens on the character list
-    self.charListKeybindStripDescriptorUseServiceToken =
-    {
-        alignment = KEYBIND_STRIP_ALIGN_LEFT,
-        -- Use service token
-        {
-            name = GetString(SI_GAMEPAD_SELECT_OPTION),
-            keybind = "UI_SHORTCUT_PRIMARY",
-            disabledDuringSceneHiding = true,
-            visible = function()
-                return self.characterList:GetNumEntries() > 0
-            end,
-            callback = function()
-                -- Perform a different function based on the currently selected service mode
-                if self.serviceMode == SERVICE_TOKEN_NAME_CHANGE then
-                    ZO_CharacterSelect_Gamepad_BeginRename()
-                elseif self.serviceMode == SERVICE_TOKEN_RACE_CHANGE then
-                    local DONT_RESET_TO_DEFAULT = false
-                    ZO_CHARACTERCREATE_MANAGER:InitializeForRaceChange(g_currentlySelectedCharacterData.dataSource)
-                    PregameStateManager_SetState("CharacterCreate_Barbershop")
-                elseif self.serviceMode == SERVICE_TOKEN_APPEARANCE_CHANGE then
-                    local DONT_RESET_TO_DEFAULT = false
-                    ZO_CHARACTERCREATE_MANAGER:InitializeForAppearanceChange(g_currentlySelectedCharacterData.dataSource)
-                    PregameStateManager_SetState("CharacterCreate_Barbershop")
-                end
-            end,
-        },
-        -- Custom back button behavior
-        {
-            name = GetString(SI_SERVICE_BACK_KEYBIND),
-            keybind = "UI_SHORTCUT_NEGATIVE",
-            disabledDuringSceneHiding = true,
-            callback = function()
-                -- If the back button is pressed before a service token is consumed, return the player back up to the extra info menu
-                local RESET_LIST_TO_DEFAULT = true
-                ZO_CharacterSelect_Gamepad_ChangeServiceMode(SERVICE_TOKEN_NONE, RESET_LIST_TO_DEFAULT)
-            end,
-        },
-    }
-    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorUseServiceToken, self.characterList)
-
-    self.charListKeybindStripDescriptorLogin =
-    {
-    }
-
-    self.charListKeybindStripDescriptor = self.charListKeybindStripDescriptorDefault
-
-end
 
 local function GetClassIconGamepad(classIdRequested)
     for i = 1, GetNumClasses() do
@@ -421,11 +241,11 @@ local function CharacterListEntry_OnSetup(control, data, selected, selectedDurin
     data:ClearIcons()
 
     -- we can't set these up at list creation time as the character data isn't fully loaded yet (GetNumClasses() returns 0, which makes GetClassIconGamepad(...) results all nil)
-    icon = ((data.name ~= nil) and data.class) and GetClassIconGamepad(data.class) or data.icon
+    local icon = ((data.name ~= nil) and data.class) and GetClassIconGamepad(data.class) or data.icon
 
     data:AddIcon(icon)
 
-    ZO_SharedGamepadEntry_OnSetup(control, data, selected, reselectingDuringRebuild, enabled, activated)
+    ZO_SharedGamepadEntry_OnSetup(control, data, selected, selectedDuringRebuild, enabled, activated)
 end
 
 local function GamepadCharacterSelectMenuEntryHeader_Setup(headerControl, data, ...)
@@ -533,38 +353,26 @@ local function CreateExtraInfoControls(self)
     if showExtraInfo then
         local data = {}
 
-        local function ServiceTokenTooltipFunction(serviceMode, descriptionTextId)
-            self.extraInfoDetails:SetHidden(false)
-
-            local title = zo_strformat(SI_SERVICE_TOOLTIP_HEADER_FORMATTER, GetString("SI_SERVICETOKENTYPE", serviceMode))
-            local body1 = GetString(descriptionTextId)
-            local body2
-            local body2Color
-
-            local numTokens = GetNumServiceTokens(serviceMode)
-            if numTokens ~= 0 then
-                body2 = zo_strformat(SI_SERVICE_TOOLTIP_SERVICE_TOKENS_AVAILABLE, numTokens, GetString("SI_SERVICETOKENTYPE", serviceMode))
-                body2Color = ZO_SUCCEEDED_TEXT
-            else
-                body2 = zo_strformat(SI_SERVICE_TOOLTIP_NO_SERVICE_TOKENS_AVAILABLE, GetString("SI_SERVICETOKENTYPE", serviceMode))
-                body2Color = ZO_ERROR_COLOR
-            end
-
-            ZO_CharacterSelect_Gamepad_SetExtraInfoDetails(title, body1, nil, body2, body2Color)
+        local function ServiceTokenTooltipFunction(tokenType)
+            ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(true)
+            GAMEPAD_TOOLTIPS:LayoutServiceTokenTooltip(GAMEPAD_LEFT_TOOLTIP, tokenType)
         end
 
-        -- Name Change Tokens
+        local function ServiceTokenHideTooltipFunction()
+            ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(false)
+            GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_LEFT_TOOLTIP)
+        end
+
+        -- Add the various service tokens
         table.insert(data, {
             keybindStripDesc = self.charListKeybindStripDescriptorServices,
             icon = "EsoUI/Art/Icons/Token_NameChange.dds",
             serviceMode = SERVICE_TOKEN_NAME_CHANGE,
             tokenCount = GetNumServiceTokens(SERVICE_TOKEN_NAME_CHANGE),
             ShowTooltipFunction = function()
-                    ServiceTokenTooltipFunction(SERVICE_TOKEN_NAME_CHANGE, SI_SERVICE_TOOLTIP_NAME_CHANGE_TOKEN_DESCRIPTION)
-                end,
-            HideTooltipFunction = function()
-                    self.extraInfoDetails:SetHidden(true)
-                end,
+                ServiceTokenTooltipFunction(SERVICE_TOKEN_NAME_CHANGE)
+            end,
+            HideTooltipFunction = ServiceTokenHideTooltipFunction,
         })
         table.insert(data, {
             keybindStripDesc = self.charListKeybindStripDescriptorServices,
@@ -572,11 +380,9 @@ local function CreateExtraInfoControls(self)
             serviceMode = SERVICE_TOKEN_RACE_CHANGE,
             tokenCount = GetNumServiceTokens(SERVICE_TOKEN_RACE_CHANGE),
             ShowTooltipFunction = function()
-                    ServiceTokenTooltipFunction(SERVICE_TOKEN_RACE_CHANGE, SI_SERVICE_TOOLTIP_RACE_CHANGE_TOKEN_DESCRIPTION)
-                end,
-            HideTooltipFunction = function()
-                    self.extraInfoDetails:SetHidden(true)
-                end,
+                ServiceTokenTooltipFunction(SERVICE_TOKEN_RACE_CHANGE)
+            end,
+            HideTooltipFunction = ServiceTokenHideTooltipFunction,
         })
         table.insert(data, {
             keybindStripDesc = self.charListKeybindStripDescriptorServices,
@@ -584,15 +390,13 @@ local function CreateExtraInfoControls(self)
             serviceMode = SERVICE_TOKEN_APPEARANCE_CHANGE,
             tokenCount = GetNumServiceTokens(SERVICE_TOKEN_APPEARANCE_CHANGE),
             ShowTooltipFunction = function()
-                    ServiceTokenTooltipFunction(SERVICE_TOKEN_APPEARANCE_CHANGE, SI_SERVICE_TOOLTIP_APPEARANCE_CHANGE_TOKEN_DESCRIPTION)
-                end,
-            HideTooltipFunction = function()
-                    self.extraInfoDetails:SetHidden(true)
-                end,
+                ServiceTokenTooltipFunction(SERVICE_TOKEN_APPEARANCE_CHANGE)
+            end,
+            HideTooltipFunction = ServiceTokenHideTooltipFunction,
         })
 
         -- Add more extra info controls above this line
-        for i=1, #data do
+        for i = 1, #data do
             local control = CreateExtraInfoEntry(self, data[i])
             AddExtraInfoEntryToFocus(self, control)
         end
@@ -611,55 +415,53 @@ local function RefreshServiceHeaderVisibility(self)
     local headerVisible = self.serviceMode ~= SERVICE_TOKEN_NONE
 
     if headerVisible then
-        local tokenCount = 0
+        local tokenCount = GetNumServiceTokens(self.serviceMode)
+        self.serviceTokensLabel:SetText(tokenCount)
+
         local instructions = ""
-
-        tokenCount = GetNumServiceTokens(self.serviceMode)
-
         if self.serviceMode ~= SERVICE_TOKEN_NONE then
             instructions = zo_strformat(SI_SERVICE_TOKEN_INSTRUCTIONS, GetString("SI_SERVICETOKENTYPE", self.serviceMode))
         end
 
-        self.serviceTokensLabel:SetText(tokenCount)
         self.serviceInstructions:SetText(instructions)
     end
 
     self.serviceHeader:SetHidden(not headerVisible)
 end
 
-local function SetExtraInfoLabel(self, labelName, text, color)
-    local label = self.extraInfoDetails:GetNamedChild(labelName)
-    label:SetText(text or "")
-
-    if color then
-        label:SetColor(color:UnpackRGBA())
-    else
-        label:SetColor(ZO_NORMAL_TEXT:UnpackRGBA())
-    end
-end
-
-function ZO_CharacterSelect_Gamepad_SetExtraInfoDetails(title, body1, body1Color, body2, body2Color)
-    local self = ZO_CharacterSelect_Gamepad
-
-    self.extraInfoDetails:GetNamedChild("Title"):SetText(title or "")
-
-    SetExtraInfoLabel(self, "Description1", body1, body1Color)
-    SetExtraInfoLabel(self, "Description2", body2, body2Color)
-end
-
 -- End Extra Info functions
 
-local function CreateList(self)
+local g_hasNeedsRenameCharacter = false
+
+local function CreateList(self, scrollToBest)
     self.characterList:Clear()
 
     CreateExtraInfoControls(self)
-
-    local characterDataList = ZO_CharacterSelect_GetCharacterDataList()
+    
     local slot = 1
+
+    local chapterUpgradeId = GetCurrentChapterUpgradeId()
+    if chapterUpgradeId ~= 0 and not IsChapterOwned(chapterUpgradeId) then
+        local chapterCollectibleId = GetChapterCollectibleId(chapterUpgradeId)
+        local data = 
+        {
+            index = slot,
+            type = ENTRY_TYPE_CHAPTER,
+            header = GetString(SI_CHARACTER_SELECT_GAMEPAD_CHAPTER_HEADER),
+            icon = GetCurrentChapterSmallLogoFileIndex(),
+            text = zo_strformat(SI_CHARACTER_SELECT_CHAPTER_LOCKED_FORMAT, GetCollectibleName(chapterCollectibleId))
+        }
+        AddCharacterListEntry("ZO_GamepadMenuEntryTemplateWithHeader", data, self.characterList)
+        slot = slot + 1
+    end
+
+    local numCharacterSlotsAdded = 0
+    local characterDataList = ZO_CharacterSelect_GetCharacterDataList()
     if  #characterDataList > 0 then
         local isFirstEntry = true
         
         -- Add Rename characters
+        g_hasNeedsRenameCharacter = false
         if self.serviceMode ~= SERVICE_TOKEN_NAME_CHANGE then
             for i, data in ipairs(characterDataList) do
                 if data.needsRename then
@@ -670,9 +472,12 @@ local function CreateList(self)
                         isFirstEntry = false
                     end
 
+                    g_hasNeedsRenameCharacter = true
+
                     data.slot = slot
                     data.type = ENTRY_TYPE_CHARACTER
                     slot = slot + 1
+                    numCharacterSlotsAdded = numCharacterSlotsAdded + 1
                     AddCharacterListEntry(template , data, self.characterList)
                 end
             end
@@ -685,7 +490,7 @@ local function CreateList(self)
             if not data.needsRename then
                 local template = "ZO_GamepadMenuEntryTemplateLowercase34"
                 if isFirstEntry then
-                    data.header = GetString(SI_CHARACTER_SELECT_GAMEPAD_CHARACTERS_HEADER)
+                    data.header = zo_strformat(SI_CHARACTER_SELECT_GAMEPAD_CHARACTERS_HEADER, #characterDataList, ZO_CharacterSelect_Gamepad_GetMaxCharacters())
                     template = "ZO_GamepadMenuEntryTemplateLowercase34WithHeader"
                     isFirstEntry = false
 
@@ -694,10 +499,13 @@ local function CreateList(self)
                     else
                         data.subHeader = nil
                     end
+                else
+                    data.header = nil
                 end
                 data.slot = slot
                 data.type = ENTRY_TYPE_CHARACTER
                 slot = slot + 1
+                numCharacterSlotsAdded = numCharacterSlotsAdded + 1
                 AddCharacterListEntry(template, data, self.characterList)
             end
         end
@@ -706,11 +514,11 @@ local function CreateList(self)
 
     if self.serviceMode == SERVICE_TOKEN_NONE then
         -- Add Create New
-        if slot <= ZO_CharacterSelect_Gamepad_GetMaxCharacters() then
+        if numCharacterSlotsAdded < ZO_CharacterSelect_Gamepad_GetMaxCharacters() then
             local data = { index = slot, type = ENTRY_TYPE_CREATE_NEW, header = GetString(SI_CHARACTER_SELECT_GAMEPAD_CREATE_NEW_HEADER), icon = CREATE_NEW_ICON, text = GetString(SI_CHARACTER_SELECT_GAMEPAD_CREATE_NEW_ENTRY)}
             AddCharacterListEntry("ZO_GamepadMenuEntryTemplateWithHeader", data, self.characterList)
         end
-    elseif self.characterList:GetNumEntries() == 0 then
+    elseif numCharacterSlotsAdded == 0 then
         -- In a service mode, but no characters qualify for the service
         self.characterList:SetNoItemText(GetString(SI_SERVICE_NO_ELIGIBLE_CHARACTERS))
         ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorUseServiceToken)
@@ -718,7 +526,7 @@ local function CreateList(self)
 
     g_currentlySelectedCharacterData = nil
     local bestSelection = ZO_CharacterSelect_GetBestSelectionData()
-    if bestSelection then
+    if bestSelection and scrollToBest then
         local ALLOW_EVEN_IF_DISABLED = true
         local FORCE_ANIMATION = false
         ZO_CharacterSelect_Gamepad.characterList:SetSelectedIndex(bestSelection.slot, ALLOW_EVEN_IF_DISABLED, FORCE_ANIMATION)
@@ -751,10 +559,252 @@ local function SelectCharacter(characterData)
 end
 
 local function RecreateList(self)
-    CreateList(self)
+    CreateList(self, true)
     RefreshServiceHeaderVisibility(self)
     ZO_CharacterSelect_Gamepad_RefreshHeader()
     SelectCharacter(ZO_CharacterSelect_GetBestSelectionData())
+end
+
+local function InitKeybindingDescriptor(self)
+
+    local deleteKeybind =
+     {
+        name = GetString(SI_CHARACTER_SELECT_GAMEPAD_DELETE),
+        keybind = "UI_SHORTCUT_SECONDARY",
+        disabledDuringSceneHiding = true,
+        callback = function()
+            self.characterList:Deactivate() -- So we can't select a different character
+            PlaySound(SOUNDS.GAMEPAD_MENU_FORWARD)
+            local numCharacterDeletesRemaining = GetNumCharacterDeletesRemaining()
+            local selectedData = self.characterList:GetTargetData()
+
+            if numCharacterDeletesRemaining == 0 then
+                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_NO_DELETES_LEFT_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorDefault})
+            elseif selectedData and selectedData.needsRename then
+                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorRename}, {mainTextParams = {numCharacterDeletesRemaining}})
+            else
+                ZO_Dialogs_ShowGamepadDialog("DELETE_SELECTED_CHARACTER_GAMEPAD", {keybindDescriptor = self.charListKeybindStripDescriptorDefault}, {mainTextParams = {numCharacterDeletesRemaining}})
+            end
+        end,
+    }
+
+    local optionsKeybind = 
+    {
+        name = GetString(SI_CHARACTER_SELECT_GAMEPAD_OPTIONS),
+        keybind = "UI_SHORTCUT_TERTIARY",
+
+        callback = function()
+            -- fix to keep both buttons from being pushable in the time it takes for the state to change
+            local state = PregameStateManager_GetCurrentState()
+            if(state == "CharacterSelect" or state == "CharacterSelect_FromCinematic") then
+                SCENE_MANAGER:Push("gamepad_options_root")
+            end
+        end,
+    }
+
+    self.charListKeybindStripDescriptorDefault =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        -- Play
+        {
+            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_PLAY),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+            callback = function()
+                if ZO_CharacterSelect_Gamepad_Login(CHARACTER_OPTION_EXISTING_AREA) then
+                    self.characterList:Deactivate() -- So we can't select a different character
+                    PlaySound(SOUNDS.DIALOG_ACCEPT)
+                    ZO_CharacterSelect_Gamepad_ClearKeybindStrip()
+                end
+            end,
+        },
+        -- Order Character Up
+        {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = GetString(SI_CHARACTER_SELECT_ORDER_CHARACTER_UP),
+            keybind = "UI_SHORTCUT_LEFT_SHOULDER",
+            order = 101,
+            callback = function()
+                if not g_hasNeedsRenameCharacter then
+                    local selectedData = self.characterList:GetTargetData()
+                    if selectedData and selectedData.type == ENTRY_TYPE_CHARACTER and selectedData.order > 1 then
+                        ZO_CharacterSelect_OrderCharacterUp(selectedData.order)
+                        CreateList(self)
+                        local ALLOW_EVEN_IF_DISABLED = true
+                        local FORCE_ANIMATION = false
+                        ZO_CharacterSelect_Gamepad.characterList:SetSelectedIndexWithoutAnimation(selectedData.slot, ALLOW_EVEN_IF_DISABLED, FORCE_ANIMATION)
+                    end
+                end
+            end
+        },
+        -- Order Character Down
+        {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = GetString(SI_CHARACTER_SELECT_ORDER_CHARACTER_DOWN),
+            keybind = "UI_SHORTCUT_RIGHT_SHOULDER",
+            order = 102,
+            callback = function()
+                if not g_hasNeedsRenameCharacter then
+                    local selectedData = self.characterList:GetTargetData()
+                    if selectedData and selectedData.order < GetNumCharacters() then
+                        ZO_CharacterSelect_OrderCharacterDown(selectedData.order)
+                        CreateList(self)
+                        local ALLOW_EVEN_IF_DISABLED = true
+                        local FORCE_ANIMATION = false
+                        ZO_CharacterSelect_Gamepad.characterList:SetSelectedIndexWithoutAnimation(selectedData.slot, ALLOW_EVEN_IF_DISABLED, FORCE_ANIMATION)
+                    end
+                end
+            end
+        },
+        deleteKeybind,
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorDefault, self.characterList)
+
+    self.charListKeybindStripDescriptorRename =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        {
+            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_RENAME),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+            callback = function()
+                self.characterList:Deactivate() -- So we can't select a different character
+
+                PlaySound(SOUNDS.DIALOG_ACCEPT)
+                SCENE_MANAGER:RemoveFragment(CHARACTER_SELECT_CHARACTERS_GAMEPAD_FRAGMENT)
+                ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(true)
+                ZO_CharacterSelect_Gamepad_BeginRename()
+            end,
+        },
+        deleteKeybind,
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorRename, self.characterList)
+
+    -- Different keybinding for Create New option
+    self.charListKeybindStripDescriptorCreateNew =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        {
+            name = GetString(SI_CHARACTER_SELECT_GAMEPAD_CREATE_NEW),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+
+            callback = function()
+                self.characterList:Deactivate() -- So we can't select a different character
+                PlaySound(SOUNDS.DIALOG_ACCEPT)
+                PlaySound(SOUNDS.GAMEPAD_MENU_FORWARD)
+                PregameStateManager_SetState("CharacterCreate")
+            end,
+        },
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorCreateNew, self.characterList)
+
+    self.charListKeybindStripDescriptorChapter =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        {
+            name = GetString(SI_CHARACTER_SELECT_CHAPTER_UPGRADE_REGISTER),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+
+            callback = function()
+                self.characterList:Deactivate() -- So we can't select a different character
+                PlaySound(SOUNDS.DIALOG_ACCEPT)
+                PlaySound(SOUNDS.GAMEPAD_MENU_FORWARD)
+                PregameStateManager_SetState("ChapterUpgrade")
+            end,
+        },
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorChapter, self.characterList)
+
+    -- Keybinds for the additional character slot control
+    self.charListKeybindStripDescriptorAdditionalSlots =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+
+    -- Keybinds for service token controls
+    self.charListKeybindStripDescriptorServices =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        -- Select service
+        {
+            name = GetString(SI_SERVICE_USE_SERVICE_KEYBIND),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+            enabled = function()
+                local requestedServiceMode = ZO_CharacterSelect_Gamepad_GetSelectedServiceMode()
+                if requestedServiceMode ~= SERVICE_TOKEN_NONE then
+                    return GetNumServiceTokens(requestedServiceMode) > 0
+                end
+
+                return false
+            end,
+            callback = function()
+                local newServiceMode = ZO_CharacterSelect_Gamepad_GetSelectedServiceMode()
+                local RESET_LIST_TO_DEFAULT = true
+                ZO_CharacterSelect_Gamepad_ChangeServiceMode(newServiceMode, RESET_LIST_TO_DEFAULT)
+            end,
+        },
+        optionsKeybind,
+        KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect),
+    }
+
+    -- Keybinds for using service tokens on the character list
+    self.charListKeybindStripDescriptorUseServiceToken =
+    {
+        alignment = KEYBIND_STRIP_ALIGN_LEFT,
+        -- Use service token
+        {
+            name = GetString(SI_GAMEPAD_SELECT_OPTION),
+            keybind = "UI_SHORTCUT_PRIMARY",
+            disabledDuringSceneHiding = true,
+            visible = function()
+                return self.characterList:GetNumEntries() > 0
+            end,
+            callback = function()
+                -- Perform a different function based on the currently selected service mode
+                if self.serviceMode == SERVICE_TOKEN_NAME_CHANGE then
+                    ZO_CharacterSelect_Gamepad_BeginRename()
+                elseif self.serviceMode == SERVICE_TOKEN_RACE_CHANGE then
+                    ZO_CHARACTERCREATE_MANAGER:InitializeForRaceChange(g_currentlySelectedCharacterData.dataSource)
+                    PregameStateManager_SetState("CharacterCreate_Barbershop")
+                elseif self.serviceMode == SERVICE_TOKEN_APPEARANCE_CHANGE then
+                    ZO_CHARACTERCREATE_MANAGER:InitializeForAppearanceChange(g_currentlySelectedCharacterData.dataSource)
+                    PregameStateManager_SetState("CharacterCreate_Barbershop")
+                end
+            end,
+        },
+        -- Custom back button behavior
+        {
+            name = GetString(SI_SERVICE_BACK_KEYBIND),
+            keybind = "UI_SHORTCUT_NEGATIVE",
+            disabledDuringSceneHiding = true,
+            callback = function()
+                -- If the back button is pressed before a service token is consumed, return the player back up to the extra info menu
+                local RESET_LIST_TO_DEFAULT = true
+                ZO_CharacterSelect_Gamepad_ChangeServiceMode(SERVICE_TOKEN_NONE, RESET_LIST_TO_DEFAULT)
+            end,
+        },
+    }
+    ZO_Gamepad_AddListTriggerKeybindDescriptors(self.charListKeybindStripDescriptorUseServiceToken, self.characterList)
+
+    self.charListKeybindStripDescriptorLogin =
+    {
+    }
+
+    self.charListKeybindStripDescriptor = self.charListKeybindStripDescriptorDefault
+
 end
 
 local function ZO_CharacterSelect_Gamepad_GetFormattedRace(characterData)
@@ -775,10 +825,6 @@ local function ZO_CharacterSelect_Gamepad_GetFormattedAlliance(characterData)
     return zo_strformat(SI_CHARACTER_SELECT_ALLIANCE, allianceName)
 end
 
-local function ZO_CharacterSelect_Gamepad_GetRankIcon(rank)
-    return zo_iconFormat(GetAvARankIcon(rank), 32, 32)
-end
-
 local function ZO_CharacterSelect_Gamepad_GetFormattedLocation(characterData)
     local locationName = characterData.location ~= 0 and GetLocationName(characterData.location) or GetString(SI_UNKNOWN_LOCATION)
 
@@ -788,10 +834,8 @@ end
 local SetupCharacterList
 local SelectedCharacterChanged
 do
-    SetupCharacterList = function (self, eventCode, numCharacters, maxCharacters, mostRecentlyPlayedCharacterId, numCharacterDeletesRemaining)
+    SetupCharacterList = function(self, eventCode, numCharacters, maxCharacters, mostRecentlyPlayedCharacterId, numCharacterDeletesRemaining, maxCharacterDeletes)
         ZO_CharacterSelect_OnCharacterListReceivedCommon(eventCode, numCharacters, maxCharacters, mostRecentlyPlayedCharacterId, numCharacterDeletesRemaining, maxCharacterDeletes)
-        g_canCreateCharacter = numCharacters < maxCharacters
-
         ZO_CharacterSelect_Gamepad_SetMaxCharacters(maxCharacters)
         RecreateList(self)
     end
@@ -804,35 +848,33 @@ do
             return
         end
         
-        local characterName = self.characterDetails:GetNamedChild("Name")
-        local characterRace = self.characterDetails:GetNamedChild("RaceContainer"):GetNamedChild("Race")
-        local characterLevel = self.characterDetails:GetNamedChild("LevelContainer"):GetNamedChild("Level")
-        local characterClass = self.characterDetails:GetNamedChild("ClassContainer"):GetNamedChild("Class")
-        local characterAlliance = self.characterDetails:GetNamedChild("AllianceContainer"):GetNamedChild("Alliance")
-        local characterLocation = self.characterDetails:GetNamedChild("LocationContainer"):GetNamedChild("Location")
-
-        local locationName = ""
-
+        local shouldShowCharacterDetails = false
         if selectedData then
-            characterName:SetText(ZO_CharacterSelect_GetFormattedCharacterName(selectedData))
-            characterRace:SetText(ZO_CharacterSelect_Gamepad_GetFormattedRace(selectedData))
-            characterLevel:SetText(ZO_CharacterSelect_GetFormattedLevel(selectedData))
-            characterClass:SetText(ZO_CharacterSelect_Gamepad_GetFormattedClass(selectedData))
-            characterAlliance:SetText(ZO_CharacterSelect_Gamepad_GetFormattedAlliance(selectedData))
+            g_canPlayCharacter = false
+            if selectedData.type == ENTRY_TYPE_CHARACTER then
+                local characterName = self.characterDetails:GetNamedChild("Name")
+                local characterRace = self.characterDetails:GetNamedChild("RaceContainer"):GetNamedChild("Race")
+                local characterLevel = self.characterDetails:GetNamedChild("LevelContainer"):GetNamedChild("Level")
+                local characterClass = self.characterDetails:GetNamedChild("ClassContainer"):GetNamedChild("Class")
+                local characterAlliance = self.characterDetails:GetNamedChild("AllianceContainer"):GetNamedChild("Alliance")
+                local characterLocation = self.characterDetails:GetNamedChild("LocationContainer"):GetNamedChild("Location")
 
-            -- Location Name isn't always valid
-            locationName = ZO_CharacterSelect_Gamepad_GetFormattedLocation(selectedData)
+                characterName:SetText(ZO_CharacterSelect_GetFormattedCharacterName(selectedData))
+                characterRace:SetText(ZO_CharacterSelect_Gamepad_GetFormattedRace(selectedData))
+                characterLevel:SetText(ZO_CharacterSelect_GetFormattedLevel(selectedData))
+                characterClass:SetText(ZO_CharacterSelect_Gamepad_GetFormattedClass(selectedData))
+                characterAlliance:SetText(ZO_CharacterSelect_Gamepad_GetFormattedAlliance(selectedData))
+                characterLocation:SetText(ZO_CharacterSelect_Gamepad_GetFormattedLocation(selectedData))
 
-            characterLocation:SetText(locationName)
-
-            if selectedData.name then
                 ZO_CharacterSelect_SetPlayerSelectedCharacterId(selectedData.id)
                 SelectCharacter(selectedData)
-            end
+                g_canPlayCharacter = true
 
-            -- Change the keybind strip if we have create new selected
-            local self = ZO_CharacterSelect_Gamepad
-            g_canPlayCharacter = false
+                -- Only show character details if the character is in a valid location
+                shouldShowCharacterDetails = selectedData.location and selectedData.location ~= 0
+            else
+                ZO_CharacterSelect_SetPlayerSelectedCharacterId(nil)
+            end
 
             if self.serviceMode ~= SERVICE_TOKEN_NONE then
                 ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorUseServiceToken)
@@ -840,16 +882,16 @@ do
                 ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorRename)
             elseif selectedData.type == ENTRY_TYPE_CREATE_NEW then
                 ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorCreateNew)
+            elseif selectedData.type == ENTRY_TYPE_CHAPTER then
+                ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorChapter)
             else
-                g_canPlayCharacter = true
                 ZO_CharacterSelect_Gamepad_RefreshKeybindStrip(self.charListKeybindStripDescriptorDefault)
             end
         else
             ZO_CharacterSelect_SetPlayerSelectedCharacterId(nil)
         end
 
-        -- Only show the character details if the slot is valid
-        ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(not (selectedData and selectedData.name and locationName ~= ""))
+        ZO_CharacterSelect_GamepadCharacterDetails:SetHidden(not shouldShowCharacterDetails)
 
         -- Handle needs rename text
         local needsRename = selectedData and selectedData.needsRename
@@ -866,30 +908,16 @@ function ZO_CharacterSelect_Gamepad_RefreshCharacter()
     SelectedCharacterChanged(self, nil, g_lastSelectedData, nil)
 end
 
-local function GetPlayerCountString()
-    local characterDataList = ZO_CharacterSelect_GetCharacterDataList()
-    return zo_strformat(SI_CHARACTER_SELECT_GAMEPAD_CHARACTERS_COUNTER, #characterDataList, ZO_CharacterSelect_Gamepad_GetMaxCharacters())
-end
-
 function ZO_CharacterSelect_Gamepad_RefreshHeader()
     local self = ZO_CharacterSelect_Gamepad
 
     ZO_GamepadGenericHeader_Refresh(self.header, self.headerData)
 
-    ZO_CharacterSelectProfile_Gamepad:GetNamedChild("CharacterCount"):SetText(GetPlayerCountString())
     ZO_CharacterSelectProfile_Gamepad:GetNamedChild("Profile"):SetText(GetOnlineIdForActiveProfile())
-    local accountChampionPoints = ZO_CharacterSelect_GetAccountChampionPoints()
-    local championPointsContainer = ZO_CharacterSelectProfile_Gamepad:GetNamedChild("ChampionPointsContainer")
-    if accountChampionPoints > 0 then
-        championPointsContainer:SetHidden(false)
-        championPointsContainer:GetNamedChild("ChampionPointsCount"):SetText(accountChampionPoints)
-    else
-        championPointsContainer:SetHidden(true)
-    end
 end
 
 local function OnCharacterConstructionReady()
-    if(GetNumCharacters() > 0) then
+    if GetNumCharacters() > 0 then
         g_currentlySelectedCharacterData = g_currentlySelectedCharacterData or ZO_CharacterSelect_GetBestSelectionData()
 
         if g_currentlySelectedCharacterData then
@@ -959,14 +987,15 @@ local function ZO_CharacterSelect_Gamepad_StateChanged(oldState, newState)
         ZO_CharacterSelect_GamepadCharacterViewport.Activate()
         SCENE_MANAGER:AddFragment(CHARACTER_SELECT_CHARACTERS_GAMEPAD_FRAGMENT)
 
-        if PregameIsFullyLoaded() then
+        local characterDataReady = IsPregameCharacterConstructionReady()
+        if characterDataReady then
             self.characterList:RefreshVisible()
             self.characterList:Activate()
             self.extraInfoFocus:Deactivate()
         end
 
         ZO_CharacterSelect_Gamepad_RefreshKeybindStrip()
-        if IsPregameCharacterConstructionReady() then
+        if characterDataReady then
             OnCharacterConstructionReady()  -- So that if we come to this screen from Character Create, it will load a different scene.
         end
 
@@ -995,7 +1024,6 @@ end
 local g_requestedRename = ""
 
 local function OnCharacterRenamedSuccessCallback()
-    local DONT_RESET_TO_DEFAULT = false
     local self = ZO_CharacterSelect_Gamepad
 
     -- there are multiple ways to rename a character, some of which do not change the servicemode, so we will
@@ -1003,6 +1031,7 @@ local function OnCharacterRenamedSuccessCallback()
     if self.serviceMode == SERVICE_TOKEN_NONE then
         ZO_CharacterSelect_Gamepad_ReturnToCharacterList(ACTIVATE_VIEWPORT)
     else
+        local DONT_RESET_TO_DEFAULT = false
         ZO_CharacterSelect_Gamepad_ChangeServiceMode(SERVICE_TOKEN_NONE, DONT_RESET_TO_DEFAULT)
     end
 end
@@ -1020,18 +1049,6 @@ local function ContextFilter(callback)
     return function(...)
         if IsConsoleUI() then
             callback(...)
-        end
-    end
-end
-
-local function OnPregameCharacterListReceived(characterCount, previousCharacterCount)
-    if (characterCount > 0) then
-        local currentState = PregameStateManager_GetCurrentState()
-
-        -- The character list is received a second time once a character is renamed, which prevents the rename success dialog from
-        -- displaying if we're already at CharacterSelect
-        if currentState ~= "CharacterSelect" and currentState ~= "WaitForPregameFullyLoaded" then
-            PregameStateManager_SetState("WaitForPregameFullyLoaded")
         end
     end
 end
@@ -1072,12 +1089,12 @@ function ZO_CharacterSelect_Gamepad_Initialize(self)
     self.characterList:AddDataTemplate("ZO_GamepadMenuEntryTemplateLowercase34", CharacterListEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
     self.characterList:AddDataTemplateWithHeader("ZO_GamepadMenuEntryTemplateLowercase34", CharacterListEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadCharacterSelectMenuEntryHeaderTemplate", GamepadCharacterSelectMenuEntryHeader_Setup)
     self.characterList:SetAlignToScreenCenter(true)
+    self.characterList:SetValidateGradient(true)
 
     self.UpdateDirectionalInput = ZO_CharacterSelect_Gamepad_UpdateDirectionalInput
     self.characterList:SetDirectionalInputEnabled(false)
 
     self.characterDetails = self:GetNamedChild("CharacterDetails"):GetNamedChild("Container")
-    self.extraInfoDetails = self:GetNamedChild("CharacterDetails"):GetNamedChild("ExtraInfoDetails")
     self.characterNeedsRename = self:GetNamedChild("CharacterDetails"):GetNamedChild("NeedsRename")
     self.header = self:GetNamedChild("Mask"):GetNamedChild("Characters"):GetNamedChild("HeaderContainer"):GetNamedChild("Header")
     ZO_GamepadGenericHeader_Initialize(self.header, ZO_GAMEPAD_HEADER_TABBAR_DONT_CREATE)
@@ -1147,7 +1164,6 @@ function ZO_CharacterSelect_Gamepad_Initialize(self)
 
     CALLBACK_MANAGER:RegisterCallback("OnCharacterConstructionReady", ContextFilter(OnCharacterConstructionReady))
     CALLBACK_MANAGER:RegisterCallback("PregameFullyLoaded", ContextFilter(OnPregameFullyLoaded))
-    CALLBACK_MANAGER:RegisterCallback("PregameCharacterListReceived", ContextFilter(OnPregameCharacterListReceived))
 
     self:RegisterForEvent(EVENT_CHARACTER_DELETED, ContextFilter(CharacterDeleted))
     self:RegisterForEvent(EVENT_CHARACTER_RENAME_RESULT, ContextFilter(OnCharacterRenamed))
@@ -1177,7 +1193,11 @@ function ZO_CharacterSelect_Gamepad_Initialize(self)
 
                 return mainText
             end,
-            onBack = function() ZO_CharacterSelect_Gamepad_ReturnToCharacterList(ACTIVATE_VIEWPORT) end,
+            onBack = function()
+                -- viewport was never deactivated, so don't reactivate
+                local DONT_ACTIVATE_VIEWPORT = false
+                ZO_CharacterSelect_Gamepad_ReturnToCharacterList(DONT_ACTIVATE_VIEWPORT)
+            end,
             onFinish = function(dialog)
                 g_requestedRename = dialog.selectedName
 
@@ -1244,18 +1264,6 @@ function ZO_CharacterSelect_Gamepad_ShowLoginScreen()
 
     -- Show the fact that the login has been requested
     ZO_Dialogs_ShowGamepadDialog("CHARACTER_SELECT_LOGIN")
-end
-
-function ZO_CharacterSelect_Gamepad_SetLabelMaxWidth(labelControl, siblingName)
-    local siblingControl = labelControl:GetParent():GetNamedChild(siblingName)
-    local isValid, anchor, _, _, offsetX = labelControl:GetAnchor(0)
-    local maxConstraintX = ZO_GAMEPAD_CONTENT_WIDTH - offsetX
-
-    if siblingControl then
-        maxConstraintX = maxConstraintX - siblingControl:GetWidth()
-    end
-
-    labelControl:SetDimensionConstraints(maxConstraintX, 0)
 end
 
 function ZO_CharacterSelect_Gamepad_GetSelectedServiceMode()

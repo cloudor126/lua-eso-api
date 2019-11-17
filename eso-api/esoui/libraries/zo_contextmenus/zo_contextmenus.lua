@@ -13,6 +13,7 @@ MENU_ADD_OPTION_CHECKBOX = 2
 MENU_TYPE_DEFAULT = 1
 MENU_TYPE_COMBO_BOX = 2
 MENU_TYPE_TEXT_ENTRY_DROP_DOWN = 3
+MENU_TYPE_MULTISELECT_COMBO_BOX = 4
 
 local menuInfo =
 {
@@ -40,6 +41,14 @@ local menuInfo =
         backdropEdgeWidth = 64,
         backdropEdgeHeight = 8,
         hideMunge = true,
+    },
+    [MENU_TYPE_MULTISELECT_COMBO_BOX] =
+    {
+        backdropEdge = "EsoUI/Art/Miscellaneous/dropDown_edge.dds",
+        backdropCenter = "EsoUI/Art/Miscellaneous/dropDown_center.dds",
+        backdropInsets = {16, 16, -16, -16},
+        backdropEdgeWidth = 128,
+        backdropEdgeHeight = 16,
     },
 }
 
@@ -75,9 +84,9 @@ end
 
 local function UpdateMenuDimensions(menuEntry)
     if(ZO_Menu.currentIndex > 0) then
-        local textWidth, textHeight = GetControl(menuEntry.item, "Name"):GetTextDimensions()
+        local textWidth, textHeight = menuEntry.item.nameLabel:GetTextDimensions()
         local checkboxWidth, checkboxHeight = 0, 0
-        if(menuEntry.checkbox) then
+        if menuEntry.checkbox then
             checkboxWidth, checkboxHeight = menuEntry.checkbox:GetDesiredWidth(), menuEntry.checkbox:GetDesiredHeight()
         end
 
@@ -119,6 +128,8 @@ function ClearMenu()
     if(ZO_Menu.checkBoxPool) then
         ZO_Menu.checkBoxPool:ReleaseAllObjects()
     end
+
+    ZO_Menu.highlightPool:ReleaseAllObjects()
     
     ZO_Menu.nextAnchor = ZO_Menu
     
@@ -201,6 +212,7 @@ function ShowMenu(owner, initialRefCount, menuType)
     
     ZO_Menu:SetHidden(false)
     ZO_Menus:BringWindowToTop()
+    ZO_Menu.underlayControl:SetHidden(not ZO_Menu.useUnderlay)
 
     AnchorMenuToMouse(ZO_Menu)
 
@@ -251,13 +263,13 @@ function GetMenuPadding()
     return ZO_Menu.menuPad
 end
 
-function AddMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad)
+function AddMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment, isHighlighted)
     local menuItemControl = ZO_Menu.itemPool:AcquireObject()
     menuItemControl.OnSelect = myfunction
     menuItemControl.menuIndex = ZO_Menu.currentIndex
 
     local checkboxItemControl
-    if(itemType == MENU_ADD_OPTION_CHECKBOX) then
+    if itemType == MENU_ADD_OPTION_CHECKBOX then
         checkboxItemControl = ZO_Menu.checkBoxPool:AcquireObject()
         ZO_CheckButton_SetToggleFunction(checkboxItemControl, myfunction)
         checkboxItemControl.menuIndex = ZO_Menu.currentIndex
@@ -270,16 +282,21 @@ function AddMenuItem(mytext, myfunction, itemType, myFont, normalColor, highligh
 
     table.insert(ZO_Menu.items, { item = menuItemControl, checkbox = checkboxItemControl, itemYPad = itemYPad })
     
+    local nameLabel = menuItemControl.nameLabel
+
     menuItemControl:ClearAnchors()
     menuItemControl:SetHidden(false)
+    -- We need to reset these anchors first so the label can get it's proper size for the parent to reference
+    nameLabel:ClearAnchors()
+    nameLabel:SetAnchor(TOPLEFT)
 
-    if(checkboxItemControl) then
+    if checkboxItemControl then
         checkboxItemControl:ClearAnchors()
         checkboxItemControl:SetHidden(false)
     end
 
-    if(ZO_Menu.nextAnchor == ZO_Menu) then
-        if(checkboxItemControl) then
+    if ZO_Menu.nextAnchor == ZO_Menu then
+        if checkboxItemControl then
             checkboxItemControl:SetAnchor(TOPLEFT, ZO_Menu.nextAnchor, TOPLEFT, ZO_Menu.menuPad, ZO_Menu.menuPad + itemYPad)
             menuItemControl:SetAnchor(TOPLEFT, checkboxItemControl, TOPRIGHT, 0, 0)
         else
@@ -296,8 +313,6 @@ function AddMenuItem(mytext, myfunction, itemType, myFont, normalColor, highligh
 
     ZO_Menu.nextAnchor = checkboxItemControl or menuItemControl
 
-    local nameControl = GetControl(menuItemControl, "Name")
-
     if myFont == nil then
         if not IsInGamepadPreferredMode() then
             myFont = "ZoFontGame"
@@ -306,16 +321,30 @@ function AddMenuItem(mytext, myfunction, itemType, myFont, normalColor, highligh
         end
     end
     
-    nameControl.normalColor = normalColor or DEFAULT_TEXT_COLOR
-    nameControl.highlightColor = highlightColor or DEFAULT_TEXT_HIGHLIGHT
+    nameLabel.normalColor = normalColor or DEFAULT_TEXT_COLOR
+    nameLabel.highlightColor = highlightColor or DEFAULT_TEXT_HIGHLIGHT
     
     -- NOTE: Must set text AFTER the current index has been incremented.
-    nameControl:SetFont(myFont)
-    nameControl:SetText(mytext)
+    nameLabel:SetFont(myFont)
+    nameLabel:SetText(mytext)
     UpdateMenuDimensions(ZO_Menu.items[#ZO_Menu.items])
-    nameControl:SetColor(nameControl.normalColor:UnpackRGBA())
 
-    if(currentOnMenuItemAddedCallback) then
+    -- Now that we know how the label wil size, finish the anchors if we need the label to be right aligned
+    -- Right align won't work if the label has no width
+    horizontalAlignment = horizontalAlignment or TEXT_ALIGN_LEFT
+    nameLabel:SetHorizontalAlignment(horizontalAlignment)
+    if horizontalAlignment == TEXT_ALIGN_RIGHT then
+        nameLabel:SetAnchor(TOPRIGHT)
+    end
+
+    nameLabel:SetColor(nameLabel.normalColor:UnpackRGBA())
+
+    if isHighlighted then
+        menuItemControl.isHighlighted = isHighlighted
+        ZO_Menu_AcquireAndApplyHighlight(menuItemControl)
+    end
+
+    if currentOnMenuItemAddedCallback then
         currentOnMenuItemAddedCallback()
     end
 
@@ -337,15 +366,17 @@ function ZO_Menu_SelectItem(control)
    
     ZO_MenuHighlight:SetHidden(false)
     
-    local nameControl = GetControl(control, "Name")
-    nameControl:SetColor(nameControl.highlightColor:UnpackRGBA())
+    if not control.isHighlighted then
+        control.nameLabel:SetColor(control.nameLabel.highlightColor:UnpackRGBA())
+    end
 end
 
 function ZO_Menu_UnselectItem(control)
     ZO_MenuHighlight:SetHidden(true)
 
-    local nameControl = GetControl(control, "Name")
-    nameControl:SetColor(nameControl.normalColor:UnpackRGBA())
+    if not control.isHighlighted then
+        control.nameLabel:SetColor(control.nameLabel.normalColor:UnpackRGBA())
+    end
 end
 
 function ZO_Menu_SetSelectedIndex(index)
@@ -392,7 +423,7 @@ end
 function ZO_Menu_GetSelectedText()
     local control = ZO_Menu.items[selectedIndex].item
     if(control) then
-        return GetControl(control, "Name"):GetText()
+        return control.nameLabel:GetText()
     end
 end
 
@@ -408,35 +439,64 @@ function ZO_Menu_ExitItem(control)
 end
 
 function ZO_Menu_ClickItem(control, button)
-    if(button == MOUSE_BUTTON_INDEX_LEFT) then
+    if button == MOUSE_BUTTON_INDEX_LEFT then
         ZO_Menu_SetLastCommandWasFromMenu(true)
         local menuEntry = ZO_Menu.items[control.menuIndex]
-        if(menuEntry and menuEntry.checkbox) then
+        if menuEntry and menuEntry.checkbox then
             -- Treat this like the checkbox was clicked.
             ZO_CheckButton_OnClicked(menuEntry.checkbox, button)
         else
             -- Treat it like the label was clicked
             control.OnSelect()
-            ClearMenu()
+            if ZO_Menu.menuType == MENU_TYPE_MULTISELECT_COMBO_BOX then
+                control.isHighlighted = not control.isHighlighted
+
+                if control.isHighlighted then
+                    ZO_Menu_AcquireAndApplyHighlight(control)
+                else
+                    ZO_Menu_ReleaseHighlight(control)
+                end
+            else
+                ClearMenu()
+            end
         end
     end
 end
 
 function ZO_Menu_OnHide(control)
     mouseUpRefCounts[ZO_Menu] = nil
+    ZO_Menu.useUnderlay = false
     if(currentOnMenuHiddenCallback) then
         currentOnMenuHiddenCallback()
     end
 end
 
+function ZO_Menu_AcquireAndApplyHighlight(control)
+    local highlight, key = ZO_Menu.highlightPool:AcquireObject()
+    highlight.key = key
+    control.highlight = highlight
+
+    highlight:SetAnchor(TOPLEFT, control, TOPLEFT, -2, -2)
+    highlight:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, 2, 2)
+   
+    highlight:SetHidden(false)
+
+    control.nameLabel:SetColor(control.nameLabel.highlightColor:UnpackRGBA())
+end
+
+function ZO_Menu_ReleaseHighlight(control)
+    ZO_Menu.highlightPool:ReleaseObject(control.highlight.key)
+    control.highlight = nil
+end
+
 local function OnGlobalMouseUp()
     local refCount = mouseUpRefCounts[ZO_Menu]
-    if(refCount ~= nil) then
+    if refCount ~= nil then
         local moc = WINDOW_MANAGER:GetMouseOverControl()
-        if(moc:GetOwningWindow() ~= ZO_Menus) then
+        if moc:GetOwningWindow() ~= ZO_Menus or moc == ZO_Menu.underlayControl then
             refCount = refCount - 1
             mouseUpRefCounts[ZO_Menu] = refCount
-            if(refCount <= 0) then                
+            if refCount <= 0 then                
                 ClearMenu()
             end
         end
@@ -448,19 +508,33 @@ local function ResetFunction(control)
     control:ClearAnchors()
     control.OnSelect = nil
     control.menuIndex = nil
+    control.isHighlighted = nil
 end
 
 local function ResetCheckbox(checkbox)
     ResetFunction(checkbox)
     ZO_CheckButton_SetToggleFunction(checkbox, nil)
+    ZO_CheckButton_SetUnchecked(checkbox)
 end
     
 local function EntryFactory(pool)
-    return ZO_ObjectPool_CreateControl("ZO_MenuItem", pool, ZO_Menu)
+    local control = ZO_ObjectPool_CreateControl("ZO_MenuItem", pool, ZO_Menu)
+    control.nameLabel = control:GetNamedChild("Name")
+    return control
 end
 
 local function CheckBoxFactory(pool)
     return ZO_ObjectPool_CreateControl("ZO_MenuItemCheckButton", pool, ZO_Menu)
+end
+
+local function HighlightFactory(pool)
+    return ZO_ObjectPool_CreateControl("ZO_MenuItemHighlight", pool, ZO_Menu)
+end
+
+local function HighlightResetFunction(control)
+    control:SetHidden(true)
+    control:ClearAnchors()
+    control.key = nil
 end
 
 function ZO_Menu_Initialize()
@@ -477,6 +551,10 @@ function ZO_Menu_Initialize()
     end
     ZO_Menu.checkBoxPool:ReleaseAllObjects()
 
+    ZO_Menu.highlightPool = ZO_ObjectPool:New(HighlightFactory, HighlightResetFunction)
+
+    ZO_Menu.underlayControl = ZO_Menu:GetNamedChild("Underlay")
+
     ClearMenu()
  
     EVENT_MANAGER:RegisterForEvent("ZO_Menu_OnGlobalMouseUp", EVENT_GLOBAL_MOUSE_UP, OnGlobalMouseUp)
@@ -488,4 +566,8 @@ end
 
 function ZO_Menu_SetLastCommandWasFromMenu(menuCommand)
     lastCommandWasFromMenu = menuCommand
+end
+
+function ZO_Menu_SetUseUnderlay(useUnderlay)
+    ZO_Menu.useUnderlay = useUnderlay
 end

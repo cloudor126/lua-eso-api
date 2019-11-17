@@ -27,7 +27,7 @@ end
 function GroupList_Gamepad:Initialize(control)
     ZO_GamepadSocialListPanel.Initialize(self, control, GROUP_LIST_MANAGER, "ZO_GroupListRow_Gamepad")
     self:SetEmptyText(GetString(SI_GROUP_LIST_PANEL_NO_GROUP_MESSAGE));
-    self:SetupSort(SORT_KEYS, "displayName", ZO_SORT_ORDER_DOWN)
+    self:SetupSort(SORT_KEYS, "displayName", ZO_SORT_ORDER_UP)
 end
 
 function GroupList_Gamepad:GetBackKeybindCallback()
@@ -72,6 +72,8 @@ function GroupList_Gamepad:RefreshData()
     if not self.control:IsHidden() then
         ZO_GamepadSocialListPanel.RefreshData(self)
     end
+
+    GAMEPAD_GROUP_ROLES_BAR:UpdateEnabledState()
 end
 
 function GroupList_Gamepad:RefreshTooltip()
@@ -92,11 +94,11 @@ function GroupList_Gamepad:BuildOptionsList()
     self:AddOptionTemplate(groupingId, ZO_SocialOptionsDialogGamepad.BuildWhisperOption, ZO_SocialOptionsDialogGamepad.ShouldAddWhisperOption)
     
     local function CanKickMember()
-        return not DoesGroupModificationRequireVote() and IsUnitGroupLeader("player") and not self:SelectedDataIsPlayer()
+        return IsGroupModificationAvailable() and not DoesGroupModificationRequireVote() and IsUnitGroupLeader("player") and not self:SelectedDataIsPlayer()
     end
 
     local function CanVoteForKickMember()
-        return DoesGroupModificationRequireVote() and not self:SelectedDataIsPlayer()
+        return IsGroupModificationAvailable() and DoesGroupModificationRequireVote() and not self:SelectedDataIsPlayer()
     end
 
     local function ShouldAddPromoteOption()

@@ -1,10 +1,15 @@
 ZO_ONE_MINUTE_IN_SECONDS = 60
-ZO_ONE_HOUR_IN_SECONDS = 60 * ZO_ONE_MINUTE_IN_SECONDS -- = 3600
-ZO_ONE_DAY_IN_SECONDS = 24 * ZO_ONE_HOUR_IN_SECONDS -- = 86400
-ZO_ONE_MONTH_IN_SECONDS = 30 * ZO_ONE_DAY_IN_SECONDS -- = 2592000
+ZO_ONE_HOUR_IN_MINUTES = 60
+ZO_ONE_DAY_IN_HOURS = 24
+ZO_ONE_MONTH_IN_DAYS = 30
+ZO_ONE_HOUR_IN_SECONDS = ZO_ONE_HOUR_IN_MINUTES * ZO_ONE_MINUTE_IN_SECONDS -- = 3600
+ZO_ONE_DAY_IN_SECONDS = ZO_ONE_DAY_IN_HOURS * ZO_ONE_HOUR_IN_SECONDS -- = 86400
+ZO_ONE_MONTH_IN_SECONDS = ZO_ONE_MONTH_IN_DAYS * ZO_ONE_DAY_IN_SECONDS -- = 2592000
+ZO_ONE_DAY_IN_MINUTES = ZO_ONE_DAY_IN_HOURS * ZO_ONE_HOUR_IN_MINUTES -- = 1440
 
-ZO_ONE_MINUTE_IN_MILLISECONDS = 60000
-ZO_ONE_HOUR_IN_MILLISECONDS = 60 * ZO_ONE_MINUTE_IN_MILLISECONDS -- = 3600000
+ZO_ONE_SECOND_IN_MILLISECONDS = 1000
+ZO_ONE_MINUTE_IN_MILLISECONDS = ZO_ONE_MINUTE_IN_SECONDS * ZO_ONE_SECOND_IN_MILLISECONDS -- = 60000
+ZO_ONE_HOUR_IN_MILLISECONDS = ZO_ONE_HOUR_IN_MINUTES * ZO_ONE_MINUTE_IN_MILLISECONDS -- = 3600000
 
 function ZO_FormatTime(seconds, formatStyle, precision, direction)
    return FormatTimeSeconds(seconds, formatStyle, precision, direction or TIME_FORMAT_DIRECTION_NONE)
@@ -52,13 +57,9 @@ function ZO_FormatTimeAsDecimalWhenBelowThreshold(seconds, secondsThreshold)
     end
 end
 
-local CLOCK_FORMAT
+local CLOCK_FORMAT = (GetCVar("Language.2") == "en") and TIME_FORMAT_PRECISION_TWELVE_HOUR or TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR
 
 function ZO_FormatClockTime()
-    if(CLOCK_FORMAT == nil) then
-        CLOCK_FORMAT = (GetCVar("Language.2") == "en") and TIME_FORMAT_PRECISION_TWELVE_HOUR or TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR
-    end
-
     local localTimeSinceMidnight = GetSecondsSinceMidnight()
     local text, secondsUntilNextUpdate = ZO_FormatTime(localTimeSinceMidnight, TIME_FORMAT_STYLE_CLOCK_TIME, CLOCK_FORMAT)
     return text, secondsUntilNextUpdate
@@ -66,7 +67,14 @@ end
 
 function ZO_SetClockFormat(clockFormat)
     -- Doesn't currently take effect until the next clock update.
-    CLOCK_FORMAT = clockFormat
+    if CLOCK_FORMAT ~= clockFormat then
+        CLOCK_FORMAT = clockFormat
+        ZO_BuildHoursSinceMidnightPerHourTable()
+    end
+end
+
+function ZO_GetClockFormat()
+    return CLOCK_FORMAT
 end
 
 local g_normalizationTime = GetFrameTimeSeconds()
@@ -133,3 +141,41 @@ do
         end
     end
 end
+
+do
+    local hoursSinceMidnightPerHour = {}
+
+    function ZO_BuildHoursSinceMidnightPerHourTable()
+        hoursSinceMidnightPerHour = {}
+        for i = 0, 23 do
+            table.insert(hoursSinceMidnightPerHour, { value = i, name = ZO_FormatTime(i * ZO_ONE_HOUR_IN_MINUTES * ZO_ONE_MINUTE_IN_SECONDS, TIME_FORMAT_STYLE_CLOCK_TIME, CLOCK_FORMAT) })
+        end
+    end
+
+    ZO_BuildHoursSinceMidnightPerHourTable()
+
+    function ZO_GetHoursSinceMidnightPerHourTable()
+        return hoursSinceMidnightPerHour
+    end
+
+    function ZO_PopulateHoursSinceMidnightPerHourComboBox(comboBox, onSelectionCallback, selectedValue)
+        comboBox:ClearItems()
+
+        local selectedEntry
+        for i, data in ipairs(hoursSinceMidnightPerHour) do
+            local entry = comboBox:CreateItemEntry(data.name, onSelectionCallback)
+            entry.value = data.value
+            entry.index = i
+            if data.value == selectedValue then
+                selectedEntry = entry
+            end
+            comboBox:AddItem(entry, ZO_COMBOBOX_SUPRESS_UPDATE)
+        end
+
+        local IGNORE_CALLBACK = true
+        if selectedEntry then
+            comboBox:SelectItemByIndex(selectedEntry.index, IGNORE_CALLBACK)
+        end
+    end
+end
+

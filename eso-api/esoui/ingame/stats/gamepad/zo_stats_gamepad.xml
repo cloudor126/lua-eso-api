@@ -79,6 +79,7 @@
                     <Dimensions x="180"/>
                 </Label>
                 <Texture name="$(parent)Icon" inherits="ZO_GamepadMenuEntryIconTemplate"/>
+                <Texture name="$(parent)StatusIndicator" inherits="ZO_GamepadMenuEntryStatusIndicationTemplate" />
             </Controls>
         </Control>
         
@@ -87,7 +88,7 @@
                 <Label name="$(parent)Label" inherits="ZO_GamepadMenuEntryLabelTemplate" modifyTextType="NONE" />
                 <Texture name="$(parent)Icon" inherits="ZO_GamepadMenuEntryIconTemplate"/>
 
-                <Cooldown name="$(parent)Cooldown" textureFile="EsoUI/Art/Miscellaneous/timer_overlay_32.dds" excludeFromResizeToFitExtents="true" pixelRoundingEnabled="false" hidden="true">
+                <Cooldown name="$(parent)Cooldown" textureFile="EsoUI/Art/Miscellaneous/timer_overlay_32.dds" excludeFromResizeToFitExtents="true" hidden="true">
                     <Dimensions x="32" y="32"/>
                     <Anchor point="CENTER" relativeTo="$(parent)Label" relativePoint="LEFT" offsetX="ZO_GAMEPAD_DEFAULT_LIST_ENTRY_SECOND_ICON_X_OFFSET" />
                 </Cooldown>
@@ -112,6 +113,26 @@
                 ZO_GamepadStats_OnInitialize(self)
             </OnInitialized>   
             <Controls>
+                <Scroll name="$(parent)Mask" override="true">
+                    <Controls>
+                        <Control name="$(parent)Container" override="true">
+                            <Controls>
+                                <Control name="$(parent)HeaderContainer" override="true">
+                                    <Controls>
+                                        <Control name="$(parent)Header" override="true">
+                                            <Controls>
+                                                <Control name="$(parent)OutfitSelector" inherits="ZO_OutfitSelector_List_Header">
+                                                    <Anchor point="TOP" relativeTo="$(parent)Message" relativePoint="BOTTOM" offsetY="25" />
+                                                </Control>
+                                            </Controls>
+                                        </Control>
+                                    </Controls>
+                                </Control>
+                            </Controls>
+                        </Control>
+                    </Controls>
+                </Scroll>
+                
                 <Control name="$(parent)RightPane" hidden="true" inherits="ZO_GamepadGrid_NavQuadrant_2_3_Anchors">
                     <Controls>
                         <Control name="$(parent)HeaderContainer" inherits="ZO_GamepadContentHeaderContainer ZO_GamepadGrid_NavQuadrant_ContainerAnchors" />

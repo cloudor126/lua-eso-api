@@ -20,6 +20,14 @@ function ZO_SharedInventoryManager:Initialize()
     end
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_ITEM_USED, OnInventoryItemUsed)
 
+    local function OnItemCombinationResult(_, itemCombinationResult)
+        if itemCombinationResult == ITEM_COMBINATION_RESULT_SUCCESS then
+            -- Combinations play an animation on success, hide UI so the player can see it
+            SCENE_MANAGER:SetInUIMode(false)
+        end
+    end 
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_ITEM_COMBINATION_RESULT, OnItemCombinationResult)
+
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_OPEN_FENCE, function() 
         self:RefreshInventory(BAG_BACKPACK) 
         self:RefreshInventory(BAG_WORN)
@@ -39,6 +47,10 @@ function ZO_SharedInventoryManager:Initialize()
             -- with the addition of Craft Bags the bank bag could be modified by the automatic transfer
             -- of bank contents to the Craft Bag on joining a region
             self:RefreshInventory(BAG_BANK)
+            self:RefreshInventory(BAG_SUBSCRIBER_BANK)
+            for bag = BAG_HOUSE_BANK_ONE, BAG_HOUSE_BANK_TEN do
+                self:RefreshInventory(bag)
+            end
         end,
         RefreshSingle = function(...)
             self:RefreshSingleSlot(...)
@@ -75,11 +87,7 @@ function ZO_SharedInventoryManager:Initialize()
             end
         end
 
-        local previousSlotData = self:GetOrCreateBagCache(bagId)[slotIndex]
-        --Since the inventory can update the existing slot table to a new item we need to make a copy of the old data
-        if previousSlotData then
-            previousSlotData = ZO_ShallowTableCopy(previousSlotData)
-        end
+        local previousSlotData = self:GetPreviousSlotDataInternal(bagId, slotIndex)
 
         self.refresh:RefreshSingle("inventory", bagId, slotIndex, isNewItem, itemSoundCategory, updateReason)
         self.refresh:UpdateRefreshGroups()
@@ -114,6 +122,11 @@ function ZO_SharedInventoryManager:Initialize()
         self:FireCallbacks("SingleSlotInventoryUpdate", bagId, slotIndex, previousSlotData)
     end
 
+    local function RefreshInventoryOnGuildChange()
+        self:RefreshInventory(BAG_BACKPACK)
+        self:RefreshInventory(BAG_WORN)
+    end
+
     local function OnGuildBankUpdated()
         self.refresh:RefreshAll("guild_bank")
         self:FireCallbacks("FullInventoryUpdate", BAG_GUILDBANK)
@@ -121,7 +134,8 @@ function ZO_SharedInventoryManager:Initialize()
 
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_FULL_UPDATE, OnFullInventoryUpdated)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnInventorySlotUpdated)
-
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_GUILD_SELF_JOINED_GUILD, RefreshInventoryOnGuildChange)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_GUILD_SELF_LEFT_GUILD, RefreshInventoryOnGuildChange)
 
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_OPEN_GUILD_BANK, OnGuildBankUpdated)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_CLOSE_GUILD_BANK, OnGuildBankUpdated)
@@ -130,10 +144,15 @@ function ZO_SharedInventoryManager:Initialize()
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_GUILD_BANK_ITEMS_READY, OnGuildBankUpdated)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_GUILD_BANK_OPEN_ERROR, OnGuildBankUpdated)
 
-    local function OnGuildBankInventorySlotUpdated(eventCode, slotIndex)
-        local previousSlotData = self:GetOrCreateBagCache(BAG_GUILDBANK)[slotIndex]
+    local function OnGuildBankInventorySlotUpdated(eventCode, slotIndex, updatedByLocalPlayer, itemSoundCategory)
+        local previousSlotData = self:GetPreviousSlotDataInternal(BAG_GUILDBANK, slotIndex)
         self.refresh:RefreshSingle("inventory", BAG_GUILDBANK, slotIndex)
         self.refresh:UpdateRefreshGroups()
+
+        if updatedByLocalPlayer and GetInteractionType() == INTERACTION_GUILDBANK then
+            PlayItemSound(itemSoundCategory, ITEM_SOUND_ACTION_SLOT)
+        end
+
         self:FireCallbacks("SingleSlotInventoryUpdate", BAG_GUILDBANK, slotIndex, previousSlotData)
     end
 
@@ -188,15 +207,57 @@ function ZO_SharedInventoryManager:Initialize()
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_MONEY_UPDATE, OnMoneyUpdated)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_TELVAR_STONE_UPDATE, OnTelvarStonesUpdated)
 
+    local function OnSmithingTraitResearch()
+        self:RefreshAllTraitInformation()
+    end 
+
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_SMITHING_TRAIT_RESEARCH_CANCELED, OnSmithingTraitResearch)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_SMITHING_TRAIT_RESEARCH_STARTED, OnSmithingTraitResearch)
+
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_PLAYER_ACTIVATED, OnFullInventoryUpdated)
 
+    self:RegisterForConfirmUseItemEvents(namespace)
+
     self:PerformFullUpdateOnQuestCache()
+end
+
+function ZO_SharedInventoryManager:RegisterForConfirmUseItemEvents(namespace)
+    local function AcceptEvolutionCallback()
+        RespondToConfirmUseInventoryItemRequest(true)
+    end
+
+    local function DeclineEvolutionCallback()
+        RespondToConfirmUseInventoryItemRequest(false)
+    end
+
+    local function OnRequestConfirmUseItem(eventCode, bag, slot)
+        local onUseType = GetItemUseType(bag, slot)
+        if onUseType == ITEM_USE_TYPE_COMBINATION then
+            local combinationId = GetItemCombinationId(bag, slot)
+            local baseCollectibleId = GetCombinationFirstNonFragmentCollectibleComponentId(combinationId)
+            if baseCollectibleId ~= 0 then
+                local unlockedCollectibleId = GetCombinationUnlockedCollectible(combinationId)
+                ZO_CombinationPromptManager_ShowEvolutionPrompt(baseCollectibleId, unlockedCollectibleId, AcceptEvolutionCallback, DeclineEvolutionCallback)
+                return
+            end
+        end
+
+        -- right now only items that evolve collectibles need confirmation
+        -- so if it's not one of those, automatically accept using the item
+        RespondToConfirmUseInventoryItemRequest(true)
+    end
+
+    local function OnCancelConfirmUseItem()
+        ZO_CombinationPromptManager_ClearEvolutionPrompt()
+    end
+
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_REQUEST_CONFIRM_USE_ITEM, OnRequestConfirmUseItem)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_CANCEL_REQUEST_CONFIRM_USE_ITEM, OnCancelConfirmUseItem)
 end
 
 function ZO_SharedInventoryManager:RefreshInventory(bagId)
     if self:HasBagCache(bagId) then
         self:PerformFullUpdateOnBagCache(bagId)
-        self:FireCallbacks("FullInventoryUpdate", bagId)
     end
 end
 
@@ -282,6 +343,34 @@ function ZO_SharedInventoryManager:GenerateFullQuestCache()
     return self.questCache
 end
 
+-- Trait Information Update
+function ZO_SharedInventoryManager:RefreshAllTraitInformation()
+    -- Refresh all bags where weapons and armor can reside
+    self:RefreshBagTraitInformation(BAG_BACKPACK)
+    self:RefreshBagTraitInformation(BAG_WORN)
+    self:RefreshBagTraitInformation(BAG_BANK)
+    self:RefreshBagTraitInformation(BAG_SUBSCRIBER_BANK)
+end
+
+function ZO_SharedInventoryManager:RefreshBagTraitInformation(bagId)
+    if self:HasBagCache(bagId) then
+        local bagCache = self:GetBagCache(bagId)
+
+        for slotIndex in ZO_IterateBagSlots(bagId) do
+            local existingData = bagCache[slotIndex]
+            if existingData then
+                local newItemTraitInformation = GetItemTraitInformation(bagId, slotIndex)
+                if existingData.traitInformation ~= newItemTraitInformation then
+                    local previousSlotData = self:GetPreviousSlotDataInternal(bagId, slotIndex)
+                    existingData.traitInformation = newItemTraitInformation
+                    existingData.traitInformationSortOrder = ZO_GetItemTraitInformation_SortOrder(existingData.traitInformation)
+                    self:FireCallbacks("SingleSlotInventoryUpdate", bagId, slotIndex, previousSlotData)
+                end
+            end
+        end
+    end
+end
+
 -- Helper functions for new items
 function ZO_SharedInventoryManager:AreAnyItemsNew(optFilterFunction, currentFilter, ...)
     self.refresh:UpdateRefreshGroups()
@@ -324,6 +413,20 @@ function ZO_SharedInventoryManager:GetItemUniqueId(bagId, slotIndex)
     end
 end
 
+function ZO_SharedInventoryManager:GetHouseBankingBagName(bankingBag)
+    local interactName = GetUnitName("interact")
+    local collectibleId = GetCollectibleForHouseBankBag(bankingBag)
+    local nickname
+    if collectibleId ~= 0 then
+        local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+        if collectibleData then
+            nickname = collectibleData:GetNickname()
+        end
+    end
+
+    return interactName, nickname
+end
+
 --[[ Shared Guild Bank functions ]]--
 
 function ZO_SharedInventory_SelectAccessibleGuildBank(lastSuccessfulGuildBankId)
@@ -331,20 +434,17 @@ function ZO_SharedInventory_SelectAccessibleGuildBank(lastSuccessfulGuildBankId)
     local numGuilds = GetNumGuilds()
     for i = 1, numGuilds do
         local guildId = GetGuildId(i)
-        local bankPermission = DoesPlayerHaveGuildPermission(guildId, GUILD_PERMISSION_BANK_DEPOSIT) or DoesPlayerHaveGuildPermission(guildId, GUILD_PERMISSION_BANK_WITHDRAW) or DoesPlayerHaveGuildPermission(guildId, GUILD_PERMISSION_BANK_WITHDRAW_GOLD)
-        if(bankPermission) then
-            if(lastSuccessfulGuildBankId == guildId) then
-                SelectGuildBank(guildId)
-                return
-            elseif(validId == nil) then
-                validId = guildId
-            end            
+        if(lastSuccessfulGuildBankId == guildId) then
+            SelectGuildBank(guildId)
+            return
+        elseif(validId == nil) then
+            validId = guildId
         end
     end
 
-    if(validId) then
+    if validId then
         SelectGuildBank(validId)
-    elseif(numGuilds > 0) then
+    elseif numGuilds > 0 then
         SelectGuildBank(GetGuildId(1))
     end
 end
@@ -369,13 +469,12 @@ end
 
 function ZO_SharedInventoryManager:PerformFullUpdateOnBagCache(bagId)
     local bagCache = self:GetBagCache(bagId)
-    ZO_ClearTable(bagCache)
 
-    local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-    while slotIndex do
+    for slotIndex in ZO_IterateBagSlots(bagId) do
         self:HandleSlotCreationOrUpdate(bagCache, bagId, slotIndex)
-        slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
     end
+
+    self:FireCallbacks("FullInventoryUpdate", bagId)
 end
 
 local SHARED_INVENTORY_SLOT_RESULT_REMOVED = 1
@@ -414,7 +513,7 @@ function ZO_SharedInventoryManager:ComputeDynamicStatusMask(...)
 end
 
 function ZO_SharedInventoryManager:RefreshStatusSortOrder(slotData)
-    slotData.statusSortOrder = self:ComputeDynamicStatusMask(slotData.isPlayerLocked, slotData.isGemmable, slotData.stolen, slotData.isBoPTradeable, slotData.brandNew)
+    slotData.statusSortOrder = self:ComputeDynamicStatusMask(slotData.isPlayerLocked, slotData.isGemmable, slotData.stolen, slotData.isBoPTradeable, slotData.brandNew, slotData.bagId == BAG_WORN)
 end
 
 function ZO_SharedInventoryManager:CreateOrUpdateSlotData(existingSlotData, bagId, slotIndex, isNewItem)
@@ -444,12 +543,13 @@ function ZO_SharedInventoryManager:CreateOrUpdateSlotData(existingSlotData, bagI
         return nil, SHARED_INVENTORY_SLOT_RESULT_NO_CHANGE
     end
 
-    local rawNameBefore = slot.rawName;
+    local rawNameBefore = slot.rawName
     slot.rawName = GetItemName(bagId, slotIndex)
     if rawNameBefore ~= slot.rawName then
         slot.name = zo_strformat(SI_TOOLTIP_ITEM_NAME, slot.rawName)
     end
     slot.requiredLevel = GetItemRequiredLevel(bagId, slotIndex)
+    slot.requiredChampionPoints = GetItemRequiredChampionPoints(bagId, slotIndex)
 
     if not wasSameItemInSlotBefore then
         slot.itemType, slot.specializedItemType = GetItemType(bagId, slotIndex)
@@ -478,6 +578,10 @@ function ZO_SharedInventoryManager:CreateOrUpdateSlotData(existingSlotData, bagI
     slot.filterData = { GetItemFilterTypeInfo(bagId, slotIndex) }
     slot.condition = GetItemCondition(bagId, slotIndex)
     slot.isPlaceableFurniture = IsItemPlaceableFurniture(bagId, slotIndex)
+    slot.traitInformation = GetItemTraitInformation(bagId, slotIndex)
+    slot.traitInformationSortOrder = ZO_GetItemTraitInformation_SortOrder(slot.traitInformation)
+    slot.sellInformation = GetItemSellInformation(bagId, slotIndex)
+    slot.sellInformationSortOrder = ZO_GetItemSellInformationCustomSortOrder(slot.sellInformation)
 
     local isFromCrownCrate = IsItemFromCrownCrate(bagId, slotIndex)
     slot.isGemmable = false
@@ -538,20 +642,20 @@ function ZO_SharedInventoryManager:PerformSingleUpdateOnQuestCache(questIndex)
         -- First update all the tools for the quest...
         for toolIndex = 1, GetQuestToolCount(questIndex) do
             local icon, stack, _, name, questItemId = GetQuestToolInfo(questIndex, toolIndex)
-            self:CreateQuestData(icon, stack, questIndex, toolIndex, QUEST_MAIN_STEP_INDEX, nil, name, questItemId, SEARCH_TYPE_QUEST_TOOL)
+            self:CreateQuestData(icon, stack, questIndex, toolIndex, QUEST_MAIN_STEP_INDEX, nil, name, questItemId)
         end
 
         -- Then update all the collectable items...
         for stepIndex = QUEST_MAIN_STEP_INDEX, GetJournalQuestNumSteps(questIndex) do
             for conditionIndex = 1, GetJournalQuestNumConditions(questIndex, stepIndex) do
                 local icon, stack, name, questItemId = GetQuestItemInfo(questIndex, stepIndex, conditionIndex)
-                self:CreateQuestData(icon, stack, questIndex, nil, stepIndex, conditionIndex, name, questItemId, SEARCH_TYPE_QUEST_ITEM)
+                self:CreateQuestData(icon, stack, questIndex, nil, stepIndex, conditionIndex, name, questItemId)
             end
         end
     end
 end
 
-function ZO_SharedInventoryManager:CreateQuestData(iconFile, stackCount, questIndex, toolIndex, stepIndex, conditionIndex, name, questItemId, searchType)
+function ZO_SharedInventoryManager:CreateQuestData(iconFile, stackCount, questIndex, toolIndex, stepIndex, conditionIndex, name, questItemId)
     if(stackCount > 0) then
         local questCache = self.questCache
 
@@ -574,9 +678,13 @@ function ZO_SharedInventoryManager:CreateQuestData(iconFile, stackCount, questIn
             sellPrice       = 0,
             stackSellPrice  = 0,
             filterData      = { ITEMFILTERTYPE_QUEST },
-            questItemId        = questItemId,
+            questItemId     = questItemId,
             age             = 0, -- 0 for now, probably need to come up with a way to make these appear new when appropriate.  maybe diffing what was there before with what's being added?
         }
+
+        if CanQuickslotQuestItemById(questItemId) then
+            table.insert(questItem.filterData, ITEMFILTERTYPE_QUEST_QUICKSLOT)
+        end
 
         questItems[questItemId] = questItem
     end
@@ -585,38 +693,32 @@ end
 SHARED_INVENTORY = ZO_SharedInventoryManager:New()
 
 do
-    local function UpdateMoney(currencyLabel, currencyOptions)
-        ZO_CurrencyControl_SetSimpleCurrency(currencyLabel, CURT_MONEY, GetCarriedCurrencyAmount(CURT_MONEY), currencyOptions)
-    end
-
-    local function UpdateAlliancePoints(alliancePointsLabel, alliancePointsOptions)
-        ZO_CurrencyControl_SetSimpleCurrency(alliancePointsLabel, CURT_ALLIANCE_POINTS, GetAlliancePoints(), alliancePointsOptions)
-    end
-
-    local function UpdateBankedMoney(currencyLabel, currencyOptions)
-        ZO_CurrencyControl_SetSimpleCurrency(currencyLabel, CURT_MONEY, GetBankedMoney(), currencyOptions)
-    end
-
-    local function UpdateGuildBankedMoney(currencyLabel, currencyOptions)
-        ZO_CurrencyControl_SetSimpleCurrency(currencyLabel, CURT_MONEY, GetGuildBankedMoney(), currencyOptions)
-    end
-
-    local function ConnectPlayerLabel(label, options, event, updateFnc)
+    local SHOW_ALL = true
+    local HAS_ENOUGH = false
+    function ZO_SharedInventory_ConnectPlayerCurrencyLabel(label, currencyType, currencyLocation, currencyOptions, showCap)
         local dirty = true
 
-        label:RegisterForEvent(event, function() 
-            if label:IsHidden() then
-                dirty = true
-            else
-                updateFnc(label, options)
-                dirty = false
-            end 
+        local displayOptions = {}
+
+        if showCap and IsCurrencyCapped(currencyType, currencyLocation) then
+            displayOptions.currencyCapAmount = GetMaxPossibleCurrency(currencyType, currencyLocation)
+        end
+
+        label:RegisterForEvent(EVENT_CURRENCY_UPDATE, function(eventId, eventCurrencyType, eventCurrencyLocation, newAmount, oldAmount, reason)
+            if eventCurrencyType == currencyType and eventCurrencyLocation == currencyLocation then
+                if label:IsHidden() then
+                    dirty = true
+                else
+                    dirty = false
+                    ZO_CurrencyControl_SetSimpleCurrency(label, currencyType, newAmount, currencyOptions, SHOW_ALL, HAS_ENOUGH, displayOptions)
+                end
+            end
         end)
 
         local function CleanDirty()
             if dirty then
                 dirty = false
-                updateFnc(label, options)
+                ZO_CurrencyControl_SetSimpleCurrency(label, currencyType, GetCurrencyAmount(currencyType, currencyLocation), currencyOptions, SHOW_ALL, HAS_ENOUGH, displayOptions)
             end
         end
 
@@ -626,21 +728,18 @@ do
             CleanDirty()
         end
     end
+end
 
-    function ZO_SharedInventory_ConnectPlayerCurrencyLabel(currencyLabel, currencyOptions)
-        ConnectPlayerLabel(currencyLabel, currencyOptions, EVENT_MONEY_UPDATE, UpdateMoney)
-    end
-
-    function ZO_SharedInventory_ConnectPlayerAlliancePointsLabel(alliancePointsLabel, alliancePointsOptions)
-        ConnectPlayerLabel(alliancePointsLabel, alliancePointsOptions, EVENT_ALLIANCE_POINT_UPDATE, UpdateAlliancePoints)
-    end
-
-    function ZO_SharedInventory_ConnectBankedCurrencyLabel(currencyLabel, currencyOptions)
-        ConnectPlayerLabel(currencyLabel, currencyOptions, EVENT_BANKED_MONEY_UPDATE, UpdateBankedMoney)
-    end
-
-    function ZO_SharedInventory_ConnectGuildBankedCurrencyLabel(currencyLabel, currencyOptions)
-        ConnectPlayerLabel(currencyLabel, currencyOptions, EVENT_GUILD_BANKED_MONEY_UPDATE, UpdateGuildBankedMoney)
+-- Internal Use Only
+function ZO_SharedInventoryManager:GetPreviousSlotDataInternal(bagId, slotIndex)
+    local bagCache = self:GetBagCache(bagId)
+    if bagCache then
+        local previousSlotData = bagCache[slotIndex]
+        --Since the inventory can update the existing slot table to a new item we need to make a copy of the old data
+        if previousSlotData then
+            previousSlotData = ZO_ShallowTableCopy(previousSlotData)
+        end
+        return previousSlotData
     end
 end
 
@@ -725,5 +824,41 @@ function ZO_Inventory_TryStowAllMaterials()
         else
             StowAllVirtualItems()
         end
+    end
+end
+
+do
+    -- if this triggers, need to add new trait information to this arbitrary sort order
+    internalassert(ITEM_TRAIT_INFORMATION_MAX_VALUE == 4)
+
+    local ITEM_TRAIT_INFORMATION_SORT_ORDER =
+    {
+        [ITEM_TRAIT_INFORMATION_INTRICATE] = 0,
+        [ITEM_TRAIT_INFORMATION_NONE] = 1,
+        [ITEM_TRAIT_INFORMATION_CAN_BE_RESEARCHED] = 2,
+        [ITEM_TRAIT_INFORMATION_RETRAITED] = 3,
+        [ITEM_TRAIT_INFORMATION_ORNATE] = 4,
+    }
+
+    function ZO_GetItemTraitInformation_SortOrder(traitInfo)
+        return ITEM_TRAIT_INFORMATION_SORT_ORDER[traitInfo]
+    end
+end
+
+do
+    -- if this triggers, need to add new sell information to this arbitrary sort order
+    internalassert(ITEM_SELL_INFORMATION_MAX_VALUE == 4)
+
+    local ITEM_SELL_INFORMATION_SORT_ORDER =
+    {
+        [ITEM_SELL_INFORMATION_PRIORITY_SELL] = 0,
+        [ITEM_SELL_INFORMATION_NONE] = 1,
+        [ITEM_SELL_INFORMATION_CAN_BE_RESEARCHED] = 2,
+        [ITEM_SELL_INFORMATION_INTRICATE] = 3,
+        [ITEM_SELL_INFORMATION_CANNOT_SELL] = 4,
+    }
+
+    function ZO_GetItemSellInformationCustomSortOrder(sellInformation)
+        return ITEM_SELL_INFORMATION_SORT_ORDER[sellInformation]
     end
 end

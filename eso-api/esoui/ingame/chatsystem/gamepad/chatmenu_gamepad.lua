@@ -1,4 +1,4 @@
-ZO_ChatMenu_Gamepad = ZO_Object.MultiSubclass(ZO_Gamepad_ParametricList_Screen, ZO_SocialOptionsDialogGamepad)
+ZO_ChatMenu_Gamepad = ZO_Object.MultiSubclass(ZO_Gamepad_ParametricList_Screen, ZO_SocialOptionsDialogGamepad, ZO_GamepadMultiFocusArea_Manager)
 
 ZO_CHAT_MENU_GAMEPAD_LOG_MAX_SIZE = 200
 ZO_CHAT_MENU_GAMEPAD_COLOR_MODIFIER = .7
@@ -21,6 +21,7 @@ function ZO_ChatMenu_Gamepad:Initialize(control)
     local ACTIVATE_ON_SHOW = true
     ZO_Gamepad_ParametricList_Screen.Initialize(self, control, ZO_GAMEPAD_HEADER_TABBAR_DONT_CREATE, ACTIVATE_ON_SHOW, CHAT_MENU_GAMEPAD_SCENE)
     ZO_SocialOptionsDialogGamepad.Initialize(self)
+    ZO_GamepadMultiFocusArea_Manager.Initialize(self)
 
     self:InitializeFragment()
     self:InitializeControls()
@@ -48,9 +49,9 @@ function ZO_ChatMenu_Gamepad:InitializeControls()
     local list = self:GetMainList()
     list:SetSelectedItemOffsets(0, 0)
     list:SetAnchorOppositeSide(true)
+    list:SetValidateGradient(true)
     list:AddDataTemplate("ZO_ChatMenu_Gamepad_LogLine", function(...) self:SetupLogMessage(...) end, ZO_GamepadMenuEntryTemplateParametricListFunction, function(a, b) return a.data.id == b.data.id end)
 
-    local CONSUME_INPUT = true
     local function HandleListDirectionalInput(result)
         if result == MOVEMENT_CONTROLLER_MOVE_NEXT then
             if list:GetSelectedIndex() == list:GetNumEntries() then
@@ -178,7 +179,7 @@ function ZO_ChatMenu_Gamepad:InitializePassiveFocus()
         DIRECTIONAL_INPUT:Deactivate(self)
     end
 
-    self.textInputAreaFocalArea = ZO_GamepadPassiveFocus:New(self, TextInputAreaActivateCallback, TextInputAreaDeactivateCallback)
+    self.textInputAreaFocalArea = ZO_GamepadMultiFocusArea_Base:New(self, TextInputAreaActivateCallback, TextInputAreaDeactivateCallback)
 
     local function EnableChatDirectionalInputLater()
         if self.chatEntryPanelFocalArea:IsFocused() then
@@ -202,11 +203,10 @@ function ZO_ChatMenu_Gamepad:InitializePassiveFocus()
         self.list:SetSoundEnabled(false)
         GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_RIGHT_TOOLTIP)
     end
-    self.chatEntryPanelFocalArea =  ZO_GamepadPassiveFocus:New(self, ChatEntryPanelActivateCallback, ChatEntryPanelDeactivateCallback)
+    self.chatEntryPanelFocalArea = ZO_GamepadMultiFocusArea_Base:New(self, ChatEntryPanelActivateCallback, ChatEntryPanelDeactivateCallback)
 
-    local NO_PREVIOUS, NO_NEXT
-    self.chatEntryPanelFocalArea:SetupSiblings(NO_PREVIOUS, self.textInputAreaFocalArea)
-    self.textInputAreaFocalArea:SetupSiblings(self.chatEntryPanelFocalArea, NO_NEXT)
+    self:AddNextFocusArea(self.chatEntryPanelFocalArea)
+    self:AddNextFocusArea(self.textInputAreaFocalArea)
 end
 
 function ZO_ChatMenu_Gamepad:RegisterForEvents()
@@ -242,6 +242,7 @@ function ZO_ChatMenu_Gamepad:RegisterForEvents()
     self.control:RegisterForEvent(EVENT_GUILD_SELF_LEFT_GUILD, RefreshChannelDropdown)
     self.control:RegisterForEvent(EVENT_GUILD_MEMBER_RANK_CHANGED, OnGuildMemberRankChanged)
     self.control:RegisterForEvent(EVENT_SCREEN_RESIZED, RefreshChannelDropdown)
+    self.control:RegisterForEvent(EVENT_PLAYER_ACTIVATED, RefreshChannelDropdown)
 end
 
 function ZO_ChatMenu_Gamepad:InitializeFocusKeybinds()
@@ -273,6 +274,49 @@ function ZO_ChatMenu_Gamepad:InitializeFocusKeybinds()
             sound = SOUNDS.GAMEPAD_MENU_BACK,
         },
 
+        -- Open Link (super special keybind)
+        {
+            name = function()
+                local targetData = self.list:GetTargetData()
+                local currentLink = targetData.data.links[self.currentLinkIndex]
+                if currentLink.linkType == GUILD_LINK_TYPE then
+                    return GetString(SI_GAMEPAD_GUILD_LINK_KEYBIND)
+                elseif currentLink.linkType == HELP_LINK_TYPE then
+                    return GetString(SI_GAMEPAD_OPEN_HELP_LINK_KEYBIND)
+                end
+            end,
+
+            keybind = "UI_SHORTCUT_SECONDARY",
+
+            alignment = KEYBIND_STRIP_ALIGN_RIGHT,
+
+            callback = function()
+                local targetData = self.list:GetTargetData()
+                local currentLink = targetData.data.links[self.currentLinkIndex]
+                if currentLink.linkType == GUILD_LINK_TYPE then
+                    local text, color, linkType, guildId = ZO_LinkHandler_ParseLink(currentLink.link)
+                    GUILD_BROWSER_GUILD_INFO_GAMEPAD:ShowWithGuild(guildId)
+                elseif currentLink.linkType == HELP_LINK_TYPE then
+                    local helpCategoryIndex, helpIndex = GetHelpIndicesFromHelpLink(currentLink.link)
+                    if helpCategoryIndex and helpIndex then
+                        HELP_TUTORIALS_ENTRIES_GAMEPAD:Push(helpCategoryIndex, helpIndex)
+                    end
+                end
+            end,
+
+            visible = function()
+                local targetData = self.list:GetTargetData()
+                if targetData.data.links then
+                    local currentLink = targetData.data.links[self.currentLinkIndex]
+                    if currentLink then
+                        return currentLink.linkType == GUILD_LINK_TYPE or currentLink.linkType == HELP_LINK_TYPE
+                    end
+                end
+                return false
+            end
+        },
+
+        -- cycle tooltip
         {
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
 
@@ -287,12 +331,16 @@ function ZO_ChatMenu_Gamepad:InitializeFocusKeybinds()
                     self.currentLinkIndex = 1
                 end
                 self:RefreshTooltip(targetData)
+                KEYBIND_STRIP:UpdateKeybindButtonGroup(self.chatEntryListKeybindDescriptor)
             end,
 
             visible = LinkShouldersEnabled,
         },
 
         {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Gamepad Chat Previous Link",
+
             ethereal = true,
 
             keybind = "UI_SHORTCUT_INPUT_LEFT",
@@ -406,10 +454,7 @@ function ZO_ChatMenu_Gamepad:UpdateDirectionalInput()
     if self.list:GetNumEntries() > 0 then
         local result = self.textInputVerticalMovementController:CheckMovement()
         if result == MOVEMENT_CONTROLLER_MOVE_PREVIOUS then
-            local newFocus = self.textInputAreaFocalArea:MovePrevious()
-            if newFocus then
-                self.currentFocalArea = newFocus
-            end
+            self.textInputAreaFocalArea:HandleMovePrevious()
         end
     end
 end
@@ -445,15 +490,9 @@ do
             local links
             --Only chat channel messages will have raw text, because they're the only ones that could have links in them
             if rawMessageText then
-                for link in zo_strgmatch(rawMessageText, LINK_GMATCH_PATTERN) do
-                    local linkType = zo_strmatch(link, LINK_TYPE_MATCH_PATTERN)
-                    if linkType == ACHIEVEMENT_LINK_TYPE or linkType == ITEM_LINK_TYPE or linkType == COLLECTIBLE_LINK_TYPE then
-                        if not links then
-                            links = {}
-                        end
-                        table.insert(links, { linkType = linkType, link = link })
-                    end
-                end
+                links = {}
+                ZO_ExtractLinksFromText(rawMessageText, ZO_VALID_LINK_TYPES_CHAT, links)
+                links = #links > 0 and links or nil
             end
 
             local messageEntry = ZO_GamepadEntryData:New(message)
@@ -465,7 +504,7 @@ do
                 category = category,
                 targetChannel = targetChannel,
                 rawMessageText = rawMessageText,
-                links = links
+                links = links,
             }
 
             self.nextMessageId = self.nextMessageId + 1
@@ -532,8 +571,6 @@ function ZO_ChatMenu_Gamepad:RefreshChannelDropdown(reselectDuringRebuild)
         --Target means we don't yet have enough info to properly change channels
         if data and not data.target then
             CHAT_SYSTEM:SetChannel(data.id)
-        else
-            --TODO: Fill the chat with something to get the player started
         end
     end
 
@@ -590,6 +627,10 @@ function ZO_ChatMenu_Gamepad:RefreshTooltip(targetData)
                 GAMEPAD_TOOLTIPS:LayoutAchievementFromLink(GAMEPAD_RIGHT_TOOLTIP, link)
             elseif linkType == ITEM_LINK_TYPE then
                 GAMEPAD_TOOLTIPS:LayoutItem(GAMEPAD_RIGHT_TOOLTIP, link)
+            elseif linkType == GUILD_LINK_TYPE then
+                GAMEPAD_TOOLTIPS:LayoutGuildLink(GAMEPAD_RIGHT_TOOLTIP, link)
+            elseif linkType == HELP_LINK_TYPE then
+                GAMEPAD_TOOLTIPS:LayoutHelpLink(GAMEPAD_RIGHT_TOOLTIP, link)
             end
 
             return
@@ -629,7 +670,7 @@ function ZO_ChatMenu_Gamepad:BuildOptionsList()
     self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildInviteToGroupOption, ZO_SocialOptionsDialogGamepad.ShouldAddInviteToGroupOption)
     self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildWhisperOption)
     self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildAddFriendOption, ZO_SocialOptionsDialogGamepad.ShouldAddFriendOption)
-    self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildSendMailOption)
+    self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildSendMailOption, ZO_SocialOptionsDialogGamepad.ShouldAddSendMailOption)
     self:AddOptionTemplate(groupId, ZO_SocialOptionsDialogGamepad.BuildIgnoreOption, ZO_SocialOptionsDialogGamepad.SelectedDataIsNotPlayer)
 end
 

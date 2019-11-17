@@ -35,6 +35,13 @@ function ZO_Provisioner:Initialize(control)
         self.resultTooltip:GetNamedChild("Icon"):SetHandler("OnMouseUp", OnTooltipMouseUp)
     end
 
+    self.multiCraftContainer = self.control:GetNamedChild("MultiCraftContainer")
+    self.multiCraftSpinner = ZO_MultiCraftSpinner:New(self.multiCraftContainer:GetNamedChild("Spinner"))
+    self.multiCraftSpinner:RegisterCallback("OnValueChanged", function()
+        self:RefreshRecipeDetails()
+    end)
+    ZO_CraftingUtils_ConnectSpinnerToCraftingProcess(self.multiCraftSpinner)
+
     self:InitializeTabs()
     self:InitializeSettings()
     self:InitializeFilters()
@@ -62,6 +69,7 @@ function ZO_Provisioner:Initialize(control)
     PROVISIONER_FRAGMENT = ZO_FadeSceneFragment:New(control)
     PROVISIONER_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
         if newState == SCENE_FRAGMENT_SHOWING then
+            self:ResetMultiCraftNumIterations()
             SYSTEMS:GetObject("craftingResults"):SetCraftingTooltip(self.resultTooltip)
             KEYBIND_STRIP:AddKeybindButtonGroup(self.mainKeybindStripDescriptor)
         elseif newState == SCENE_FRAGMENT_HIDDEN then
@@ -106,7 +114,8 @@ ZO_Provisioner.EMBEDDED_SETTINGS =
 }
 
 function ZO_Provisioner:InitializeSettings()
-    local function GenerateTab(name, filterType, normal, pressed, highlight, disabled)
+    local function GenerateTab(filterType, normal, pressed, highlight, disabled)
+        local name = GetString("SI_PROVISIONERSPECIALINGREDIENTTYPE", filterType) 
         return {
             activeTabText = name,
             categoryName = name,
@@ -121,9 +130,9 @@ function ZO_Provisioner:InitializeSettings()
     end
 
     local provisioningSettings = ZO_Provisioner.PROVISIONING_SETTINGS
-    local foodTab = GenerateTab(SI_PROVISIONER_FILTER_COOK, PROVISIONER_SPECIAL_INGREDIENT_TYPE_SPICES, "EsoUI/Art/Crafting/provisioner_indexIcon_meat_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_disabled.dds")
-    local drinkTab = GenerateTab(SI_PROVISIONER_FILTER_BREW, PROVISIONER_SPECIAL_INGREDIENT_TYPE_FLAVORING, "EsoUI/Art/Crafting/provisioner_indexIcon_beer_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_disabled.dds")
-    local furnishingsTab = GenerateTab(SI_PROVISIONER_FILTER_FURNISHINGS, PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING, "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_disabled.dds")
+    local foodTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_SPICES, "EsoUI/Art/Crafting/provisioner_indexIcon_meat_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_meat_disabled.dds")
+    local drinkTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_FLAVORING, "EsoUI/Art/Crafting/provisioner_indexIcon_beer_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_beer_disabled.dds")
+    local furnishingsTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING, "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_up.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_down.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_over.dds", "EsoUI/Art/Crafting/provisioner_indexIcon_furnishings_disabled.dds")
 
     provisioningSettings.tabs = {}
     table.insert(provisioningSettings.tabs, foodTab)
@@ -173,12 +182,19 @@ function ZO_Provisioner:InitializeTabs()
 end
 
 function ZO_Provisioner:OnTabFilterChanged(filterData)
-    self.activeTab:SetText(GetString(filterData.activeTabText))
+    -- we are switching from the furnishing tab to another tab, make sure the end the preview if there is one
+    if self.filterType == PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING then
+        if SYSTEMS:GetObject("itemPreview"):IsInteractionCameraPreviewEnabled() then
+            self:TogglePreviewMode()
+        end
+    end
+    self.activeTab:SetText(filterData.activeTabText)
     self.filterType = filterData.descriptor
     if self.savedVars then
         ZO_CheckButton_SetCheckState(self.haveIngredientsCheckBox, self.savedVars.haveIngredientsChecked)
         ZO_CheckButton_SetCheckState(self.haveSkillsCheckBox, self.savedVars.haveSkillsChecked)
     end
+    self:ResetMultiCraftNumIterations()
     self:DirtyRecipeList()
 end
 
@@ -215,9 +231,13 @@ function ZO_Provisioner:InitializeKeybindStripDescriptors()
             end,
             keybind = "UI_SHORTCUT_SECONDARY",
         
-            callback = function() self:Create() end,
+            callback = function()
+                ZO_KeyboardCraftingUtils_RequestCraftingCreate(self, self:GetMultiCraftNumIterations())
+            end,
 
-            visible = function() return not ZO_CraftingUtils_IsPerformingCraftProcess() and self:IsCraftable() end,
+            enabled = function()
+                return self:ShouldCraftButtonBeEnabled()
+            end,
         },
 
         --Toggle Preview
@@ -237,7 +257,7 @@ function ZO_Provisioner:InitializeKeybindStripDescriptors()
             end,
 
             visible = function()
-                return self:CanPreviewRecipe(self.recipeTree:GetSelectedData())
+                return self:CanPreviewRecipe(self:GetRecipeData())
             end,
         },
     }
@@ -255,10 +275,13 @@ function ZO_Provisioner:InitializeRecipeTree()
         control.text:SetText(data.name)
 
         if not enabled then
-            control.icon:SetTexture(data.disabledIcon)
+            control.icon:SetDesaturation(1)
+            control.icon:SetTexture(data.upIcon)
         elseif open then
+            control.icon:SetDesaturation(0)
             control.icon:SetTexture(data.downIcon)
         else
+            control.icon:SetDesaturation(0)
             control.icon:SetTexture(data.upIcon)
         end
 
@@ -277,9 +300,8 @@ function ZO_Provisioner:InitializeRecipeTree()
         control.meetsQualityReq = self:PassesQualityLevelReq(data.qualityReq)
         control.enabled = enabled
 
-        local numEffectivelyCreatable = data.numCreatable
-        if numEffectivelyCreatable > 0 and enabled then
-            control:SetText(zo_strformat(SI_PROVISIONER_RECIPE_NAME_COUNT, data.name, numEffectivelyCreatable))
+        if data.maxIterationsForIngredients > 0 and enabled then
+            control:SetText(zo_strformat(SI_PROVISIONER_RECIPE_NAME_COUNT, data.name, data.maxIterationsForIngredients))
         else
             control:SetText(zo_strformat(SI_PROVISIONER_RECIPE_NAME_COUNT_NONE, data.name))
         end
@@ -334,6 +356,10 @@ function ZO_Provisioner:InitializeDetails()
     end
 end
 
+function ZO_Provisioner:ResetSelectedTab()
+    self.settings = nil
+end
+
 function ZO_Provisioner:SetDetailsEnabled(enabled)
     for ingredientIndex, ingredientSlot in ipairs(self.ingredientRows) do
         ingredientSlot:SetEnabled(enabled)
@@ -345,25 +371,24 @@ function ZO_Provisioner:RefreshRecipeList()
 
     local knowAnyRecipesInTab = false
     local hasRecipesWithFilter = false
-    local checkNumCreatable = ZO_CheckButton_IsChecked(self.haveIngredientsCheckBox)
-    local checkSkills = ZO_CheckButton_IsChecked(self.haveSkillsCheckBox)
+    local requireIngredients = ZO_CheckButton_IsChecked(self.haveIngredientsCheckBox)
+    local requireSkills = ZO_CheckButton_IsChecked(self.haveSkillsCheckBox)
     local craftingInteractionType = GetCraftingInteractionType()
 
     local recipeData = PROVISIONER_MANAGER:GetRecipeData()
     for _, recipeList in pairs(recipeData) do
         local parent
         for _, recipe in ipairs(recipeList.recipes) do
-            if self:DoesRecipePassFilter(recipe.specialIngredientType, checkNumCreatable, recipe.numCreatable, checkSkills, recipe.tradeskillsLevelReqs, recipe.qualityReq, craftingInteractionType, recipe.requiredCraftingStationType) then
+            if self:DoesRecipePassFilter(recipe.specialIngredientType, requireIngredients, recipe.maxIterationsForIngredients, requireSkills, recipe.tradeskillsLevelReqs, recipe.qualityReq, craftingInteractionType, recipe.requiredCraftingStationType) then
                 parent = parent or self.recipeTree:AddNode("ZO_IconHeader", {
                     recipeListIndex = recipeList.recipeListIndex,
                     name = recipeList.recipeListName,
                     upIcon = recipeList.upIcon,
                     downIcon = recipeList.downIcon,
                     overIcon = recipeList.overIcon,
-                    disabledIcon = recipeList.disabledIcon
-                    }, nil, SOUNDS.PROVISIONING_BLADE_SELECTED)
+                    })
                 
-                self.recipeTree:AddNode("ZO_ProvisionerNavigationEntry", recipe, parent, SOUNDS.PROVISIONING_ENTRY_SELECTED)
+                self.recipeTree:AddNode("ZO_ProvisionerNavigationEntry", recipe, parent)
                 hasRecipesWithFilter = true
             end
             knowAnyRecipesInTab = true
@@ -373,8 +398,6 @@ function ZO_Provisioner:RefreshRecipeList()
     self.recipeTree:Commit()
 
     self.noRecipesLabel:SetHidden(hasRecipesWithFilter)
-    ZO_CheckButton_SetEnableState(self.haveIngredientsCheckBox, knowAnyRecipesInTab)
-    ZO_CheckButton_SetEnableState(self.haveSkillsCheckBox, knowAnyRecipesInTab)
     if not hasRecipesWithFilter then
         if knowAnyRecipesInTab then
             self.noRecipesLabel:SetText(GetString(SI_PROVISIONER_NONE_MATCHING_FILTER))
@@ -386,25 +409,32 @@ function ZO_Provisioner:RefreshRecipeList()
         end
         self:RefreshRecipeDetails()
     end
+
+    ZO_CheckButton_SetEnableState(self.haveIngredientsCheckBox, knowAnyRecipesInTab)
+    ZO_CheckButton_SetEnableState(self.haveSkillsCheckBox, knowAnyRecipesInTab)
+end
+
+function ZO_Provisioner:GetRecipeData()
+    return self.recipeTree:GetSelectedData()
 end
 
 function ZO_Provisioner:GetSelectedRecipeListIndex()
-    local selectedData = self.recipeTree:GetSelectedData()
-    if selectedData then
-        return selectedData.recipeListIndex
+    local recipeData = self:GetRecipeData()
+    if recipeData then
+        return recipeData.recipeListIndex
     end
 end
 
 function ZO_Provisioner:GetSelectedRecipeIndex()
-    local selectedData = self.recipeTree:GetSelectedData()
-    if selectedData then
-        return selectedData.recipeIndex
+    local recipeData = self:GetRecipeData()
+    if recipeData then
+        return recipeData.recipeIndex
     end
 end
 
 function ZO_Provisioner:RefreshRecipeDetails()
-    local selectedData = self.recipeTree:GetSelectedData()
-    if selectedData then
+    local recipeData = self:GetRecipeData()
+    if recipeData then
         if not ITEM_PREVIEW_KEYBOARD:IsInteractionCameraPreviewEnabled() then
             self.resultTooltip:SetHidden(false)
         end
@@ -414,22 +444,30 @@ function ZO_Provisioner:RefreshRecipeDetails()
         self.resultTooltip:ClearLines()
         self.resultTooltip:SetProvisionerResultItem(recipeListIndex, recipeIndex)
 
-        local numIngredients = selectedData.numIngredients
+        local numIngredients = recipeData.numIngredients 
         for ingredientIndex, ingredientSlot in ipairs(self.ingredientRows) do
             if ingredientIndex > numIngredients then
                 ingredientSlot:ClearItem()
             else
                 local name, icon, requiredQuantity, _, quality = GetRecipeIngredientItemInfo(recipeListIndex, recipeIndex, ingredientIndex)
-                local ingredientCount = GetCurrentRecipeIngredientCount(recipeListIndex, recipeIndex, ingredientIndex)
+
+                -- Scale the recipe ingredients to what will actually be used when you hit craft.
+                -- If numIterations is 0 we should just show what ingredients you would need to craft once, instead.
+                local numIterations = self:GetMultiCraftNumIterations()
+                if numIterations > 1 then
+                    requiredQuantity = requiredQuantity * numIterations
+                end
+
+                local ingredientCount = GetCurrentRecipeIngredientCount(recipeListIndex, recipeIndex, ingredientIndex) 
                 ingredientSlot:SetItem(name, icon, ingredientCount, quality, requiredQuantity)
                 ingredientSlot:SetItemIndices(recipeListIndex, recipeIndex, ingredientIndex)
             end
         end
 
-        CRAFTING_RESULTS:SetTooltipAnimationSounds(selectedData.createSound)
+        CRAFTING_RESULTS:SetTooltipAnimationSounds(recipeData.createSound)
 
-        if ITEM_PREVIEW_KEYBOARD:IsInteractionCameraPreviewEnabled() and self:CanPreviewRecipe(selectedData) then
-            self:PreviewRecipe(selectedData)
+        if ITEM_PREVIEW_KEYBOARD:IsInteractionCameraPreviewEnabled() and self:CanPreviewRecipe(recipeData) then
+            self:PreviewRecipe(recipeData)
         end
     else
         self.resultTooltip:SetHidden(true)
@@ -439,33 +477,44 @@ function ZO_Provisioner:RefreshRecipeDetails()
         end
     end
 
+    self:UpdateMultiCraft()
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.mainKeybindStripDescriptor)
-end
-
-function ZO_Provisioner:IsCraftable()
-    local selectedData = self.recipeTree:GetSelectedData()
-    if selectedData then
-        return selectedData.numCreatable > 0 
-           and self:PassesTradeskillLevelReqs(selectedData.tradeskillsLevelReqs) 
-           and self:PassesQualityLevelReq(selectedData.qualityReq)
-    end
-    return false
-end
-
-function ZO_Provisioner:Create()
-    CraftProvisionerItem(self:GetSelectedRecipeListIndex(), self:GetSelectedRecipeIndex())
 end
 
 function ZO_Provisioner:TogglePreviewMode()
     ITEM_PREVIEW_KEYBOARD:ToggleInteractionCameraPreview(FRAME_TARGET_CRAFTING_FRAGMENT, FRAME_PLAYER_ON_SCENE_HIDDEN_FRAGMENT, CRAFTING_PREVIEW_OPTIONS_FRAGMENT)
     if ITEM_PREVIEW_KEYBOARD:IsInteractionCameraPreviewEnabled() then
         self.resultTooltip:SetHidden(true)
-        self:PreviewRecipe(self.recipeTree:GetSelectedData())
+        self:SetMultiCraftHidden(true)
+        self:PreviewRecipe(self:GetRecipeData())
     else
         self.resultTooltip:SetHidden(false)
+        self:SetMultiCraftHidden(false)
     end
 
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.mainKeybindStripDescriptor)
+end
+
+function ZO_Provisioner:SetMultiCraftHidden(shouldBeHidden)
+    self.multiCraftContainer:SetHidden(shouldBeHidden)
+    self:RefreshRecipeDetails()
+end
+
+function ZO_Provisioner:GetMultiCraftNumIterations()
+    -- while spinner is hidden, hard cap the iteration count at 1, so the player doesn't accidentally perform a multicraft without a visual cue that it will happen
+    if self.multiCraftContainer:IsControlHidden() then
+        return 1
+    end
+    return self.multiCraftSpinner:GetValue()
+end
+
+function ZO_Provisioner:ResetMultiCraftNumIterations()
+    self.multiCraftSpinner:SetValue(1)
+end
+
+function ZO_Provisioner:UpdateMultiCraft()
+    self.multiCraftSpinner:SetMinMax(1, self:GetMultiCraftMaxIterations())
+    self.multiCraftSpinner:UpdateButtons()
 end
 
 ZO_ProvisionerRow = ZO_Object:Subclass()

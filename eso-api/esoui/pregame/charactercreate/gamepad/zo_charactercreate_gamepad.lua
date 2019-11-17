@@ -1,4 +1,3 @@
-local g_controlLookup = {}
 local g_randomizeAppearanceEnabled = true
 
 local CHARACTER_CREATE_GAMEPAD_DIALOG = "CHARACTER_CREATE_GAMEPAD"
@@ -132,14 +131,13 @@ function ZO_CharacterCreate_Gamepad:Initialize(...)
     local ALWAYS_ANIMATE = true
     CHARACTER_CREATE_GAMEPAD_FINISH_ERROR_FRAGMENT = ZO_FadeSceneFragment:New(ZO_CharacterCreate_GamepadFinishError, ALWAYS_ANIMATE)
     CHARACTER_CREATE_GAMEPAD_CONTAINER_FRAGMENT = ZO_FadeSceneFragment:New(ZO_CharacterCreate_GamepadContainer, ALWAYS_ANIMATE)
-    CHARACTER_CREATE_GAMEPAD_LOREINFO_FRAGMENT = ZO_FadeSceneFragment:New(ZO_CharacterCreate_GamepadContainerLoreInfo, ALWAYS_ANIMATE)
 
     local function CharacterNameValidationCallback(isValid)
         if isValid then
             if ZO_CHARACTERCREATE_MANAGER:GetShouldPromptForTutorialSkip() and CanSkipTutorialArea() then
                 ZO_CHARACTERCREATE_MANAGER:SetShouldPromptForTutorialSkip(false)
                 -- color the character name white so it's highlighted in the dialog
-				local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+                local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
                 local genderDecoratedCharacterName = ZO_SELECTED_TEXT:Colorize(GetGrammarDecoratedName(self.characterName, CharacterCreateGetGender(characterMode)))
                 ZO_Dialogs_ShowGamepadDialog(SKIP_TUTORIAL_GAMEPAD_DIALOG, { characterName = self.characterName }, {mainTextParams = { genderDecoratedCharacterName }})
             else
@@ -458,7 +456,7 @@ do
             keybindStripDescriptor[#keybindStripDescriptor + 1] = KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ReturnToCharacterSelect)
         elseif numCharacters == 0 then
             -- mimic the behavior from the character select screen
-            keybindStripDescriptor[#keybindStripDescriptor + 1] = KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(function() PregameStateManager_SetState("Disconnect") end)
+            keybindStripDescriptor[#keybindStripDescriptor + 1] = KEYBIND_STRIP:GenerateGamepadBackButtonDescriptor(ZO_Disconnect)
         end
 
         return keybindStripDescriptor
@@ -513,22 +511,23 @@ function ZO_CharacterCreate_Gamepad:RefreshKeybindStrip()
     end
 end
 
-function ZO_CharacterCreate_Gamepad:SetFocus(control)
-    if control and self.focusControl and self.focusControl ~= control then
-        if control.SetHighlightIndexByColumn and self.focusControl.GetHighlightColumn then
+function ZO_CharacterCreate_Gamepad:SetFocus(newFocusControl)
+    local oldFocusControl = self.focusControl
+
+    if newFocusControl and oldFocusControl and oldFocusControl ~= newFocusControl then
+        if newFocusControl.SetHighlightIndexByColumn and oldFocusControl.GetHighlightColumn then
             -- Highlight the current selection
-            control:SetHighlightIndexByColumn(self.focusControl:GetHighlightColumn(), control:GetFocusIndex() > self.focusControl:GetFocusIndex())
+            newFocusControl:SetHighlightIndexByColumn(oldFocusControl:GetHighlightColumn(), newFocusControl:GetFocusIndex() > oldFocusControl:GetFocusIndex())
         end
     end
 
-    if self.focusControl ~= nil and self.focusControl.EnableFocus then
-        self.focusControl:EnableFocus(false)
-        self.focusControl = nil
+    if oldFocusControl ~= nil and oldFocusControl.EnableFocus then
+        oldFocusControl:EnableFocus(false)
     end
 
-    self.focusControl = control
-    if self.focusControl ~= nil and self.focusControl.EnableFocus then
-        self.focusControl:EnableFocus(true)
+    self.focusControl = newFocusControl
+    if newFocusControl ~= nil and newFocusControl.EnableFocus then
+        newFocusControl:EnableFocus(true)
     end
 
     if not self.control:IsHidden() then
@@ -556,7 +555,7 @@ function ZO_CharacterCreate_Gamepad:GetNextFocus(control)
     return control
 end
 
-function ZO_CharacterCreate_Gamepad:GetPreviousFocus(self, control)
+function ZO_CharacterCreate_Gamepad:GetPreviousFocus(control)
     if control == nil then
         return nil
     end
@@ -579,11 +578,11 @@ end
 -- Creator Control Initialization
 
 function ZO_CharacterCreate_Gamepad:UpdateGenderSpecificText(currentGender)
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     currentGender = currentGender or CharacterCreateGetGender(characterMode)
 
-    ZO_CharacterCreate_GamepadContainerLoreInfoRaceName:SetText(zo_strformat(SI_RACE_NAME, GetRaceName(currentGender, CharacterCreateGetRace(characterMode))))
-    ZO_CharacterCreate_GamepadContainerLoreInfoClassName:SetText(zo_strformat(SI_CLASS_NAME, GetClassName(currentGender, CharacterCreateGetClass(characterMode))))
+    ZO_CharacterCreate_GamepadLoreInfoRaceName:SetText(zo_strformat(SI_RACE_NAME, GetRaceName(currentGender, CharacterCreateGetRace(characterMode))))
+    ZO_CharacterCreate_GamepadLoreInfoClassName:SetText(zo_strformat(SI_CLASS_NAME, GetClassName(currentGender, CharacterCreateGetClass(characterMode))))
 end
 
 local function SetSelectorsControlSelectedCenterOffset(control, numSelectors)
@@ -594,6 +593,14 @@ local function SetSelectorsControlSelectedCenterOffset(control, numSelectors)
             control.selectedCenterOffset = 0
         end
     end
+end
+
+-- override of ZO_CharacterCreate_Base:SetSelectorButtonEnabled
+function ZO_CharacterCreate_Gamepad:SetSelectorButtonEnabled(selectorButton, radioGroup, enabled)
+    radioGroup:SetButtonIsValidOption(selectorButton, enabled)
+
+    local alpha = enabled and 1 or 0.5
+    selectorButton:SetAlpha(alpha)
 end
 
 function ZO_CharacterCreate_Gamepad:InitializeSelectorButtonTextures(buttonControl, data)
@@ -619,7 +626,6 @@ function ZO_CharacterCreate_Gamepad:InitializeAllianceSelectors()
 end
 
 function ZO_CharacterCreate_Gamepad:InitializeRaceSelectors()
-    local races = self.characterData:GetRaceInfo()
     local layoutTable =
     {
         ZO_CharacterCreate_GamepadRaceColumn11,
@@ -637,10 +643,9 @@ function ZO_CharacterCreate_Gamepad:InitializeRaceSelectors()
     -- Hide and reset buttons
     for i, button in ipairs(layoutTable) do
         button:SetHidden(true)
-        local raceButton = button:GetNamedChild("Button")
-        raceButton.nameFn = nil
-        raceButton.defId = nil
-        raceButton.alliance = nil
+        button.nameFn = nil
+        button.defId = nil
+        button.alliance = nil
     end
 
     -- We either need to show 3, 4, 9, or 10 buttons
@@ -648,71 +653,58 @@ function ZO_CharacterCreate_Gamepad:InitializeRaceSelectors()
     -- 4 if they can't play any race any alliance but can play as imperial
     -- 9 if they can play any race any alliance but not imperial
     -- 10 if they can play any race any alliance and imperial
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     local selectedAlliance = CharacterCreateGetAlliance(characterMode)
     local position = 1
-    local finalRace
+
+    local races = self.characterData:GetRaceInfo()
     for i, race in ipairs(races) do
-        if race.isSelectable then
-            if race.alliance == 0 or race.alliance == selectedAlliance or CanPlayAnyRaceAsAnyAlliance() then
-                race.position = position
-                position = position + 1
-                finalRace = race
-            else
-                race.position = GAMEPAD_SELECTOR_IGNORE_POSITION
-            end
+        if race.alliance == 0 or race.alliance == selectedAlliance or CanPlayAnyRaceAsAnyAlliance() then
+            race.position = position
+            position = position + 1
+        else
+            race.position = GAMEPAD_SELECTOR_IGNORE_POSITION
         end
     end
 
-    -- If there are 4 buttons we should center the final button
     local raceObject = ZO_CharacterCreate_GamepadRace
     raceObject.numButtons = position - 1
-    if raceObject.numButtons == 4 then
-        finalRace.position = 5
-    end
 
     SetSelectorsControlSelectedCenterOffset(raceObject, raceObject.numButtons)
 
-    local invalidRaces = {}
     for i, race in ipairs(races) do
         if race.position == GAMEPAD_SELECTOR_IGNORE_POSITION then
             --nothing for now
-        elseif race.isSelectable then
-            local raceContainer = layoutTable[race.position]
-            raceContainer:SetHidden(false)
-            local raceButton = raceContainer:GetNamedChild("Button")
+        else
+            local raceButton = layoutTable[race.position]
+            -- If there are 4 buttons we should center the final button
+            if raceObject.numButtons == 4 and raceObject.numButtons == race.position then
+                raceButton = layoutTable[5]
+            end
+            raceButton:SetHidden(false)
             self:InitializeSelectorButton(raceButton, race, self.raceRadioGroup)
             self:AddRaceSelectionDataToSelector(raceButton, race)
-        else
-            table.insert(invalidRaces, 1, i)
         end
-    end
-
-    -- TODO: we shouldn't just remove the race info for races we can't select
-    for i = 1, #invalidRaces do
-        table.remove(races, invalidRaces[i])
     end
 end
 
-local function SetValidRace()
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
-    local currentRace = CharacterCreateGetRace(characterMode)
+function ZO_CharacterCreate_Gamepad:SetValidRace()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local currentRaceId = CharacterCreateGetRace(characterMode)
     local currentAlliance = CharacterCreateGetAlliance(characterMode)
 
-    local race = self.characterData:GetRaceForRaceDef(currentRace)
-    if race then
-        if race.alliance == 0 or race.alliance == currentAlliance or CanPlayAnyRaceAsAnyAlliance() then
+    local currentRace = self.characterData:GetRaceForRaceDef(currentRaceId)
+    if currentRace then
+        if currentRace.alliance == 0 or currentRace.alliance == currentAlliance or CanPlayAnyRaceAsAnyAlliance() then
             return
         end
     end
 
     local races = self.characterData:GetRaceInfo()
     for i, race in ipairs(races) do
-        if race.isSelectable then
-            if race.alliance == 0 or race.alliance == currentAlliance or CanPlayAnyRaceAsAnyAlliance() then
-                GAMEPAD_CHARACTER_CREATE_MANAGER:SetRace(race.race, "preventAllianceChange")
-                return
-            end
+        if race.alliance == 0 or race.alliance == currentAlliance or CanPlayAnyRaceAsAnyAlliance() then
+            GAMEPAD_CHARACTER_CREATE_MANAGER:SetRace(race.race, "preventAllianceChange")
+            return
         end
     end
 end
@@ -720,7 +712,7 @@ end
 function ZO_CharacterCreate_Gamepad:UpdateRaceControl()
     self:InitializeRaceSelectors()
 
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     local currentRace = CharacterCreateGetRace(characterMode)
 
     local function IsRaceClicked(button)
@@ -748,19 +740,19 @@ function ZO_CharacterCreate_Gamepad:UpdateRaceControl()
     if race then
         self:UpdateGenderSpecificText()
 
-        ZO_CharacterCreate_GamepadContainerLoreInfoRaceDescription:SetText(race.lore)
+        ZO_CharacterCreate_GamepadLoreInfoRaceDescription:SetText(race.lore)
 
-        ZO_CharacterCreate_GamepadContainerLoreInfoRaceIcon:SetTexture(race.gamepadPressedIcon)
+        ZO_CharacterCreate_GamepadLoreInfoRaceIcon:SetTexture(race.gamepadPressedIcon)
 
         local alliance = self.characterData:GetAllianceForAllianceDef(currentAlliance)
-        ZO_CharacterCreate_GamepadContainerLoreInfoAllianceIcon:SetTexture(alliance.gamepadPressedIcon)
-        ZO_CharacterCreate_GamepadContainerLoreInfoAllianceName:SetText(zo_strformat(SI_ALLIANCE_NAME, alliance.name))
-        ZO_CharacterCreate_GamepadContainerLoreInfoAllianceDescription:SetText(alliance.lore)
+        ZO_CharacterCreate_GamepadLoreInfoAllianceIcon:SetTexture(alliance.gamepadPressedIcon)
+        ZO_CharacterCreate_GamepadLoreInfoAllianceName:SetText(zo_strformat(SI_ALLIANCE_NAME, alliance.name))
+        ZO_CharacterCreate_GamepadLoreInfoAllianceDescription:SetText(alliance.lore)
     end
 end
 
 function ZO_CharacterCreate_Gamepad:UpdateClassControl()
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     local currentClass = CharacterCreateGetClass(characterMode)
 
     local function IsClassClicked(button)
@@ -773,8 +765,8 @@ function ZO_CharacterCreate_Gamepad:UpdateClassControl()
     local class = self.characterData:GetClassForClassDef(currentClass)
     if class then
         self:UpdateGenderSpecificText()
-        ZO_CharacterCreate_GamepadContainerLoreInfoClassIcon:SetTexture(class.gamepadPressedIcon)
-        ZO_CharacterCreate_GamepadContainerLoreInfoClassDescription:SetText(class.lore)
+        ZO_CharacterCreate_GamepadLoreInfoClassIcon:SetTexture(class.gamepadPressedIcon)
+        ZO_CharacterCreate_GamepadLoreInfoClassDescription:SetText(class.lore)
     end
 end
 
@@ -965,13 +957,36 @@ end
 
 function ZO_CharacterCreate_Gamepad:InitializeClassSelectors()
     local classes = self.characterData:GetClassInfo()
-    local layoutTable =
-    {
-        ZO_CharacterCreate_GamepadClassColumn11,
-        ZO_CharacterCreate_GamepadClassColumn21,
-        ZO_CharacterCreate_GamepadClassColumn31,
-        ZO_CharacterCreate_GamepadClassColumn22,
-    }
+    local numClasses = #classes
+    local layoutTable
+    -- TODO: Create these controls dynamically
+    if numClasses <= 4 then
+        -- 4 is the default number of classes and they are laid out
+        -- so that the fourth class is i nthe middle column
+        layoutTable = {
+            ZO_CharacterCreate_GamepadClassColumn11,
+            ZO_CharacterCreate_GamepadClassColumn21,
+            ZO_CharacterCreate_GamepadClassColumn31,
+            ZO_CharacterCreate_GamepadClassColumn22,
+        }
+    elseif numClasses <= 6 then
+        -- if we have 5 or 6 classes, then we can lay them out normally
+        -- from left to right without worrying about centering one
+        layoutTable = {
+            ZO_CharacterCreate_GamepadClassColumn11,
+            ZO_CharacterCreate_GamepadClassColumn21,
+            ZO_CharacterCreate_GamepadClassColumn31,
+            ZO_CharacterCreate_GamepadClassColumn12,
+            ZO_CharacterCreate_GamepadClassColumn22,
+            ZO_CharacterCreate_GamepadClassColumn32,
+        }
+    else -- numClasses > CHARACTER_CREATE_MAX_SUPPORTED_CLASSES
+        -- we aren't dynamically creating controls and we are out of controls
+        -- more controls will have to be added to the XML and additional logic to correctly lay them out
+        -- this assert is also duplicated in the keyboard UI so that non-console builds will catch the issue as well
+        local errorString = string.format("The gamepad UI currently only supports up to %d classes, but there are currently %d classes used", CHARACTER_CREATE_MAX_SUPPORTED_CLASSES, numClasses)
+        assert(false, errorString)
+    end
 
     -- Hide buttons
     for i, button in ipairs(layoutTable) do
@@ -980,12 +995,13 @@ function ZO_CharacterCreate_Gamepad:InitializeClassSelectors()
 
     for i, class in ipairs(classes) do
         class.position = i
-        classButton = layoutTable[class.position]
+        local classButton = layoutTable[i]
+        assert(classButton ~= nil, "Unable to get class button for class #" .. i)
         self:InitializeSelectorButton(classButton, class, self.classRadioGroup)
         AddClassSelectionDataToSelector(classButton, class)
     end
 
-    SetSelectorsControlSelectedCenterOffset(ZO_CharacterCreate_GamepadClass, #classes)
+    SetSelectorsControlSelectedCenterOffset(ZO_CharacterCreate_GamepadClass, numClasses)
 end
 
 local function SetRandomizeAppearanceEnabled(enabled)
@@ -998,7 +1014,7 @@ function ZO_CharacterCreate_Gamepad:SetTemplate(templateId)
             return false
         end
 
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     if not templateData.isSelectable or CharacterCreateGetTemplate(characterMode) == templateId then
             return false
         end
@@ -1167,18 +1183,39 @@ do
     }
 
     function ZO_CharacterCreate_Gamepad:ShowLoreInfo(type)
-        SCENE_MANAGER:AddFragment(CHARACTER_CREATE_GAMEPAD_LOREINFO_FRAGMENT)
+        SCENE_MANAGER:AddFragment(CHARACTER_CREATE_GAMEPAD_LORE_INFO_FRAGMENT)
+        SCENE_MANAGER:AddFragment(GAMEPAD_NAV_QUADRANT_4_BACKGROUND_FRAGMENT)
 
-        for src_type, t in pairs(CREATE_LORE_INFO_CONTROLS) do
+        for sourceType, t in pairs(CREATE_LORE_INFO_CONTROLS) do
             for i, control in pairs(t) do
-                ZO_CharacterCreate_GamepadContainerLoreInfo:GetNamedChild(control):SetHidden(type ~= src_type)
+                ZO_CharacterCreate_GamepadLoreInfo:GetNamedChild(control):SetHidden(type ~= sourceType)
             end
         end
     end
 end
 
 function ZO_CharacterCreate_Gamepad:HideLoreInfo()
-    SCENE_MANAGER:RemoveFragment(CHARACTER_CREATE_GAMEPAD_LOREINFO_FRAGMENT)
+    SCENE_MANAGER:RemoveFragment(CHARACTER_CREATE_GAMEPAD_LORE_INFO_FRAGMENT)
+    SCENE_MANAGER:RemoveFragment(GAMEPAD_NAV_QUADRANT_4_BACKGROUND_FRAGMENT)
+end
+
+
+function ZO_CharacterCreate_Gamepad:ShowInformationTooltip(title, description)
+    SCENE_MANAGER:AddFragment(CHARACTER_CREATE_GAMEPAD_INFORMATION_TOOLTIP_FRAGMENT)
+    SCENE_MANAGER:AddFragment(GAMEPAD_NAV_QUADRANT_2_BACKGROUND_FRAGMENT)
+
+    local infoTooltip = CHARACTER_CREATE_GAMEPAD_INFORMATION_TOOLTIP_FRAGMENT:GetControl()
+
+    local titleLabel = infoTooltip:GetNamedChild("ContainerTitle")
+    titleLabel:SetText(title)
+
+    local descriptionLabel = infoTooltip:GetNamedChild("ContainerDescription")
+    descriptionLabel:SetText(description)
+end
+
+function ZO_CharacterCreate_Gamepad:HideInformationTooltip()
+    SCENE_MANAGER:RemoveFragment(CHARACTER_CREATE_GAMEPAD_INFORMATION_TOOLTIP_FRAGMENT)
+    SCENE_MANAGER:RemoveFragment(GAMEPAD_NAV_QUADRANT_2_BACKGROUND_FRAGMENT)
 end
 
 -- XML Handlers and global functions
@@ -1193,7 +1230,7 @@ function ZO_CharacterCreate_Gamepad:ContainerOnUpdate()
     if self.focusControl and self.focusControl.disableFocusMovementController then
         -- Just do focus update
         if self.focusControl and self.focusControl.FocusUpdate then
-            self.focusControl:FocusUpdate(moveFocus)
+            self.focusControl:FocusUpdate()
         end
         return
     end
@@ -1276,7 +1313,7 @@ function ZO_CharacterCreate_Gamepad:InitializeForCharacterCreate()
     customControls[GAMEPAD_BUCKET_CUSTOM_CONTROL_RACE].shouldAdd = true
     customControls[GAMEPAD_BUCKET_CUSTOM_CONTROL_CLASS].shouldAdd = true
 
-	local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
+    local characterMode = ZO_CHARACTERCREATE_MANAGER:GetCharacterMode()
     local templateData = self.characterData:GetTemplate(CharacterCreateGetTemplate(characterMode))
     -- we may not have any template selected or we have no templates
     -- so create a default template with no restrictions
@@ -1361,7 +1398,7 @@ function ZO_CharacterCreate_Gamepad_OnSelectorPressed(button)
                             if newButton then
                                 GAMEPAD_CHARACTER_CREATE_MANAGER:SetRace(newButton.defId)
                             else
-                                SetValidRace()
+                                GAMEPAD_CHARACTER_CREATE_MANAGER:SetValidRace()
                             end
 
                             GAMEPAD_CHARACTER_CREATE_MANAGER:UpdateRaceControl()
@@ -1388,6 +1425,16 @@ function ZO_CharacterCreate_Gamepad_CreateClassSelector(control)
     ZO_CharacterCreateClassSelector_Gamepad:New(control)
 end
 
+function ZO_CharacterCreate_GamepadLoreInfo_Initialize(control)
+    local ALWAYS_ANIMATE = true
+    CHARACTER_CREATE_GAMEPAD_LORE_INFO_FRAGMENT = ZO_FadeSceneFragment:New(control, ALWAYS_ANIMATE)
+end
+
+function ZO_CharacterCreate_GamepadInformationTooltip_Initialize(control)
+    local ALWAYS_ANIMATE = true
+    CHARACTER_CREATE_GAMEPAD_INFORMATION_TOOLTIP_FRAGMENT = ZO_FadeSceneFragment:New(control, ALWAYS_ANIMATE)
+end
+
 do
     local paperDollInputObject =
     {
@@ -1412,7 +1459,7 @@ do
                 CharacterCreateStopMouseSpin()
             end
         end,
-    }    
+    }
 
     function ZO_PaperdollManipulation_Gamepad_Initialize(self)
         self.Activate = function()

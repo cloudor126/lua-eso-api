@@ -65,7 +65,7 @@ function ZO_HorizontalScrollList:Initialize(control, templateName, numVisibleEnt
     self.onPlaySoundFunction = ZO_HorizontalScrollListPlaySound
 
     local function OnDragStart(clickedControl, button)
-        if self.enabled then
+        if self.enabled and self:CanScroll() then
             self.dragging = true
             self.draggingXStart = GetUIMousePosition()
         end
@@ -87,6 +87,9 @@ function ZO_HorizontalScrollList:Initialize(control, templateName, numVisibleEnt
             OnDragStop()
         elseif button == MOUSE_BUTTON_INDEX_LEFT and upInside and self.enabled then
             self:SelectControl(clickedControl)
+            if self.onControlClicked then
+                self.onControlClicked(clickedControl, button, upInside)
+            end
         end
     end
 
@@ -101,7 +104,7 @@ function ZO_HorizontalScrollList:Initialize(control, templateName, numVisibleEnt
         self.controls[i] = entryControl
     end
 
-    self.control:SetHandler("OnUpdate", function() self:OnUpdate() end)
+    self.control:SetHandler("OnUpdate", function(_, currentFrameTimeSeconds) self:OnUpdate(currentFrameTimeSeconds) end)
 
     self.noItemsLabel = self.control:GetNamedChild("NoItemsLabel")
 
@@ -176,16 +179,23 @@ function ZO_HorizontalScrollList:AddEntry(data)
     self.list[#self.list + 1] = data
 end
 
-function ZO_HorizontalScrollList:MoveLeft()
-    self:SetSelectedIndex((self.selectedIndex or 0) - 1)
+function ZO_HorizontalScrollList:MoveLeft(isAutoScrollEvent)
+    if self:CanScroll() then
+        self:SetSelectedIndex((self.selectedIndex or 0) - 1, nil, nil, nil, isAutoScrollEvent)
+    end
 end
 
-function ZO_HorizontalScrollList:MoveRight()
-    self:SetSelectedIndex((self.selectedIndex or 0) + 1)
+function ZO_HorizontalScrollList:MoveRight(isAutoScrollEvent)
+    if self:CanScroll() then
+        self:SetSelectedIndex((self.selectedIndex or 0) + 1, nil, nil, nil, isAutoScrollEvent)
+    end
 end
 
-function ZO_HorizontalScrollList:SetSelectedIndex(selectedIndex, allowEvenIfDisabled, withoutAnimation, reselectingDuringRebuild)
+function ZO_HorizontalScrollList:SetSelectedIndex(selectedIndex, allowEvenIfDisabled, withoutAnimation, reselectingDuringRebuild, isAutoScrollEvent)
     if self.enabled or allowEvenIfDisabled then
+        self.lastScrollTime = GetFrameTimeSeconds()
+        self.lastInteractionAutomatic = isAutoScrollEvent
+
         if selectedIndex and not self.allowWrapping then
             selectedIndex = zo_clamp(selectedIndex, 1 - #self.list, 0)
         end
@@ -274,7 +284,7 @@ function ZO_HorizontalScrollList:Commit()
         self.noItemsLabel:SetHidden(hasItems)
     end
 
-    local hideArrows = #self.list == 0 or (#self.list == 1 and not self.allowWrapping)
+    local hideArrows = not self:CanScroll()
     self.leftArrow:SetHidden(hideArrows)
     self.rightArrow:SetHidden(hideArrows)
 
@@ -303,6 +313,10 @@ function ZO_HorizontalScrollList:GetNumItems()
     return #self.list
 end
 
+function ZO_HorizontalScrollList:CanScroll()
+    return #self.list > 1
+end
+
 function ZO_HorizontalScrollList:ApplyTemplateToControls(template)
     for i, entry in ipairs(self.controls) do
         ApplyTemplateToControl(entry, template)
@@ -310,12 +324,23 @@ function ZO_HorizontalScrollList:ApplyTemplateToControls(template)
 end
 
 function ZO_HorizontalScrollList:SetMouseEnabled(mouseEnabled)
-	self.control:SetMouseEnabled(mouseEnabled)
+    self.control:SetMouseEnabled(mouseEnabled)
+end
+
+function ZO_HorizontalScrollList:SetAutoScroll(movementType, autoScrollDuration, postInteractionDuration)
+    self.autoScrollMovementType = movementType
+    self.autoScrollDuration = autoScrollDuration
+    self.autoScrollPostInteractionDuration = postInteractionDuration or autoScrollDuration
+end
+
+function ZO_HorizontalScrollList:ResetAutoScrollTimer()
+    self.lastScrollTime = GetFrameTimeSeconds()
+    self.lastInteractionAutomatic = false
 end
 
 --[[ Private API ]]--
 
-function ZO_HorizontalScrollList:OnUpdate()
+function ZO_HorizontalScrollList:OnUpdate(currentFrameTimeSeconds)
     if #self.list > 0 and self.lastPrimaryControlOffsetX then
         local targetOffsetX = self:CalculateSelectedIndexOffsetWithDrag()
         if self.dragging then
@@ -328,6 +353,16 @@ function ZO_HorizontalScrollList:OnUpdate()
         elseif self.isMoving then
             self:SetMoving(false)
             self:UpdateAnchors(targetOffsetX)
+        elseif self.autoScrollMovementType and self:CanScroll() then
+            local currentDuration = self.lastInteractionAutomatic and self.autoScrollDuration or self.autoScrollPostInteractionDuration
+            if currentFrameTimeSeconds > self.lastScrollTime + currentDuration then
+                local IS_AUTO_EVENT = true
+                if self.autoScrollMovementType == ZO_HORIZONTALSCROLLLIST_MOVEMENT_TYPES.MOVE_LEFT then
+                    self:MoveLeft(IS_AUTO_EVENT)
+                elseif self.autoScrollMovementType == ZO_HORIZONTALSCROLLLIST_MOVEMENT_TYPES.MOVE_RIGHT then
+                    self:MoveRight(IS_AUTO_EVENT)
+                end
+            end
         end
     end
 end
@@ -342,7 +377,7 @@ end
 function ZO_HorizontalScrollList:CalculateSelectedIndexOffsetWithDrag()
     if self.dragging then
         if self.allowWrapping then
-            return self:CalculateSelectedIndexOffset() + (GetUIMousePosition() - self.draggingXStart) 
+            return self:CalculateSelectedIndexOffset() + (GetUIMousePosition() - self.draggingXStart)
         end
         return zo_clamp(self:CalculateSelectedIndexOffset() + (GetUIMousePosition() - self.draggingXStart), -self.controlEntryWidth * (#self.list - 1), 0)
     end
@@ -381,7 +416,7 @@ function ZO_HorizontalScrollList:UpdateAnchors(primaryControlOffsetX, initialUpd
     local oldData = self.selectedData
     for i, control in ipairs(self.controls) do
         local index = self:CalculateOffsetIndex(i, newVisibleIndex)
-        if not self.allowWrapping and (index >= #self.list or index < 0) then
+        if not (self.allowWrapping and self:CanScroll()) and (index >= #self.list or index < 0) then
             control:SetHidden(true)
         else
             control:SetHidden(false)
@@ -451,6 +486,10 @@ function ZO_HorizontalScrollList:AnchorEntryAtFixedOffset(control, offsetX, inde
     end
 end
 
+function ZO_HorizontalScrollList:SetOnControlClicked(onControlClicked)
+    self.onControlClicked = onControlClicked
+end
+
 function ZO_HorizontalScrollList:SelectControl(controlToSelect)
     for i, control in ipairs(self.controls) do
         if controlToSelect == control then
@@ -492,4 +531,15 @@ end
 
 function ZO_HorizontalScrollList:SetPlaySoundFunction(fn)
     self.onPlaySoundFunction = fn
+end
+
+function ZO_HorizontalScrollList_OnMouseWheel(control, delta)
+    local horizontalScrollList = control.horizontalScrollList
+    if horizontalScrollList:CanScroll() then
+        if delta > 0 then
+            horizontalScrollList:MoveLeft()
+        else
+            horizontalScrollList:MoveRight()
+        end
+    end
 end

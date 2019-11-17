@@ -1,70 +1,65 @@
-local KEYBOARD_STYLE =
-{
-    FONT_HEADER = "ZoFontGameShadow",
-    FONT_STATUS = "ZoFontGameShadow",
-    TEXT_TYPE_HEADER = MODIFY_TEXT_TYPE_NONE,
-
-    CONTAINER_PRIMARY_ANCHOR_OFFSET_Y = 10,
-    STATUS_PRIMARY_ANCHOR_OFFSET_Y = 2,
-}
-
-local GAMEPAD_STYLE =
-{
-    FONT_HEADER = "ZoFontGamepadBold27",
-    FONT_STATUS = "ZoFontGamepad34",
-    TEXT_TYPE_HEADER = MODIFY_TEXT_TYPE_UPPERCASE,
-
-    CONTAINER_PRIMARY_ANCHOR_OFFSET_Y = 20,
-    STATUS_PRIMARY_ANCHOR_OFFSET_Y = 10,
-}
-
 local HEADER_MAPPING =
 {
     [LFG_ACTIVITY_DUNGEON] = GetString(SI_ACTIVITY_FINDER_CATEGORY_DUNGEON_FINDER),
     [LFG_ACTIVITY_MASTER_DUNGEON] = GetString(SI_ACTIVITY_FINDER_CATEGORY_DUNGEON_FINDER),
     [LFG_ACTIVITY_AVA] = GetString(SI_ACTIVITY_FINDER_CATEGORY_ALLIANCE_WAR),
+    [LFG_ACTIVITY_BATTLE_GROUND_CHAMPION] = GetString(SI_ACTIVITY_FINDER_CATEGORY_BATTLEGROUNDS),
+    [LFG_ACTIVITY_BATTLE_GROUND_NON_CHAMPION] = GetString(SI_ACTIVITY_FINDER_CATEGORY_BATTLEGROUNDS),
+    [LFG_ACTIVITY_BATTLE_GROUND_LOW_LEVEL] = GetString(SI_ACTIVITY_FINDER_CATEGORY_BATTLEGROUNDS),
 }
 
 ------------------
 --Initialization--
 ------------------
 
-local ActivityTracker = ZO_Object:Subclass()
+local ActivityTracker = ZO_HUDTracker_Base:Subclass()
 
 function ActivityTracker:New(...)
-    local tracker = ZO_Object.New(self)
-    tracker:Initialize(...)
-    return tracker
+    return ZO_HUDTracker_Base.New(self, ...)
 end
 
 function ActivityTracker:Initialize(control)
-    self.control = control
-    control.owner = self
+    ZO_HUDTracker_Base.Initialize(self, control)
 
-    self.container = control:GetNamedChild("Container")
-    self.headerLabel = self.container:GetNamedChild("Header")
-    self.statusLabel = self.container:GetNamedChild("Status")
+    ACTIVITY_TRACKER_FRAGMENT = self:GetFragment()
+end
 
-    local allConstants = { KEYBOARD_STYLE, GAMEPAD_STYLE }
-    for _, constants in ipairs(allConstants) do
-        constants.CONTAINER_PRIMARY_ANCHOR = ZO_Anchor:New(TOPRIGHT, control, TOPRIGHT, 0, constants.CONTAINER_PRIMARY_ANCHOR_OFFSET_Y)
-        constants.HEADER_PRIMARY_ANCHOR = ZO_Anchor:New(TOPRIGHT, self.container)
-        constants.STATUS_PRIMARY_ANCHOR = ZO_Anchor:New(TOPRIGHT, self.headerLabel, BOTTOMRIGHT, 0, constants.STATUS_PRIMARY_ANCHOR_OFFSET_Y)
-    end
+function ActivityTracker:InitializeStyles()
+    self.styles =
+    {
+        keyboard =
+        {
+            FONT_HEADER = "ZoFontGameShadow",
+            FONT_SUBLABEL = "ZoFontGameShadow",
+            TEXT_TYPE_HEADER = MODIFY_TEXT_TYPE_NONE,
 
-    KEYBOARD_STYLE.CONTAINER_SECONDARY_ANCHOR = ZO_Anchor:New(TOPLEFT, control, TOPLEFT, 0, KEYBOARD_STYLE.CONTAINER_PRIMARY_ANCHOR_OFFSET_Y)
-    KEYBOARD_STYLE.HEADER_SECONDARY_ANCHOR = ZO_Anchor:New(TOPLEFT, self.container)
-    KEYBOARD_STYLE.STATUS_SECONDARY_ANCHOR = ZO_Anchor:New(TOPLEFT, self.headerLabel, BOTTOMLEFT, 10, KEYBOARD_STYLE.STATUS_PRIMARY_ANCHOR_OFFSET_Y)
+            TOP_LEVEL_PRIMARY_ANCHOR_TO_ZONE_STORY_TRACKER = ZO_Anchor:New(TOPLEFT, ZO_ZoneStoryTracker, BOTTOMLEFT, 0, 10),
+            TOP_LEVEL_SECONDARY_ANCHOR = ZO_Anchor:New(RIGHT, GuiRoot, RIGHT, 0, 10, ANCHOR_CONSTRAINS_X),
 
-    ZO_PlatformStyle:New(function(style) self:ApplyPlatformStyle(style) end, KEYBOARD_STYLE, GAMEPAD_STYLE)
+            CONTAINER_PRIMARY_ANCHOR = ZO_Anchor:New(TOPLEFT),
+            CONTAINER_SECONDARY_ANCHOR = ZO_Anchor:New(TOPRIGHT),
 
+            SUBLABEL_PRIMARY_ANCHOR_OFFSET_Y = 2,
+        },
+        gamepad =
+        {
+            FONT_HEADER = "ZoFontGamepadBold27",
+            FONT_SUBLABEL = "ZoFontGamepad34",
+            TEXT_TYPE_HEADER = MODIFY_TEXT_TYPE_UPPERCASE,
 
-    ACTIVITY_TRACKER_FRAGMENT = ZO_HUDFadeSceneFragment:New(control)
+            TOP_LEVEL_PRIMARY_ANCHOR_TO_ZONE_STORY_TRACKER = ZO_Anchor:New(TOPRIGHT, ZO_ZoneStoryTracker, BOTTOMRIGHT, 0, 20),
 
-    self:RegisterEvents()
+            CONTAINER_PRIMARY_ANCHOR = ZO_Anchor:New(TOPRIGHT),
+
+            SUBLABEL_PRIMARY_ANCHOR_OFFSET_Y = 10,
+        }
+    }
+    ZO_HUDTracker_Base.InitializeStyles(self)
 end
 
 function ActivityTracker:RegisterEvents()
+    ZO_HUDTracker_Base.RegisterEvents(self)
+
     local function Update()
         self:Update()
     end
@@ -73,46 +68,36 @@ function ActivityTracker:RegisterEvents()
 end
 
 function ActivityTracker:Update()
+    local activityId = 0
     local activityType
+
     if IsCurrentlySearchingForGroup() then
-        activityType = GetLFGRequestInfo(1)
+        activityId = GetActivityRequestIds(1)
     elseif IsInLFGGroup() then
-        activityType = GetCurrentLFGActivity()
+        activityId = GetCurrentLFGActivityId()
     end
-    if activityType then
-        self.headerLabel:SetText(HEADER_MAPPING[activityType])
-        self.statusLabel:SetText(GetString("SI_ACTIVITYFINDERSTATUS", GetActivityFinderStatus()))
+
+    if activityId > 0 then
+        activityType = GetActivityType(activityId)
+        self:SetHeaderText(HEADER_MAPPING[activityType])
+        self:SetSubLabelText(GetString("SI_ACTIVITYFINDERSTATUS", GetActivityFinderStatus()))
     end
-    self.headerLabel:SetHidden(activityType == nil)
-    self.statusLabel:SetHidden(activityType == nil)
+
+    local fragment = self:GetFragment()
+    if fragment then
+        fragment:SetHiddenForReason("NoTrackedActivity", activityType == nil, DEFAULT_HUD_DURATION, DEFAULT_HUD_DURATION)
+    end
     self.activityType = activityType
+
+    self:RefreshAnchors()
 end
 
-function ActivityTracker:ApplyPlatformStyle(style)
-    self.headerLabel:SetModifyTextType(style.TEXT_TYPE_HEADER)
-    self.headerLabel:SetFont(style.FONT_HEADER)
-    if self.activityType then
-        self.headerLabel:SetText(HEADER_MAPPING[self.activityType])
-    end
-    self.statusLabel:SetFont(style.FONT_STATUS)
+function ActivityTracker:GetPrimaryAnchor()
+    return self.currentStyle.TOP_LEVEL_PRIMARY_ANCHOR_TO_ZONE_STORY_TRACKER
+end
 
-    self.container:ClearAnchors()
-    style.CONTAINER_PRIMARY_ANCHOR:AddToControl(self.container)
-    if style.CONTAINER_SECONDARY_ANCHOR then
-        style.CONTAINER_SECONDARY_ANCHOR:AddToControl(self.container)
-    end
-
-    self.headerLabel:ClearAnchors()
-    style.HEADER_PRIMARY_ANCHOR:AddToControl(self.headerLabel)
-    if style.HEADER_SECONDARY_ANCHOR then
-        style.HEADER_SECONDARY_ANCHOR:AddToControl(self.headerLabel)
-    end
-
-    self.statusLabel:ClearAnchors()
-    style.STATUS_PRIMARY_ANCHOR:AddToControl(self.statusLabel)
-    if style.STATUS_SECONDARY_ANCHOR then
-        style.STATUS_SECONDARY_ANCHOR:AddToControl(self.statusLabel)
-    end
+function ActivityTracker:GetSecondaryAnchor()
+    return self.currentStyle.TOP_LEVEL_SECONDARY_ANCHOR
 end
 
 function ZO_ActivityTracker_OnInitialized(control)

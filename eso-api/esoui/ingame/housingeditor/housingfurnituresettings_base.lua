@@ -11,10 +11,22 @@ end
 
 function ZO_HousingFurnitureSettings_Base:Initialize(control, owner)
     self.control = control
-	self.owner = owner
+    self.owner = owner
 
-    self.control:RegisterForEvent(EVENT_HOUSING_PERMISSIONS_CHANGED, function(...) self:OnPermissionsChanged(...) end)
-    self.control:RegisterForEvent(EVENT_HOUSING_PRIMARY_RESIDENCE_SET, function(...) self:UpdateGeneralSettings() end)
+    local function OnPermissionsChanged(...)
+        if self.owner:IsShowing() and self.owner:GetMode() == HOUSING_BROWSER_MODE.SETTINGS then
+            self:OnPermissionsChanged(...)
+        end
+    end
+
+    local function OnPrimaryResidenceSet()
+        if self.owner:IsShowing() and self.owner:GetMode() == HOUSING_BROWSER_MODE.SETTINGS then
+            self:UpdateGeneralSettings()
+        end
+    end
+
+    self.control:RegisterForEvent(EVENT_HOUSING_PERMISSIONS_CHANGED, OnPermissionsChanged)
+    self.control:RegisterForEvent(EVENT_HOUSING_PRIMARY_RESIDENCE_SET, OnPrimaryResidenceSet)
 end
 
 function ZO_HousingFurnitureSettings_Base:OnPermissionsChanged(eventId, userGroup)
@@ -51,7 +63,6 @@ function ZO_HousingFurnitureSettings_Base:IsCurrentHomeInHomeShow()
 end
 
 function ZO_HousingFurnitureSettings_Base:UpdateLists()
-    self.currentHouse = GetCurrentZoneHouseId()
     self:UpdateGeneralSettings()
     self:UpdateSingleVisitorSettings()
     self:UpdateGuildVisitorSettings()
@@ -60,10 +71,21 @@ end
 
 function ZO_HousingFurnitureSettings_Base:TryShowCopyDialog()
     if GetTotalUnlockedCollectiblesByCategoryType(COLLECTIBLE_CATEGORY_TYPE_HOUSE) > 1 then
-        local data = { currentHouse = self.currentHouse }
+        local data = { currentHouse = GetCurrentZoneHouseId() }
         self:ShowCopyDialog(data)
     else
         ZO_Alert(UI_ALERT_CATEGORY_ALERT, nil, GetString(SI_DIALOG_COPY_HOUSING_PERMISSION_REQUIRES_MORE_HOUSES))
+    end
+end
+
+function ZO_HousingFurnitureSettings_Base:SetPrimaryResidence()
+    local currentHouse = GetCurrentZoneHouseId()
+    if self.primaryResidence == 0 then
+        SetHousingPrimaryHouse(currentHouse)
+    elseif currentHouse ~= self.primaryResidence then
+        local collectibleId = GetCollectibleIdForHouse(self.primaryResidence)
+        local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+        ZO_Dialogs_ShowPlatformDialog("CONFIRM_PRIMARY_RESIDENCE", { currentHouse = currentHouse }, { mainTextParams = { collectibleData:GetName(), collectibleData:GetNickname()}})
     end
 end
 

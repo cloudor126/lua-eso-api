@@ -1,5 +1,14 @@
 ZO_CHROMA_UNDERLAY_ALPHA = .5
+ZO_CHROMA_ACTIVE_KEY_COLOR = ZO_ColorDef:New(1, 1, 1, 1)
+
 local FALLBACK_CANVAS_COLOR = ZO_ColorDef:New(0.773, 0.761, 0.62, ZO_CHROMA_UNDERLAY_ALPHA)
+local FALLBACK_KEYBIND_VISUAL_DATA = 
+{
+    animationTimerData = ZO_CHROMA_ANIMATION_TIMER_DATA.KEYBIND_PROMPT_PULSATE,
+    color = ZO_CHROMA_ACTIVE_KEY_COLOR,
+    blendMode = CHROMA_BLEND_MODE_NORMAL,
+    level = ZO_CHROMA_EFFECT_DRAW_LEVEL.ACTIVE_KEY_UI,
+}
 
 ZO_RzChroma_Effects = ZO_Object:Subclass()
 
@@ -9,24 +18,19 @@ function ZO_RzChroma_Effects:New(...)
     return object
 end
 
-function ZO_RzChroma_Effects:Initialize()
-    self:RegisterForEvents()
-
-    ChromaDeleteAllCustomEffectIds()
-
-    self.allianceEffects = { }
-
-    for alliance = ALLIANCE_NONE, ALLIANCE_DAGGERFALL_COVENANT do
+function ZO_RzChroma_Effects:CreateAllianceEffects(getColorFunction)
+    local allianceEffects = {}
+    for alliance = ALLIANCE_MIN_VALUE, ALLIANCE_MAX_VALUE do
         local allianceColor
         if alliance == ALLIANCE_NONE then
             allianceColor = FALLBACK_CANVAS_COLOR
         else
-            allianceColor = GetAllianceColor(alliance):Clone()
+            allianceColor = getColorFunction(alliance):Clone()
             allianceColor:SetAlpha(ZO_CHROMA_UNDERLAY_ALPHA)
         end
         local r, g, b = allianceColor:UnpackRGB()
         local NO_ANIMATION_TIMER = nil
-        self.allianceEffects[alliance] =
+        allianceEffects[alliance] =
         {
             [CHROMA_DEVICE_TYPE_KEYBOARD] = ZO_ChromaCStyleCustomSingleColorEffect:New(CHROMA_DEVICE_TYPE_KEYBOARD, ZO_CHROMA_EFFECT_DRAW_LEVEL.FALLBACK, CHROMA_CUSTOM_EFFECT_GRID_STYLE_FULL, NO_ANIMATION_TIMER, allianceColor, CHROMA_BLEND_MODE_NORMAL),
             [CHROMA_DEVICE_TYPE_KEYPAD] = ZO_ChromaCStyleCustomSingleColorEffect:New(CHROMA_DEVICE_TYPE_KEYPAD, ZO_CHROMA_EFFECT_DRAW_LEVEL.FALLBACK, CHROMA_CUSTOM_EFFECT_GRID_STYLE_FULL, NO_ANIMATION_TIMER, allianceColor, CHROMA_BLEND_MODE_NORMAL),
@@ -35,6 +39,16 @@ function ZO_RzChroma_Effects:Initialize()
             [CHROMA_DEVICE_TYPE_HEADSET] = ZO_ChromaPredefinedEffect:New(CHROMA_DEVICE_TYPE_HEADSET, ZO_CHROMA_EFFECT_DRAW_LEVEL.FALLBACK, ChromaCreateHeadsetStaticEffect, r, g, b),
         }
     end
+    return allianceEffects
+end
+
+function ZO_RzChroma_Effects:Initialize()
+    self:RegisterForEvents()
+
+    ChromaDeleteAllCustomEffectIds()
+
+    self.allianceEffects = self:CreateAllianceEffects(GetAllianceColor)
+    self.battlegroundAllianceEffects = self:CreateAllianceEffects(GetBattlegroundAllianceColor)
 
     self.keybindActionVisualData = { }
     self.keybindActionEffects = { }
@@ -46,10 +60,24 @@ function ZO_RzChroma_Effects:RegisterForEvents()
     --To be overriden
 end
 
-function ZO_RzChroma_Effects:SetAlliance(alliance)
-    if self.activeAlliance ~= alliance then
-        local previousActiveAllianceEffects = self.allianceEffects[self.activeAlliance]
-        local newActiveAllianceEffects = self.allianceEffects[alliance]
+function ZO_RzChroma_Effects:GetAllianceEffects(alliance, inBattleground)
+    local container
+    if inBattleground then
+        container = self.battlegroundAllianceEffects
+    else
+        container = self.allianceEffects
+    end
+    return container[alliance]
+end
+
+function ZO_RzChroma_Effects:SetAlliance(alliance, inBattleground)
+    if inBattleground == nil then
+        inBattleground = false
+    end
+
+    if self.activeAlliance ~= alliance or self.inBattleground ~= inBattleground then
+        local previousActiveAllianceEffects = self:GetAllianceEffects(self.activeAlliance, self.inBattleground)
+        local newActiveAllianceEffects = self:GetAllianceEffects(alliance, inBattleground)
         for deviceType, newEffect in pairs(newActiveAllianceEffects) do
             if self.activeAlliance then
                 local previousEffect = previousActiveAllianceEffects[deviceType]
@@ -60,11 +88,12 @@ function ZO_RzChroma_Effects:SetAlliance(alliance)
             ZO_RZCHROMA_MANAGER:AddEffect(newEffect)
         end
         self.activeAlliance = alliance
+        self.inBattleground = inBattleground
     end
 end
 
-function ZO_RzChroma_Effects:SetVisualDataForKeybindAction(actionName, animationTimerData, color, blendMode)
-    self.keybindActionVisualData[actionName] = { animationTimerData = animationTimerData, color = color, blendMode = blendMode }
+function ZO_RzChroma_Effects:SetVisualDataForKeybindAction(actionName, animationTimerData, color, blendMode, level)
+    self.keybindActionVisualData[actionName] = { animationTimerData = animationTimerData, color = color, blendMode = blendMode, level = level }
 end
 
 function ZO_RzChroma_Effects:AddKeybindActionEffect(actionName)
@@ -72,14 +101,12 @@ function ZO_RzChroma_Effects:AddKeybindActionEffect(actionName)
 
     local row, column = ZO_ChromaGetCustomEffectCoordinatesForAction(actionName)
     if row and column then
-        local visualData = self.keybindActionVisualData[actionName]
-        if visualData then
-            local effect = ZO_ChromaCStyleCustomSingleColorFadingEffect:New(CHROMA_DEVICE_TYPE_KEYBOARD, ZO_CHROMA_EFFECT_DRAW_LEVEL.ACTIVE_KEY, CHROMA_CUSTOM_EFFECT_GRID_STYLE_STATIC, visualData.animationTimerData, visualData.color, visualData.blendMode)
-            effect:SetCellActive(row, column, true)
-            effect:SetDeleteEffectCallback(function() self:RemoveKeybindActionEffect(actionName) end)
-            self.keybindActionEffects[actionName] = effect
-            ZO_RZCHROMA_MANAGER:AddEffect(effect)
-        end
+        local visualData = self.keybindActionVisualData[actionName] or FALLBACK_KEYBIND_VISUAL_DATA
+        local effect = ZO_ChromaCStyleCustomSingleColorFadingEffect:New(CHROMA_DEVICE_TYPE_KEYBOARD, visualData.level, CHROMA_CUSTOM_EFFECT_GRID_STYLE_STATIC_CELLS, visualData.animationTimerData, visualData.color, visualData.blendMode)
+        effect:SetCellActive(row, column, true)
+        effect:SetDeleteEffectCallback(function() self:RemoveKeybindActionEffect(actionName) end)
+        self.keybindActionEffects[actionName] = effect
+        ZO_RZCHROMA_MANAGER:AddEffect(effect)
     end
 end
 

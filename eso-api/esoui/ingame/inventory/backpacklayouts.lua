@@ -2,10 +2,6 @@
 -- Backpack Layout Fragment
 ----------------------------------------
 
-ZO_BACKPACK_LAYOUT_HIDE_ALL_BANK_INFO_BARS = 1
-ZO_BACKPACK_LAYOUT_SHOW_ALL_BANK_INFO_BARS = 2
-ZO_BACKPACK_LAYOUT_HIDE_ONLY_TELVAR_BANK_INFO_BARS = 3
-
 ZO_BackpackLayoutFragment = ZO_SceneFragment:Subclass()
 local DEFAULT_BACKPACK_LAYOUT_DATA =
 {
@@ -18,7 +14,8 @@ local DEFAULT_BACKPACK_LAYOUT_DATA =
     emptyLabelOffsetY = 100,
     sortByHeaderWidth = 576,
     sortByNameWidth = 241,
-    bankInfoBarVisibilityOption = ZO_BACKPACK_LAYOUT_HIDE_ALL_BANK_INFO_BARS,
+    hideBankInfo = true,
+    hideCurrencyInfo = false,
 }
 
 function ZO_BackpackLayoutFragment:New(...)
@@ -38,6 +35,10 @@ function ZO_BackpackLayoutFragment:Initialize(layoutData)
     else
         self.layoutData = DEFAULT_BACKPACK_LAYOUT_DATA
     end
+end
+
+function ZO_BackpackLayoutFragment:SetLayoutValue(key, value)
+    self.layoutData[key] = value
 end
 
 function ZO_BackpackLayoutFragment:Show()
@@ -70,8 +71,11 @@ BACKPACK_BANK_LAYOUT_FRAGMENT = ZO_BackpackLayoutFragment:New(
         additionalFilter = function (slot)
             return (not slot.stolen)
         end,
-        bankInfoBarVisibilityOption = ZO_BACKPACK_LAYOUT_SHOW_ALL_BANK_INFO_BARS,
+        hideBankInfo = false,
     })
+
+BACKPACK_HOUSE_BANK_LAYOUT_FRAGMENT = ZO_DeepTableCopy(BACKPACK_BANK_LAYOUT_FRAGMENT)
+BACKPACK_HOUSE_BANK_LAYOUT_FRAGMENT:SetLayoutValue("hideCurrencyInfo", true)
 
 BACKPACK_GUILD_BANK_LAYOUT_FRAGMENT = ZO_BackpackLayoutFragment:New(
     {
@@ -81,20 +85,20 @@ BACKPACK_GUILD_BANK_LAYOUT_FRAGMENT = ZO_BackpackLayoutFragment:New(
         additionalFilter = function (slot)
             return (not slot.stolen) and (not slot.isPlayerLocked)
         end,
-        bankInfoBarVisibilityOption = ZO_BACKPACK_LAYOUT_HIDE_ONLY_TELVAR_BANK_INFO_BARS,
+        hideBankInfo = false,
     })
 
 BACKPACK_TRADING_HOUSE_LAYOUT_FRAGMENT = ZO_BackpackLayoutFragment:New(
     {
-        inventoryTopOffsetY = 3, -- less than default because we are showing a search box not an inventory menu
+        inventoryTopOffsetY = DEFAULT_INVENTORY_TOP_OFFSET_Y,
         inventoryFilterDividerTopOffsetY = DEFAULT_INVENTORY_FILTER_DIVIDER_TOP_OFFSET_Y,
-        width = 670,
-        backpackOffsetY = 128,
-        sortByOffsetY = 96,
-        sortByHeaderWidth = 690,
-        sortByNameWidth = 341,
-        additionalFilter = function (slot)
-            return (slot.quality ~= ITEM_QUALITY_TRASH) and (not slot.stolen) and (not slot.isPlayerLocked)
+        backpackOffsetY = 140,
+        sortByOffsetY = 110,
+        emptyLabelOffsetY = 140,
+        useSearchBar = true,
+        hiddenFilters = { [ITEMFILTERTYPE_QUEST] = true, [ITEMFILTERTYPE_JUNK] = true },
+        additionalFilter = function(slot)
+            return IsItemSellableOnTradingHouse(slot.bagId, slot.slotIndex)
         end,
     })
 

@@ -29,20 +29,23 @@ function ZO_KeyboardFriendsListManager:Initialize(control)
 
     self.sortFunction = function(listEntry1, listEntry2) return self:CompareFriends(listEntry1, listEntry2) end
 
-	self.hideOfflineCheckBox = GetControl(control, "HideOffline")
+    self.hideOfflineCheckBox = GetControl(control, "HideOffline")
         
     FRIENDS_LIST_SCENE = ZO_Scene:New("friendsList", SCENE_MANAGER)
-    FRIENDS_LIST_SCENE:RegisterCallback("StateChange",  function(oldState, newState)
-                                                            if(newState == SCENE_SHOWING) then      
-                                                                self:PerformDeferredInitialization()
-                                                                KEYBIND_STRIP:AddKeybindButtonGroup(self.staticKeybindStripDescriptor)
-                                                                KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
-																self:UpdateHideOfflineCheckBox(self.hideOfflineCheckBox)
-                                                            elseif(newState == SCENE_HIDDEN) then      
-                                                                KEYBIND_STRIP:RemoveKeybindButtonGroup(self.staticKeybindStripDescriptor)                                                          
-                                                                KEYBIND_STRIP:RemoveKeybindButtonGroup(self.keybindStripDescriptor)
-                                                            end
-                                                        end)
+    FRIENDS_LIST_SCENE:RegisterCallback("StateChange", function(oldState, newState)
+        if newState == SCENE_SHOWING then
+            self:PerformDeferredInitialization()
+            KEYBIND_STRIP:AddKeybindButtonGroup(self.staticKeybindStripDescriptor)
+            KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
+            self:UpdateHideOfflineCheckBox(self.hideOfflineCheckBox)
+        elseif newState == SCENE_HIDDEN then
+            KEYBIND_STRIP:RemoveKeybindButtonGroup(self.staticKeybindStripDescriptor)
+            KEYBIND_STRIP:RemoveKeybindButtonGroup(self.keybindStripDescriptor)
+        end
+    end)
+
+    FRIENDS_LIST_FRAGMENT = ZO_FadeSceneFragment:New(control)
+    self:InitializeDirtyLogic(FRIENDS_LIST_FRAGMENT)
 end
 
 function ZO_KeyboardFriendsListManager:PerformDeferredInitialization()
@@ -103,9 +106,9 @@ function ZO_KeyboardFriendsListManager:InitializeKeybindDescriptors()
             end,
 
             visible = function()
-                if(self.mouseOverRow) then
+                if IsGroupModificationAvailable() and self.mouseOverRow then
                     local data = ZO_ScrollList_GetData(self.mouseOverRow)
-                    if(data.hasCharacter and data.online) then                        
+                    if data.hasCharacter and data.online then
                         return true
                     end
                 end
@@ -219,11 +222,13 @@ function ZO_KeyboardFriendsListManager:FriendsListRow_OnMouseUp(control, button,
                 if IsChatSystemAvailableForCurrentPlatform() then
                     AddMenuItem(GetString(SI_SOCIAL_LIST_SEND_MESSAGE), function() StartChatInput("", CHAT_CHANNEL_WHISPER, data.displayName) end)
                 end
-                AddMenuItem(GetString(SI_SOCIAL_MENU_INVITE), function() 
-                    local NOT_SENT_FROM_CHAT = false
-                    local DISPLAY_INVITED_MESSAGE = true
-                    TryGroupInviteByName(data.characterName, NOT_SENT_FROM_CHAT, DISPLAY_INVITED_MESSAGE) 
-                end)
+                if IsGroupModificationAvailable() then
+                    AddMenuItem(GetString(SI_SOCIAL_MENU_INVITE), function() 
+                        local NOT_SENT_FROM_CHAT = false
+                        local DISPLAY_INVITED_MESSAGE = true
+                        TryGroupInviteByName(data.characterName, NOT_SENT_FROM_CHAT, DISPLAY_INVITED_MESSAGE) 
+                    end)
+                end
                 AddMenuItem(GetString(SI_SOCIAL_MENU_JUMP_TO_PLAYER), function() JumpToFriend(data.displayName) end)
             end
 

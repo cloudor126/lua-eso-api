@@ -1,9 +1,7 @@
 local ZO_LootPickup_Gamepad = ZO_Loot_Gamepad_Base:Subclass()
 
 function ZO_LootPickup_Gamepad:New(...)
-    local screen = ZO_Loot_Gamepad_Base.New(self)
-    screen:Initialize(...)
-    return screen
+    return ZO_Loot_Gamepad_Base.New(self, ...)
 end
 
 local function OnBlockingSceneActivated()
@@ -11,6 +9,8 @@ local function OnBlockingSceneActivated()
 end
 
 function ZO_LootPickup_Gamepad:Initialize(control)
+    ZO_Loot_Gamepad_Base.Initialize(self, GAMEPAD_RIGHT_TOOLTIP)
+
     control.owner = self
     self.control = control
 
@@ -108,12 +108,8 @@ end
 
 function ZO_LootPickup_Gamepad:UpdateButtonTextOnSelection(selectedData)
     if selectedData then
-        if selectedData.currencyType then 
-            self.takeControl:SetText(GetString(SI_LOOT_TAKE))
-        else
-            local shouldShowSteal = selectedData.isStolen
-            self.takeControl:SetText(GetString(shouldShowSteal and SI_LOOT_STEAL or SI_LOOT_TAKE))
-        end
+        local actionStringId = selectedData.isStolen and SI_LOOT_STEAL or SI_LOOT_TAKE
+        self.takeControl:SetText(GetString(actionStringId))
     end
 end
 
@@ -171,7 +167,6 @@ function ZO_LootPickup_Gamepad:InitializeHeader(title)
         data1HeaderText = GetString(SI_GAMEPAD_LOOT_INVENTORY_CAPACITY),
         data1Text = UpdateCapacityString,
     }
-    ZO_GamepadGenericHeader_Refresh(self.header, self.headerData)
 end
 
 --[[ Global Handlers ]]--

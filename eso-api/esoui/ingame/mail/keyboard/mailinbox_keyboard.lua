@@ -70,11 +70,6 @@ function MailInbox:Initialize(control)
 end
 
 function MailInbox:InitializeKeybindDescriptors()
-    local function ReportAndDeleteCallback()
-        self:RecordSelectedMailAsReported()
-        self:Delete()
-    end
-
     self.selectionKeybindStripDescriptor =
     {
         alignment = KEYBIND_STRIP_ALIGN_CENTER,
@@ -150,7 +145,13 @@ function MailInbox:InitializeKeybindDescriptors()
             callback = function()
                 if(self.mailId) then
                     local senderDisplayName = GetMailSender(self.mailId)
-                    ZO_ReportPlayerDialog_Show(senderDisplayName, REPORT_PLAYER_REASON_MAIL_SPAM, nil, ReportAndDeleteCallback)
+                    local function ReportCallback()
+                        self:RecordSelectedMailAsReported()
+                        if not IsIgnored() then
+                            AddIgnore(senderDisplayName)
+                        end
+                    end
+                    ZO_HELP_GENERIC_TICKET_SUBMISSION_MANAGER:OpenReportPlayerTicketScene(senderDisplayName, ReportCallback)
                 end
             end,
         },
@@ -266,7 +267,7 @@ function MailInbox:FilterScrollList()
     end
 
     for i = 1, self.numEmptyRows do
-        table.insert(scrollData, ZO_ScrollList_CreateDataEntry(EMPTY_MAIL_DATA, { priority = 3 }))
+        table.insert(scrollData, ZO_ScrollList_CreateDataEntry(EMPTY_MAIL_DATA, { priority = 3, secsSinceReceived = 0, mailId = 0 }))
     end
 end
 
@@ -355,7 +356,7 @@ function MailInbox:TryTakeAll()
             self.pendingAcceptCOD = true
         else
             if attachedMoney > 0 then
-                if ((GetCarriedCurrencyAmount(CURT_MONEY) + attachedMoney) > MAX_PLAYER_MONEY) then
+                if ((GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) + attachedMoney) > MAX_PLAYER_CURRENCY) then
                     ZO_AlertEvent(EVENT_UI_ERROR, SI_MONEY_ATTACHMENT_WILL_EXCEED_MAXIMUM)
                     return
                 end
@@ -392,7 +393,7 @@ end
 function MailInbox:ConfirmDelete(mailId)
     if not IsMailReturnable(mailId) then
         DeleteMail(mailId, true)
-		PlaySound(SOUNDS.MAIL_ITEM_DELETED)
+        PlaySound(SOUNDS.MAIL_ITEM_DELETED)
     end
 end
 
@@ -599,4 +600,54 @@ end
 
 function ZO_MailInbox_OnInitialized(self)
     MAIL_INBOX = MailInbox:New(self)
+end
+
+function ZO_TakeAttachmentCODDialog_OnInitialized(self)
+    self.confirmTextLabel = self:GetNamedChild("ConfirmText")
+    self.currentGoldContainer = self:GetNamedChild("CurrentGoldContainer")
+    self.codFeeContainer = self:GetNamedChild("CODFeeContainer")
+
+    ZO_Dialogs_RegisterCustomDialog("MAIL_TAKE_ATTACHMENT_COD",
+    {
+        customControl = self,
+        setup = function(dialog, data)
+            local currentGoldLabel = self.currentGoldContainer.currencyAmount
+            local codFeeLabel = self.codFeeContainer.currencyAmount
+            local currentGold = GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)
+            local canAffordCODFee = data.codAmount <= currentGold
+            local confirmStringId = canAffordCODFee and SI_MAIL_CONFIRM_TAKE_ATTACHMENT_COD or SI_MAIL_COD_NOT_ENOUGH_MONEY
+            local CURRENCY_OPTIONS =
+            {
+                showTooltips = true,
+            }
+
+            self.confirmTextLabel:SetText(GetString(confirmStringId))
+            ZO_CurrencyControl_SetSimpleCurrency(currentGoldLabel, CURT_MONEY, currentGold, CURRENCY_OPTIONS, CURRENCY_SHOW_ALL)
+            ZO_CurrencyControl_SetSimpleCurrency(codFeeLabel, CURT_MONEY, data.codAmount, CURRENCY_OPTIONS, CURRENCY_SHOW_ALL, not canAffordCODFee)
+        end,
+        title =
+        {
+            text = SI_PROMPT_TITLE_MAIL_TAKE_ATTACHMENT_COD,
+        },
+        buttons =
+        {
+            [1] =
+            {
+                control = self:GetNamedChild("Accept"),
+                text = SI_DIALOG_ACCEPT,
+                enabled = function(dialog)
+                    local codAmount = dialog.data.codAmount
+                    return codAmount <= GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)
+                end,
+                callback = function()
+                    MAIL_INBOX:ConfirmAcceptCOD()
+                end,
+            },
+            [2] =
+            {
+                control = self:GetNamedChild("Decline"),
+                text = SI_DIALOG_DECLINE,
+            }
+        },
+    })
 end

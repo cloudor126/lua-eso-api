@@ -30,7 +30,7 @@ function WorldMapQuests_Gamepad:Initialize(control)
 
     self:InitializeKeybindDescriptor()
 
-    GAMEPAD_WORLD_MAP_QUESTS_FRAGMENT = ZO_FadeSceneFragment:New(control)
+    GAMEPAD_WORLD_MAP_QUESTS_FRAGMENT = ZO_SimpleSceneFragment:New(control)
     GAMEPAD_WORLD_MAP_QUESTS_FRAGMENT:RegisterCallback("StateChange",  function(oldState, newState)
         if newState == SCENE_SHOWING then
             self.questList:Activate()
@@ -62,7 +62,7 @@ function WorldMapQuests_Gamepad:LayoutList()
 
         entryData.questInfo = srcData
 
-        local isAssisted = ZO_QuestTracker.tracker:IsTrackTypeAssisted(TRACK_TYPE_QUEST, questIndex)
+        local isAssisted = FOCUSED_QUEST_TRACKER:IsTrackTypeAssisted(TRACK_TYPE_QUEST, questIndex)
         entryData.isAssisted = isAssisted
         if isAssisted then
             self.assistedEntryData = entryData
@@ -102,7 +102,7 @@ function WorldMapQuests_Gamepad:SetupQuestDetails()
     local questName = targetData.questInfo.name
     local questIndex = targetData.questInfo.questIndex
 
-    local isAssisted = ZO_QuestTracker.tracker:IsTrackTypeAssisted(TRACK_TYPE_QUEST, questIndex)
+    local isAssisted = FOCUSED_QUEST_TRACKER:IsTrackTypeAssisted(TRACK_TYPE_QUEST, questIndex)
 
     local questLevel = GetJournalQuestLevel(questIndex)
     local questColor = GetColorDefForCon(GetCon(questLevel))
@@ -164,7 +164,8 @@ function WorldMapQuests_Gamepad:InitializeKeybindDescriptor()
                 end
 
                 ZO_WorldMap_PanToQuest(questIndex)
-                QUEST_TRACKER:ForceAssist(questIndex)
+                ZO_ZoneStories_Manager.StopZoneStoryTracking()
+                FOCUSED_QUEST_TRACKER:ForceAssist(questIndex)
                 self.questList:RefreshVisible()
                 self:SetupQuestDetails()
                 PlaySound(SOUNDS.MAP_LOCATION_CLICKED)
@@ -172,7 +173,7 @@ function WorldMapQuests_Gamepad:InitializeKeybindDescriptor()
 
             enabled = function()
                 local targetData = self.questList:GetTargetData()
-                return targetData and targetData.questInfo and targetData.questInfo.questIndex and not targetData.isAssisted
+                return targetData ~= nil and targetData.questInfo ~= nil and targetData.questInfo.questIndex ~= nil and (not targetData.isAssisted or IsZoneStoryActivelyTracking())
             end
         },
     }

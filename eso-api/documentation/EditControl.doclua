@@ -16,6 +16,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #AllowMarkupType allowMarkupType
+-- @function[parent = #EditControl] GetAllowMarkupType
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #boolean enabled
 -- @function[parent = #EditControl] GetCopyEnabled
 
@@ -103,6 +108,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #AllowMarkupType allowMarkupType
+-- @function[parent = #EditControl] SetAllowMarkupType
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #number r
 -- @param #number g
 -- @param #number b
@@ -123,11 +133,6 @@
 -- @param self
 -- @param #boolean enabled
 -- @function[parent = #EditControl] SetEditEnabled
-
--------------------------------------------------------------------------------
--- @param self
--- @param #boolean escapeMarkup
--- @function[parent = #EditControl] SetEscapeMarkup
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -187,11 +192,6 @@
 -- @param self
 -- @param #VirtualKeyboardType aKeyboardType
 -- @function[parent = #EditControl] SetVirtualKeyboardType
-
--------------------------------------------------------------------------------
--- @param self
--- @return #boolean escapeMarkup
--- @function[parent = #EditControl] ShouldEscapeMarkup
 
 -------------------------------------------------------------------------------
 -- @param self

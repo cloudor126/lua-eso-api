@@ -39,6 +39,7 @@ function ZO_SharedGamepadEntry_OnInitialized(control)
     control.statusIndicator = control:GetNamedChild("StatusIndicator")
 
     ZO_PregameGamepadEntry_OnInitialized(control)
+    ZO_StatusBarGamepadEntry_OnInitialized(control)
     ZO_CraftingGamepadEntry_OnInitialized(control)
     ZO_SkillsGamepadEntry_OnInitialized(control)
     ZO_CharacterGamepadEntry_OnInitialized(control)
@@ -47,6 +48,12 @@ end
 
 function ZO_PregameGamepadEntry_OnInitialized(control)
     control.description = control:GetNamedChild("Description")
+end
+
+function ZO_StatusBarGamepadEntry_OnInitialized(control)
+    control.barContainer = control:GetNamedChild("BarContainer")
+
+    ZO_SharedGamepadEntry_SetHeightFromLabelAndStatusBar(control)
 end
 
 function ZO_CraftingGamepadEntryTraits_OnInitialized(control)
@@ -88,11 +95,11 @@ function ZO_CraftingGamepadEntry_OnInitialized(control)
 end
 
 function ZO_SkillsGamepadEntry_OnInitialized(control)
-    control.barContainer = control:GetNamedChild("BarContainer")
     --skill lines
     control.rank = control:GetNamedChild("Rank")
     --abilities
-    control.alert = control:GetNamedChild("Alert")
+    control.leftIndicator = control:GetNamedChild("LeftIndicator")
+    control.rightIndicator = control:GetNamedChild("RightIndicator")
     control.lock = control:GetNamedChild("Lock")
     control.frame = control:GetNamedChild("Frame") --not sure if still needed by other menus
     control.circleFrame = control:GetNamedChild("CircleFrame")
@@ -150,6 +157,26 @@ do
 
     function ZO_SharedGamepadEntry_SetHeightFromLabelOnly(control)
         control.GetHeight = ComputeHeightFromLabelOnly
+    end
+end
+
+do
+    local function ComputeHeightFromLabelAndStatusBar(control)
+        local height = 0
+        if control.label then
+            height = height + control.label:GetTextHeight()
+        end
+        if not control.barContainer:IsControlHidden() then
+            height = height + control.barContainer:GetHeight()
+        end
+        return height
+    end
+
+    function ZO_SharedGamepadEntry_SetHeightFromLabelAndStatusBar(control)
+        -- Don't override the GetHeight functionality if their's no bar container to affect the height
+        if control.barContainer then
+            control.GetHeight = ComputeHeightFromLabelAndStatusBar
+        end
     end
 end
 
@@ -217,6 +244,26 @@ local function ZO_SharedGamepadEntryCooldownSetup(control, data)
     end
 end
 
+local function ZO_SharedGamepadEntryBarSetup(control, data, selected)
+    local barContainer = control.barContainer
+    if barContainer then
+        if data.barMax then
+            local barMin = data.barMin or 0
+            barContainer:SetMinMax(barMin, data.barMax)
+
+            if data.barValue then
+                barContainer:SetValue(data.barValue)
+            end
+        end
+
+        if data.showBarEvenWhenUnselected then
+            barContainer:SetHidden(false)
+        else
+            barContainer:SetHidden(not selected)
+        end
+    end
+end
+
 local USE_LOWERCASE_NUMBER_SUFFIXES = false
 
 local function ZO_SharedGamepadEntryIconSetup(icon, stackCountLabel, subStatusIcon, data, selected)
@@ -240,10 +287,16 @@ local function ZO_SharedGamepadEntryIconSetup(icon, stackCountLabel, subStatusIc
                 icon:SetDesaturation(data.iconDesaturation)
             end
 
+            if data.textureSampleProcessingWeights then
+                for type, weight in pairs(data.textureSampleProcessingWeights) do
+                    icon:SetTextureSampleProcessingWeight(type, weight)
+                end
+            end
+
             if stackCountLabel then
                 local stackCount = data.stackCount
                 if stackCount and stackCount > 1 then
-                    stackCountLabel:SetText(ZO_AbbreviateNumber(stackCount, NUMBER_ABBREVIATION_PRECISION_TENTHS, USE_LOWERCASE_NUMBER_SUFFIXES))
+                    stackCountLabel:SetText(zo_strformat(SI_NUMBER_FORMAT, ZO_AbbreviateNumber(stackCount, NUMBER_ABBREVIATION_PRECISION_TENTHS, USE_LOWERCASE_NUMBER_SUFFIXES)))
                 else
                     stackCountLabel:SetText("")
                 end
@@ -296,6 +349,14 @@ local function ZO_SharedGamepadEntryStatusIndicatorSetup(statusIndicator, data)
         --multi-icons control their own alpha, don't set it directly on the icon if you're using a multi-icon
         statusIndicator:ClearIcons()
         
+        if data.overrideStatusIndicatorIcons then
+            for _, iconTexture in ipairs(data.overrideStatusIndicatorIcons) do
+                statusIndicator:AddIcon(iconTexture)
+            end
+            statusIndicator:Show()
+            return -- Don't show other multi-icons
+        end
+        
         if data.isEquippedInCurrentCategory then
             statusIndicator:AddIcon(EQUIPPED_THIS_SLOT_TEXTURE)
         elseif data.isEquippedInAnotherCategory then
@@ -306,14 +367,7 @@ local function ZO_SharedGamepadEntryStatusIndicatorSetup(statusIndicator, data)
             statusIndicator:AddIcon(ITEM_IS_HIDDEN_TEXTURE)
         end
 
-        local isItemNew
-        if type(data.brandNew) == "function" then
-            isItemNew = data.brandNew()
-        else
-            isItemNew = data.brandNew
-        end
-
-        if isItemNew and data.enabled then
+        if data:IsNew() and data.enabled then
             statusIndicator:AddIcon(ZO_GAMEPAD_NEW_ICON_32)
         end
 
@@ -322,7 +376,7 @@ local function ZO_SharedGamepadEntryStatusIndicatorSetup(statusIndicator, data)
         end
 
         if data.isGemmable then
-            statusIndicator:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(UI_ONLY_CURRENCY_CROWN_GEMS))
+            statusIndicator:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(CURT_CROWN_GEMS))
         end
 
         if data.isMailAttached then
@@ -337,7 +391,7 @@ local function ZO_SharedGamepadEntryStatusIndicatorSetup(statusIndicator, data)
             statusIndicator:AddIcon(ACHIEVEMENT_EARNED_TEXTURE)
         end
 
-        if data.canLevel and data.canLevel() then
+        if data:CanLevel() then
             statusIndicator:AddIcon(CAN_LEVEL_TEXTURE)
         end
 
@@ -359,6 +413,10 @@ local function ZO_SharedGamepadEntryStatusIndicatorSetup(statusIndicator, data)
 
         if data.isLocked then
             statusIndicator:AddIcon(ZO_GAMEPAD_LOCKED_ICON_32)
+        end
+
+        if data.traitInformation ~= ITEM_TRAIT_INFORMATION_NONE and not data.ignoreTraitInformation then
+            statusIndicator:AddIcon(GetPlatformTraitInformationIcon(data.traitInformation))
         end
 
         statusIndicator:Show()
@@ -475,6 +533,8 @@ function ZO_SharedGamepadEntry_OnSetup(control, data, selected, reselectingDurin
 
     ZO_SharedGamepadEntryCooldownSetup(control, data)
 
+    ZO_SharedGamepadEntryBarSetup(control, data, selected)
+
     ZO_SharedGamepadEntryStatusIndicatorSetup(control.statusIndicator, data)
 
     if control.subLabel and data.custom then
@@ -547,6 +607,18 @@ function ZO_GamepadMenuEntryTemplate_GetAlpha(selected, disabled)
         return .64
     else
         return 1
+    end
+end
+
+function ZO_GamepadMenuEntryTemplate_GetLabelColor(selected, disabled)
+    if disabled and selected then
+        return ZO_GAMEPAD_DISABLED_SELECTED_COLOR
+    elseif disabled and not selected then
+        return ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR
+    elseif not disabled and selected then
+        return ZO_GAMEPAD_SELECTED_COLOR
+    elseif not disabled and not selected then
+        return ZO_GAMEPAD_UNSELECTED_COLOR
     end
 end
 
@@ -670,7 +742,7 @@ function ZO_GamepadMenuHeaderTemplate_OnInitialized(control)
 end
 
 function ZO_GamepadMenuHeaderTemplate_Setup(control, data, selected, selectedDuringRebuild, enabled, activated)
-    -- The header can not be selected, unless explicitly overriden by the user.
+    -- The header can not be selected, unless explicitly overridden by the user.
     if data.canSelect == nil then
         data.canSelect = false 
     end
@@ -721,7 +793,7 @@ function ZO_GamepadPipCreator:New(control, drawLayer)
     return pipCreator
 end
 
-local PIP_WIDTH = 32 --This is the width taken up by a pip in the control.  It is independant of whatever size dds is being used
+local PIP_WIDTH = 32 --This is the width taken up by a pip in the control.  It is independent of whatever size dds is being used
 function ZO_GamepadPipCreator:RefreshPips(numPips, activePipIndex)
     self.pool:ReleaseAllObjects()
     if (not numPips) or (numPips == 0) then

@@ -67,7 +67,7 @@ do
         self:SetHandler("OnEffectivelyShown", function() self:OnEffectivelyShown() end)
         self:SetHandler("OnEffectivelyHidden", function() self:OnEffectivelyHidden() end)
         self.scroll:SetHandler("OnScrollExtentsChanged", function(...) self:OnScrollExtentsChanged(...) end)
-        self:SetHandler("OnUpdate", function() self:OnUpdate() end)
+        self:EnableUpdateHandler()
 
         self.scrollIndicator = GetControl(self, "ScrollIndicator")
         self.scrollIndicator:SetTexture(ZO_GAMEPAD_RIGHT_SCROLL_ICON)
@@ -76,6 +76,7 @@ do
         self.animation, self.timeline = ZO_CreateScrollAnimation(self)
         self.scrollValue = SLIDER_MIN_VALUE
         self.directionalInputActivated = false
+        self.scrollIndicatorEnabled = true
 
         ZO_UpdateScrollFade(self.useFadeGradient, self.scroll, ZO_SCROLL_DIRECTION_VERTICAL)
     end
@@ -88,14 +89,33 @@ do
     end
 end
 
+function ZO_ScrollContainer_Gamepad:SetScrollIndicatorEnabled(enabled)
+    self.scrollIndicatorEnabled = enabled
+    self:UpdateScrollIndicator()
+end
+
+function ZO_ScrollContainer_Gamepad:UpdateScrollIndicator()
+    local _, verticalExtents = self.scroll:GetScrollExtents()
+    self.scrollIndicator:SetHidden(not (self.scrollIndicatorEnabled and verticalExtents ~= 0))
+end
+
+function ZO_ScrollContainer_Gamepad:EnableUpdateHandler()
+    self:SetHandler("OnUpdate", function() self:OnUpdate() end)
+end
+
 function ZO_ScrollContainer_Gamepad:DisableUpdateHandler()
     self:SetHandler("OnUpdate", nil)
+end
+
+function ZO_ScrollContainer_Gamepad:SetDisabled(disabled)
+    self.disabled = disabled
+    self:RefreshDirectionalInputActivation()
 end
 
 function ZO_ScrollContainer_Gamepad:RefreshDirectionalInputActivation()
     local _, verticalExtents = self.scroll:GetScrollExtents()
     local canScroll = verticalExtents > 0
-    if not self:IsHidden() and canScroll then
+    if not self.disabled and not self:IsHidden() and canScroll then
         if not self.directionalInputActivated then
             self.directionalInputActivated = true
             ZO_SCROLL_SHARED_INPUT:Activate(self, self)
@@ -119,9 +139,7 @@ end
 
 function ZO_ScrollContainer_Gamepad:OnScrollExtentsChanged(control, horizontalExtents, verticalExtents)
     self:RefreshDirectionalInputActivation()
-    --Gamepad Mode is a safety check for shared controls between Gamepad/Keyboard that 
-    --use Gamepad Scroll containers such as Death Recap.
-    self.scrollIndicator:SetHidden(not (IsInGamepadPreferredMode() and verticalExtents ~= 0))
+    self:UpdateScrollIndicator()
     ZO_UpdateScrollFade(self.useFadeGradient, self.scroll, ZO_SCROLL_DIRECTION_VERTICAL)
 end
 
@@ -132,6 +150,9 @@ do
         local scrollInput = ZO_SCROLL_SHARED_INPUT:GetY()
         if scrollInput ~= 0 then
             ZO_ScrollRelative(self, -scrollInput * INPUT_VERTICAL_DELTA_MULTIPLIER)
+            if self.onInteractWithScrollbarCallback then
+                self.onInteractWithScrollbarCallback()
+            end
         end
     end
 end

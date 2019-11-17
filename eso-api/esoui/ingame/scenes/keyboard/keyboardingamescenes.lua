@@ -132,12 +132,13 @@ GUILD_ROSTER_SCENE:AddFragment(GUILD_SELECTOR_ACTION_LAYER_FRAGMENT)
 -------------------
 
 TRADING_HOUSE_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+TRADING_HOUSE_SCENE:AddFragment(FRAME_INTERACTION_STANDARD_RIGHT_PANEL_MEDIUM_LEFT_PANEL_FRAGMENT)
 TRADING_HOUSE_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
-TRADING_HOUSE_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
 TRADING_HOUSE_SCENE:AddFragment(TRADING_HOUSE_FRAGMENT)
 TRADING_HOUSE_SCENE:AddFragment(BACKPACK_TRADING_HOUSE_LAYOUT_FRAGMENT)
 TRADING_HOUSE_SCENE:AddFragment(TRADING_HOUSE_WINDOW_SOUNDS)
 TRADING_HOUSE_SCENE:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
+TRADING_HOUSE_SCENE:AddFragment(MINIMIZE_CHAT_FRAGMENT)
 
 ----------------
 --Interact Scene
@@ -164,14 +165,17 @@ fenceKeyboardScene:AddFragment(STORE_WINDOW_SOUNDS)
 fenceKeyboardScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 
 -----------------------
---Dyeing Scene
+--Restyle Scene
 -----------------------
 
-DYEING_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
-DYEING_SCENE:AddFragment(DYEING_FRAGMENT)
-DYEING_SCENE:AddFragment(RIGHT_PANEL_BG_FRAGMENT)
-DYEING_SCENE:AddFragment(MEDIUM_LEFT_PANEL_BG_FRAGMENT)
-DYEING_SCENE:AddFragment(ZO_WindowSoundFragment:New(SOUNDS.DYEING_OPENED, SOUNDS.DYEING_CLOSED))
+ZO_RESTYLE_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+ZO_RESTYLE_SCENE:AddFragmentGroup(ZO_RESTYLE_SHEETS_KEYBOARD_FRAGMENT_GROUP)
+ZO_RESTYLE_SCENE:AddFragment(RESTYLE_FRAGMENT)
+ZO_RESTYLE_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+ZO_RESTYLE_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
+ZO_RESTYLE_SCENE:AddFragment(TITLE_FRAGMENT)
+ZO_RESTYLE_SCENE:AddFragment(RESTYLE_TITLE_FRAGMENT)
+ZO_RESTYLE_SCENE:AddFragment(ZO_WindowSoundFragment:New(SOUNDS.DYEING_OPENED, SOUNDS.DYEING_CLOSED))
 
 -----------------------
 --Alchemy Scene
@@ -209,6 +213,16 @@ SMITHING_SCENE:AddFragment(ZO_WindowSoundFragment:New(SOUNDS.SMITHING_OPENED, SO
 SMITHING_SCENE:AddFragmentGroup(FRAGMENT_GROUP.READ_ONLY_EQUIPPED_ITEMS)
 SMITHING_SCENE:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 
+-----------------------
+--Retrait Scene
+-----------------------
+
+KEYBOARD_RETRAIT_ROOT_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+KEYBOARD_RETRAIT_ROOT_SCENE:AddFragment(RIGHT_PANEL_BG_FRAGMENT)
+KEYBOARD_RETRAIT_ROOT_SCENE:AddFragmentGroup(FRAGMENT_GROUP.READ_ONLY_EQUIPPED_ITEMS)
+KEYBOARD_RETRAIT_ROOT_SCENE:AddFragment(CRAFTING_RESULTS_FRAGMENT)
+KEYBOARD_RETRAIT_ROOT_SCENE:AddFragment(INTERACT_WINDOW_SOUNDS)
+
 ----------------
 --Group Menu
 ----------------
@@ -223,7 +237,6 @@ KEYBOARD_GROUP_MENU_SCENE:AddFragment(DISPLAY_NAME_FRAGMENT)
 KEYBOARD_GROUP_MENU_SCENE:AddFragment(TITLE_FRAGMENT)
 KEYBOARD_GROUP_MENU_SCENE:AddFragment(GROUP_TITLE_FRAGMENT)
 KEYBOARD_GROUP_MENU_SCENE:AddFragment(SEARCHING_FOR_GROUP_FRAGMENT)
-KEYBOARD_GROUP_MENU_SCENE:AddFragment(ZO_TutorialTriggerFragment:New(TUTORIAL_TRIGGER_YOUR_GROUP_OPENED))
 KEYBOARD_GROUP_MENU_SCENE:AddFragment(GROUP_WINDOW_SOUNDS)
 KEYBOARD_GROUP_MENU_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_SOCIAL)
 
@@ -307,6 +320,43 @@ stablesScene:AddFragment(STABLES_MENU_FRAGMENT)
 stablesScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 stablesScene:AddFragment(STORE_WINDOW_SOUNDS)
 
+-------------------
+--Crown Store Scene
+-------------------
+
+local marketScene = ZO_RemoteScene:New("market", SCENE_MANAGER)
+marketScene:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+marketScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW_NO_KEYBIND_STRIP)
+marketScene:AddFragment(MARKET_KEYBIND_STRIP_FRAGMENT)
+marketScene:AddFragment(KEYBIND_STRIP_MUNGE_BACKDROP_FRAGMENT)
+marketScene:AddFragment(FRAME_TARGET_STANDARD_RIGHT_PANEL_FRAGMENT)
+marketScene:AddFragment(FRAME_PLAYER_FRAGMENT)
+marketScene:AddFragment(RIGHT_BG_FRAGMENT)
+marketScene:AddFragment(FRAME_EMOTE_FRAGMENT_CROWN_STORE)
+marketScene:AddFragment(STOP_MOVEMENT_FRAGMENT)
+marketScene:AddFragment(MARKET_WINDOW_SOUNDS)
+marketScene:AddFragment(PREVIEW_KEYBIND_INTERCEPT_LAYER_FRAGMENT)
+marketScene:AddFragment(MINIMIZE_CHAT_FRAGMENT)
+marketScene:AddFragment(TITLE_FRAGMENT)
+marketScene:AddFragment(CROWN_STORE_TITLE_FRAGMENT)
+
+------------------------
+-- Daily Login Rewards
+------------------------
+
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(DAILY_LOGIN_REWARDS_KEYBOARD_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(RIGHT_BG_FORCE_PREPARE_ITEM_PREVIEW_OPTIONS_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(ITEM_PREVIEW_KEYBOARD:GetFragment())
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(FRAME_PLAYER_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(TITLE_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(CROWN_STORE_TITLE_FRAGMENT)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(MARKET_WINDOW_SOUNDS)
+DAILY_LOGIN_REWARDS_KEYBOARD_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_CROWN_STORE)
+
 ------------------------
 --Collections Book Scene
 ------------------------
@@ -318,7 +368,6 @@ COLLECTIONS_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBO
 COLLECTIONS_BOOK_SCENE:AddFragment(RIGHT_BG_ITEM_PREVIEW_OPTIONS_FRAGMENT)
 COLLECTIONS_BOOK_SCENE:AddFragment(ITEM_PREVIEW_KEYBOARD:GetFragment())
 COLLECTIONS_BOOK_SCENE:AddFragment(COLLECTIONS_BOOK_FRAGMENT)
-COLLECTIONS_BOOK_SCENE:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 COLLECTIONS_BOOK_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
 COLLECTIONS_BOOK_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_JOURNAL)
 COLLECTIONS_BOOK_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
@@ -336,7 +385,6 @@ DLC_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
 DLC_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
 DLC_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
 DLC_BOOK_SCENE:AddFragment(DLC_BOOK_FRAGMENT)
-DLC_BOOK_SCENE:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 DLC_BOOK_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
 DLC_BOOK_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_JOURNAL)
 DLC_BOOK_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
@@ -353,13 +401,29 @@ HOUSING_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
 HOUSING_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
 HOUSING_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
 HOUSING_BOOK_SCENE:AddFragment(HOUSING_BOOK_FRAGMENT)
-HOUSING_BOOK_SCENE:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 HOUSING_BOOK_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
 HOUSING_BOOK_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_JOURNAL)
 HOUSING_BOOK_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
 HOUSING_BOOK_SCENE:AddFragment(COLLECTIONS_WINDOW_SOUNDS)
 HOUSING_BOOK_SCENE:AddFragment(TITLE_FRAGMENT)
 HOUSING_BOOK_SCENE:AddFragment(COLLECTIONS_TITLE_FRAGMENT)
+
+---------------------
+--Outfit Book Scene--
+---------------------
+
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL_MEDIUM_LEFT_PANEL)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragmentGroup(ZO_RESTYLE_SHEETS_KEYBOARD_FRAGMENT_GROUP)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(ZO_OUTFIT_STYLES_BOOK_FRAGMENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(KEYBOARD_OUTFIT_STYLES_PANEL_FRAGMENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_JOURNAL)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(COLLECTIONS_WINDOW_SOUNDS)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(TITLE_FRAGMENT)
+ZO_OUTFIT_STYLES_BOOK_SCENE:AddFragment(COLLECTIONS_TITLE_FRAGMENT)
 
 -------------------
 --Notifications
@@ -567,6 +631,7 @@ storeScene:AddFragment(STORE_WINDOW_SOUNDS)
 storeScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 storeScene:AddFragment(ZO_TutorialTriggerFragment:New(TUTORIAL_TRIGGER_STORE_OPENED))
 storeScene:AddFragment(BACKPACK_STORE_LAYOUT_FRAGMENT)
+storeScene:AddFragment(MINIMIZE_CHAT_FRAGMENT)
 
 -------------------
 --Housing Furniture Browser Scene
@@ -582,6 +647,8 @@ furnitureBrowserScene:AddFragment(HOUSING_FURNITURE_BROWSER_MENU_FRAGMENT)
 furnitureBrowserScene:AddFragment(HOUSING_FURNITURE_BROWSER_TITLE_FRAGMENT)
 furnitureBrowserScene:AddFragment(FURNITURE_BROWSER_ITEM_PREVIEW_OPTIONS_FRAGMENT)
 furnitureBrowserScene:AddFragment(ITEM_PREVIEW_KEYBOARD:GetFragment())
+furnitureBrowserScene:AddFragment(MINIMIZE_CHAT_FRAGMENT)
+furnitureBrowserScene:AddFragment(STOP_MOVEMENT_FRAGMENT)
 
 -------------------------------
 -- Dye Stamp Confirmation Scene
@@ -630,6 +697,20 @@ inventoryScene:AddFragment(FRAME_EMOTE_FRAGMENT_INVENTORY)
 inventoryScene:AddFragment(INVENTORY_WINDOW_SOUNDS)
 
 -------------------
+--Stats Scene
+-------------------
+
+STATS_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+STATS_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_CENTERED)
+STATS_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+STATS_SCENE:AddFragment(STATS_OUTFIT_PREVIEW_OPTIONS_FRAGMENT)
+STATS_SCENE:AddFragment(ITEM_PREVIEW_KEYBOARD:GetFragment())
+STATS_SCENE:AddFragment(STATS_BG_FRAGMENT)
+STATS_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_SKILLS)
+STATS_SCENE:AddFragment(CHARACTER_WINDOW_SOUNDS)
+STATS_SCENE:AddFragment(MINIMIZE_CHAT_FRAGMENT)
+
+-------------------
 --Bank Scene
 -------------------
 
@@ -639,7 +720,17 @@ bankScene:AddFragment(RIGHT_PANEL_BG_FRAGMENT)
 bankScene:AddFragment(BANK_MENU_FRAGMENT)
 bankScene:AddFragment(BANK_WINDOW_SOUNDS)
 bankScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
-bankScene:AddFragment(ZO_TutorialTriggerFragment:New(TUTORIAL_TRIGGER_ACCOUNT_BANK_OPENED))
+
+-------------------
+--House Bank Scene
+-------------------
+
+local houseBankScene = SCENE_MANAGER:GetScene("houseBank")
+houseBankScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+houseBankScene:AddFragment(RIGHT_PANEL_BG_FRAGMENT)
+houseBankScene:AddFragment(HOUSE_BANK_MENU_FRAGMENT)
+houseBankScene:AddFragment(BANK_WINDOW_SOUNDS)
+houseBankScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 
 -------------------
 --Guild Bank Scene
@@ -653,6 +744,115 @@ guildBankScene:AddFragment(BANK_WINDOW_SOUNDS)
 guildBankScene:AddFragment(PLAYER_PROGRESS_BAR_FRAGMENT)
 guildBankScene:AddFragment(ZO_TutorialTriggerFragment:New(TUTORIAL_TRIGGER_GUILD_BANK_OPENED))
 
+----------------
+--Combat Skills Scene
+----------------
+
+local skillsScene = SCENE_MANAGER:GetScene("skills")
+skillsScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+skillsScene:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+skillsScene:AddFragment(FRAME_PLAYER_FRAGMENT)
+skillsScene:AddFragment(RIGHT_BG_FRAGMENT)
+skillsScene:AddFragment(TREE_UNDERLAY_FRAGMENT)
+skillsScene:AddFragment(TITLE_FRAGMENT)
+skillsScene:AddFragment(SKILLS_FRAGMENT)
+skillsScene:AddFragment(FRAME_EMOTE_FRAGMENT_SKILLS)
+skillsScene:AddFragment(SKILLS_TITLE_FRAGMENT)
+skillsScene:AddFragment(SKILLS_WINDOW_SOUNDS)
+skillsScene:AddFragment(ZO_TutorialTriggerFragment:New(TUTORIAL_TRIGGER_COMBAT_SKILLS_OPENED))
+
+------------------------
+--Gift Inventory Scene
+------------------------
+
+local giftInventoryScene = GIFT_INVENTORY_KEYBOARD:GetScene()
+giftInventoryScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+giftInventoryScene:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+giftInventoryScene:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+giftInventoryScene:AddFragment(GIFT_INVENTORY_KEYBOARD:GetFragment())
+giftInventoryScene:AddFragment(RIGHT_BG_FRAGMENT)
+giftInventoryScene:AddFragment(TREE_UNDERLAY_FRAGMENT)
+giftInventoryScene:AddFragment(TITLE_FRAGMENT)
+giftInventoryScene:AddFragment(CROWN_STORE_TITLE_FRAGMENT)
+giftInventoryScene:AddFragment(MARKET_WINDOW_SOUNDS)
+giftInventoryScene:AddFragment(FRAME_EMOTE_FRAGMENT_CROWN_STORE)
+
+----------------------------
+--Gift Inventory View Scene
+----------------------------
+
+local giftInventoryViewScene = SCENE_MANAGER:GetScene("giftInventoryViewKeyboard")
+giftInventoryViewScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+giftInventoryViewScene:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+
+-- the preview options fragment needs to be added before the ITEM_PREVIEW_KEYBOARD fragment
+-- which is part of ZO_ITEM_PREVIEW_LIST_HELPER_KEYBOARD_FRAGMENT_GROUP
+giftInventoryViewScene:AddFragment(RIGHT_BG_FORCE_PREPARE_ITEM_PREVIEW_OPTIONS_FRAGMENT)
+giftInventoryViewScene:AddFragmentGroup(ZO_ITEM_PREVIEW_LIST_HELPER_KEYBOARD_FRAGMENT_GROUP)
+
+giftInventoryViewScene:AddFragment(MARKET_WINDOW_SOUNDS)
+giftInventoryViewScene:AddFragment(MINIMIZE_CHAT_FRAGMENT)
+giftInventoryViewScene:AddFragment(FRAME_EMOTE_FRAGMENT_CROWN_STORE)
+
+-------------------
+-- ESO Plus Offers Scene
+-------------------
+
+local esoPlusOffersScene = ZO_RemoteScene:New("esoPlusOffersSceneKeyboard", SCENE_MANAGER)
+esoPlusOffersScene:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+esoPlusOffersScene:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW_NO_KEYBIND_STRIP)
+esoPlusOffersScene:AddFragment(MARKET_KEYBIND_STRIP_FRAGMENT)
+esoPlusOffersScene:AddFragment(KEYBIND_STRIP_MUNGE_BACKDROP_FRAGMENT)
+esoPlusOffersScene:AddFragment(FRAME_TARGET_STANDARD_RIGHT_PANEL_FRAGMENT)
+esoPlusOffersScene:AddFragment(FRAME_PLAYER_FRAGMENT)
+esoPlusOffersScene:AddFragment(RIGHT_BG_FRAGMENT)
+esoPlusOffersScene:AddFragment(FRAME_EMOTE_FRAGMENT_CROWN_STORE)
+esoPlusOffersScene:AddFragment(STOP_MOVEMENT_FRAGMENT)
+esoPlusOffersScene:AddFragment(MARKET_WINDOW_SOUNDS)
+esoPlusOffersScene:AddFragment(PREVIEW_KEYBIND_INTERCEPT_LAYER_FRAGMENT)
+esoPlusOffersScene:AddFragment(MINIMIZE_CHAT_FRAGMENT)
+esoPlusOffersScene:AddFragment(TITLE_FRAGMENT)
+esoPlusOffersScene:AddFragment(CROWN_STORE_TITLE_FRAGMENT)
+
+-------------------
+-- Guild Finder Scene
+-------------------
+
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(GUILD_SELECTOR_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(KEYBOARD_GUILD_RECRUITMENT_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(DISPLAY_NAME_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(GUILD_SHARED_INFO_FRAGMENT)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(GUILD_WINDOW_SOUNDS)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_SOCIAL)
+KEYBOARD_GUILD_RECRUITMENT_SCENE:AddFragment(GUILD_SELECTOR_ACTION_LAYER_FRAGMENT)
+
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(DISPLAY_NAME_FRAGMENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(GUILD_SELECTOR_FRAGMENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(KEYBOARD_GUILD_BROWSER_FRAGMENT)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(GUILD_WINDOW_SOUNDS)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_SOCIAL)
+KEYBOARD_GUILD_BROWSER_SCENE:AddFragment(GUILD_SELECTOR_ACTION_LAYER_FRAGMENT)
+
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragmentGroup(FRAGMENT_GROUP.MOUSE_DRIVEN_UI_WINDOW)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragmentGroup(FRAGMENT_GROUP.FRAME_TARGET_STANDARD_RIGHT_PANEL)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragmentGroup(FRAGMENT_GROUP.PLAYER_PROGRESS_BAR_KEYBOARD_CURRENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(RIGHT_BG_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(TREE_UNDERLAY_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(TITLE_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(GUILD_LINK_TITLE_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(DISPLAY_NAME_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(KEYBOARD_GUILD_BROWSER_GUILD_INFO_FRAGMENT)
+KEYBOARD_LINK_GUILD_INFO_SCENE:AddFragment(FRAME_EMOTE_FRAGMENT_SOCIAL)
 
 -------------------
 --Main Menu
@@ -663,9 +863,57 @@ MAIN_MENU_KEYBOARD:AddCategoryAreaFragment(TOP_BAR_FRAGMENT)
 --World Map
 MAIN_MENU_KEYBOARD:AddScene(MENU_CATEGORY_MAP, "worldMap")
 
---Market
+--Market Scene Group
 
-MAIN_MENU_KEYBOARD:AddScene(MENU_CATEGORY_MARKET, "market")
+do
+    local iconData =
+        {
+            {
+                categoryName = SI_CROWN_STORE_MENU_CROWN_STORE_LABEL,
+                descriptor = "market",
+                normal = "EsoUI/Art/Market/Keyboard/tabIcon_crownStore_up.dds",
+                pressed = "EsoUI/Art/Market/Keyboard/tabIcon_crownStore_down.dds",
+                highlight = "EsoUI/Art/Market/Keyboard/tabIcon_crownStore_over.dds",
+            },
+            {
+                categoryName = SI_CROWN_STORE_MENU_ESO_PLUS_LABEL,
+                descriptor = "esoPlusOffersSceneKeyboard",
+                normal = "esoui/art/treeicons/store_indexIcon_ESOPlus_up.dds",
+                pressed = "esoui/art/treeicons/store_indexIcon_ESOPlus_down.dds",
+                highlight = "esoui/art/treeicons/store_indexIcon_ESOPlus_over.dds",
+            },
+            {
+                categoryName = SI_CROWN_STORE_MENU_DAILY_LOGIN_LABEL,
+                descriptor = "dailyLoginRewards",
+                normal = "EsoUI/Art/Market/Keyboard/tabIcon_daily_up.dds",
+                pressed = "EsoUI/Art/Market/Keyboard/tabIcon_daily_down.dds",
+                highlight = "EsoUI/Art/Market/Keyboard/tabIcon_daily_over.dds",
+                statusIcon = function()
+                    if GetDailyLoginClaimableRewardIndex() then
+                        return ZO_KEYBOARD_NEW_ICON
+                    end
+                    return nil
+                end,
+            },
+            {
+                categoryName = SI_CROWN_STORE_MENU_GIFT_INVENTORY_LABEL,
+                descriptor = "giftInventoryKeyboard",
+                normal = "EsoUI/Art/Market/Keyboard/tabIcon_gifting_up.dds",
+                pressed = "EsoUI/Art/Market/Keyboard/tabIcon_gifting_down.dds",
+                highlight = "EsoUI/Art/Market/Keyboard/tabIcon_gifting_over.dds",
+                statusIcon = function()
+                    if GIFT_INVENTORY_MANAGER:HasAnyUnseenGifts() then
+                        return ZO_KEYBOARD_NEW_ICON
+                    end
+                    return nil
+                end,
+            },
+        }
+
+    SCENE_MANAGER:AddSceneGroup("marketSceneGroup", ZO_SceneGroup:New("market", "esoPlusOffersSceneKeyboard", "dailyLoginRewards", "giftInventoryKeyboard"))
+    local NO_PREFERRED_SCENE_FUNCTION = nil
+    MAIN_MENU_KEYBOARD:AddSceneGroup(MENU_CATEGORY_MARKET, "marketSceneGroup", iconData, NO_PREFERRED_SCENE_FUNCTION, TUTORIAL_TRIGGER_CROWN_STORE_TABS_SHOWN)
+end
 
 --Inventory
 
@@ -698,6 +946,15 @@ MAIN_MENU_KEYBOARD:AddScene(MENU_CATEGORY_CROWN_CRATES, "crownCrateKeyboard")
 --Collections Scene Group
 
 do
+    local function StatusIconForSpecializedCategory(specializedCategoryType)
+        for categoryIndex, categoryData in ZO_COLLECTIBLE_DATA_MANAGER:CategoryIterator() do
+            if categoryData:IsSpecializedCategory(specializedCategoryType) and categoryData:HasAnyNewCollectibles() then
+                return ZO_KEYBOARD_NEW_ICON
+            end
+        end
+        return nil
+    end
+
     local iconData = {
         {
             categoryName = SI_COLLECTION_BOOK_TITLE,
@@ -706,12 +963,7 @@ do
             pressed = "EsoUI/Art/Collections/collections_tabIcon_collectibles_down.dds",
             highlight = "EsoUI/Art/Collections/collections_tabIcon_collectibles_over.dds",
             statusIcon = function()
-                for categoryIndex = 1, GetNumCollectibleCategories() do
-                    if COLLECTIONS_BOOK:HasAnyNotifications(categoryIndex) and COLLECTIONS_BOOK:IsStandardCategory(categoryIndex) then
-                        return ZO_KEYBOARD_NEW_ICON
-                    end
-                end
-                return nil
+                return StatusIconForSpecializedCategory(COLLECTIBLE_CATEGORY_SPECIALIZATION_NONE)
             end,
         },
         {
@@ -721,18 +973,7 @@ do
             pressed = "EsoUI/Art/Collections/collections_tabIcon_DLC_down.dds",
             highlight = "EsoUI/Art/Collections/collections_tabIcon_DLC_over.dds",
             statusIcon = function()
-                -- check for any pending quests
-                if COLLECTIONS_BOOK_SINGLETON:DoesAnyDLCHaveQuestPending() then
-                    return ZO_KEYBOARD_NEW_ICON
-                end
-
-                -- check for any DLC collectibles with notifications
-                for categoryIndex = 1, GetNumCollectibleCategories() do
-                    if COLLECTIONS_BOOK_SINGLETON:IsCategoryIndexDLC(categoryIndex) and COLLECTIONS_BOOK:HasAnyNotifications(categoryIndex) then
-                        return ZO_KEYBOARD_NEW_ICON
-                    end
-                end
-                return nil
+                return StatusIconForSpecializedCategory(COLLECTIBLE_CATEGORY_SPECIALIZATION_DLC)
             end,
         },
         {
@@ -742,16 +983,21 @@ do
             pressed = "EsoUI/Art/Collections/collections_tabIcon_housing_down.dds",
             highlight = "EsoUI/Art/Collections/collections_tabIcon_housing_over.dds",
             statusIcon = function()
-                for categoryIndex = 1, GetNumCollectibleCategories() do
-                    if COLLECTIONS_BOOK_SINGLETON:IsCategoryIndexHousing(categoryIndex) and (COLLECTIONS_BOOK:HasAnyNotifications(categoryIndex) or COLLECTIONS_BOOK:DoesCategoryHaveAnyNewCollectibles(categoryIndex)) then
-                        return ZO_KEYBOARD_NEW_ICON
-                    end
-                end
-                return nil
+                return StatusIconForSpecializedCategory(COLLECTIBLE_CATEGORY_SPECIALIZATION_HOUSING)
+            end,
+        },
+        {
+            categoryName = SI_OUTFIT_STYLES_BOOK_TITLE,
+            descriptor = "outfitStylesBook",
+            normal = "EsoUI/Art/Collections/collections_tabIcon_outfitStyles_up.dds",
+            pressed = "EsoUI/Art/Collections/collections_tabIcon_outfitStyles_down.dds",
+            highlight = "EsoUI/Art/Collections/collections_tabIcon_outfitStyles_over.dds",
+            statusIcon = function()
+                return StatusIconForSpecializedCategory(COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES)
             end,
         },
     }
-    SCENE_MANAGER:AddSceneGroup("collectionsSceneGroup", ZO_SceneGroup:New("collectionsBook", "dlcBook", "housingBook"))
+    SCENE_MANAGER:AddSceneGroup("collectionsSceneGroup", ZO_SceneGroup:New("collectionsBook", "dlcBook", "housingBook", "outfitStylesBook"))
     MAIN_MENU_KEYBOARD:AddSceneGroup(MENU_CATEGORY_COLLECTIONS, "collectionsSceneGroup", iconData)
 end
 
@@ -807,6 +1053,14 @@ do
             highlight = "EsoUI/Art/Guild/tabIcon_ranks_over.dds",
         },
         {
+            categoryName = SI_WINDOW_TITLE_GUILD_RECRUITMENT,
+            descriptor = "guildRecruitmentKeyboard",
+            normal = "EsoUI/Art/GuildFinder/tabIcon_recruitment_up.dds",
+            pressed = "EsoUI/Art/GuildFinder/tabIcon_recruitment_down.dds",
+            disabled = "EsoUI/Art/GuildFinder/tabIcon_recruitment_disabled.dds",
+            highlight = "EsoUI/Art/GuildFinder/tabIcon_recruitment_over.dds",
+        },
+        {
             categoryName = SI_WINDOW_TITLE_GUILD_HERALDRY,
             descriptor = "guildHeraldry",
             visible = function() return GUILD_HERALDRY:IsEnabled() end,
@@ -822,9 +1076,9 @@ do
             pressed = "EsoUI/Art/Guild/tabIcon_history_down.dds",
             disabled = "EsoUI/Art/Guild/tabIcon_history_disabled.dds",
             highlight = "EsoUI/Art/Guild/tabIcon_history_over.dds",
-        }
+        },
     }
-    SCENE_MANAGER:AddSceneGroup("guildsSceneGroup", ZO_SceneGroup:New("guildHome", "guildRoster", "guildRanks", "guildHeraldry", "guildHistory", "guildCreate"))
+    SCENE_MANAGER:AddSceneGroup("guildsSceneGroup", ZO_SceneGroup:New("guildHome", "guildRoster", "guildRanks", "guildHeraldry", "guildHistory", "guildCreate", "guildRecruitmentKeyboard", "guildBrowserKeyboard", "linkGuildInfoKeyboard"))
     MAIN_MENU_KEYBOARD:AddSceneGroup(MENU_CATEGORY_GUILDS, "guildsSceneGroup", iconData)
     GUILD_SELECTOR:OnScenesCreated()
     MAIN_MENU_KEYBOARD:EvaluateSceneGroupVisibilityOnCallback("guildsSceneGroup", "OnGuildSelected")
@@ -887,7 +1141,7 @@ do
         {
             categoryName = SI_WINDOW_TITLE_CAMPAIGN_OVERVIEW,
             descriptor = "campaignOverview",
-            visible = function() return GetCurrentCampaignId() ~= 0 or GetAssignedCampaignId() ~= 0 end,
+            visible = ZO_CampaignSelector_Shared_ShouldShowCampaignSelector,
             normal = "EsoUI/Art/Campaign/campaign_tabIcon_summary_up.dds",
             pressed = "EsoUI/Art/Campaign/campaign_tabIcon_summary_down.dds",
             highlight = "EsoUI/Art/Campaign/campaign_tabIcon_summary_over.dds",

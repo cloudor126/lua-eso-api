@@ -2,11 +2,7 @@
 -- CampaignEmperor Gamepad
 --------------------------------------------
 
-local CampaignEmperor_Gamepad = ZO_Object.MultiSubclass(CampaignEmperor_Shared, ZO_SortFilterList_Gamepad)
-
-local function MagnitudeQuery()
-    return DIRECTIONAL_INPUT:GetY(ZO_DI_RIGHT_STICK)
-end
+local CampaignEmperor_Gamepad = ZO_Object.MultiSubclass(CampaignEmperor_Shared, ZO_NoSelectionSortFilterList_Gamepad)
 
 local function LeaderboardEntrySelectionCallback()
     -- Add to this function if there is something to be done on selection when scrolling through a leaderboard.
@@ -20,12 +16,8 @@ function CampaignEmperor_Gamepad:New(control)
 end
 
 function CampaignEmperor_Gamepad:Initialize(control)
-    local SCROLL_AS_BLOCK = true
-    ZO_SortFilterList_Gamepad.InitializeSortFilterList(self, control, MagnitudeQuery, SCROLL_AS_BLOCK)
+    ZO_NoSelectionSortFilterList_Gamepad.InitializeSortFilterList(self, control)
     CampaignEmperor_Shared.Initialize(self, control)
-
-    self.movementController:SetNumTicksToStartAccelerating(2)
-    self.movementController:SetAccelerationMagnitudeFactor(6)
 
     self.scrollIndicator = GetControl(control, "ScrollIndicator")
     self.scrollIndicator:SetTexture(ZO_GAMEPAD_RIGHT_SCROLL_ICON)
@@ -46,25 +38,31 @@ function CampaignEmperor_Gamepad:Initialize(control)
     ZO_ScrollList_AddDataType(self.list, ZO_EMPEROR_LEADERBOARD_PLAYER_DATA, "ZO_CampaignEmperorLeaderboardsPlayerRow_Gamepad", LIST_ENTRY_HEIGHT, function(control, data) self:SetupLeaderboardEntry(control, data) end)
     ZO_ScrollList_AddDataType(self.list, ZO_EMPEROR_LEADERBOARD_ALLIANCE_DATA, "ZO_CampaignEmperorLeaderboardsAllianceRow_Gamepad", LIST_ENTRY_HEIGHT, function(control, data) self:SetupLeaderboardAllianceEntry(control, data) end)
     ZO_ScrollList_AddDataType(self.list, ZO_EMPEROR_LEADERBOARD_EMPTY_DATA, "ZO_CampaignEmperorLeaderboardsEmptyRow_Gamepad", LIST_ENTRY_HEIGHT, function(control, data) self:SetupLeaderboardEmptyEntry(control, data) end)
-	
-	self.shownAllianceIndex = self.listAlliance
+
+    self.shownAllianceIndex = self.listAlliance
 
     self:SetEmptyText(GetString(SI_GAMEPAD_EMPERORSHIP_LEADERBOARD_EMPTY))
 
     self:SetupLeaderboardAlliances()
 
-    local ALWAYS_ANIMATE = true
-    CAMPAIGN_EMPEROR_GAMEPAD_FRAGMENT = ZO_FadeSceneFragment:New(ZO_CampaignEmperor_Gamepad, ALWAYS_ANIMATE)
+    CAMPAIGN_EMPEROR_GAMEPAD_FRAGMENT = ZO_FadeSceneFragment:New(ZO_CampaignEmperor_Gamepad)
     CAMPAIGN_EMPEROR_GAMEPAD_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
-                                                                    if(newState == SCENE_FRAGMENT_SHOWN) then
-                                                                        QueryCampaignLeaderboardData()
-                                                                        self:RefreshData()
-                                                                        self:RefreshEmperor()
-                                                                        self:SetDirectionalInputEnabled(true)
-																	elseif(newState == SCENE_FRAGMENT_HIDDEN) then
-                                                                        self:SetDirectionalInputEnabled(false)
-                                                                    end
-                                                                end)
+        if newState == SCENE_FRAGMENT_SHOWN then
+            QueryCampaignLeaderboardData()
+            self:RefreshData()
+            self:RefreshEmperor()
+            self:SetDirectionalInputEnabled(true)
+
+            local localPlayerEntry = self:GetLocalPlayerLeaderboardEntry()
+            if localPlayerEntry and not self:CanLeaderboardCharacterBecomeEmperor(localPlayerEntry) then
+                GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_RIGHT_TOOLTIP)
+                GAMEPAD_TOOLTIPS:LayoutTextBlockTooltip(GAMEPAD_RIGHT_TOOLTIP, GetString(SI_CAMPAIGN_EMPEROR_CHARACTER_INELIGIBLE_TEXT))
+            end
+        elseif newState == SCENE_FRAGMENT_HIDDEN then
+            GAMEPAD_TOOLTIPS:ClearTooltip(GAMEPAD_RIGHT_TOOLTIP)
+            self:SetDirectionalInputEnabled(false)
+        end
+    end)
 end
 
 local leaderboardSortKeys =
@@ -112,7 +110,7 @@ function CampaignEmperor_Gamepad:SetupLeaderboardAlliances()
         table.insert(self.leaderboardAlliances, allianceInfo)
     end
 
-    table.sort(self.leaderboardAlliances, LeaderboardSortFunc)                      
+    table.sort(self.leaderboardAlliances, LeaderboardSortFunc)
 end
 
 function CampaignEmperor_Gamepad:SetCampaignAndQueryType(campaignId, queryType)
@@ -126,12 +124,13 @@ function CampaignEmperor_Gamepad:BuildMasterList()
     if self.leaderboardAlliances then
         for i, allianceInfo in ipairs(self.leaderboardAlliances) do
 
-            local data = {
-                    index = #self.masterList,
-                    isAlliance = true,
-                    name = allianceInfo.allianceName,
-                    alliance = allianceInfo.alliance,
-                    }
+            local data =
+            {
+                index = #self.masterList,
+                isAlliance = true,
+                name = allianceInfo.allianceName,
+                alliance = allianceInfo.alliance,
+            }
 
             self.masterList[#self.masterList + 1] = data
 
@@ -142,10 +141,11 @@ function CampaignEmperor_Gamepad:BuildMasterList()
             end
 
             if i < #self.leaderboardAlliances then
-                local emptyData = {
-                                    index = #self.masterList,
-                                    isEmpty = true,
-                                    }
+                local emptyData =
+                {
+                    index = #self.masterList,
+                    isEmpty = true,
+                }
 
                 self.masterList[#self.masterList + 1] = emptyData
             end
@@ -158,7 +158,7 @@ end
 function CampaignEmperor_Gamepad:CreateImperialKeepControl(rulesetId, playerAlliance, index, _, prevKeep)
     local keep = self.imperialKeepPool:AcquireObject()
     keep.keepId = GetCampaignRulesetImperialKeepId(rulesetId, playerAlliance, index)
-    if(prevKeep) then
+    if prevKeep then
         keep:SetAnchor(TOPLEFT, prevKeep, BOTTOMLEFT, 0, -20)
     else
         local xOffset = index == 1 and 0 or 360
@@ -178,7 +178,6 @@ function CampaignEmperor_Gamepad:SetKeepAllianceNoneStatus(keep)
     end
 end
 
-
 -- CampaignEmperor_Shared Overrides
 function CampaignEmperor_Gamepad:RefreshImperialKeeps()
     local playerAlliance = GetUnitAlliance("player")
@@ -187,13 +186,13 @@ function CampaignEmperor_Gamepad:RefreshImperialKeeps()
     for i = 1, numRequired do
         local keep = self.imperialKeeps:GetChild(i)
         local keepAlliance = GetKeepAlliance(keep.keepId, self.queryType)
-        if(keepAlliance ~= ALLIANCE_NONE) then
+        if keepAlliance ~= ALLIANCE_NONE then
             keep.iconControl:SetColor(GetInterfaceColor(INTERFACE_COLOR_TYPE_ALLIANCE, keepAlliance))
             if keep.nameControl then
                 keep.nameControl:SetText(keep.name)
                 keep.nameControl:SetColor(ZO_SELECTED_TEXT:UnpackRGB())
             end
-            if(keepAlliance == playerAlliance) then
+            if keepAlliance == playerAlliance then
                 numOwned = numOwned + 1
             end
         else
@@ -201,7 +200,7 @@ function CampaignEmperor_Gamepad:RefreshImperialKeeps()
         end
     end
 
-    if(self.imperialKeepsRequiredData) then
+    if self.imperialKeepsRequiredData then
         self.imperialKeepsRequired:SetText(GetString(SI_GAMEPAD_CAMPAIGN_EMPEROR_KEEPS_NEEDED))
         self.imperialKeepsRequiredData:SetText(zo_strformat(SI_GAMEPAD_CAMPAIGN_EMPEROR_KEEPS_NEEDED_FORMAT, numOwned, numRequired))
     else

@@ -1,6 +1,8 @@
 local PLAY_SELECT_RANK_SOUND = true
 local ADD_RANK_DIALOG_NAME = "GUILD_ADD_RANK"
 
+ZO_GUILD_RANK_HEADER_TEMPLATE_KEYBOARD_HEIGHT = 35
+
 --Guild Rank
 ----------------
 
@@ -21,8 +23,8 @@ function ZO_GuildRank_Keyboard:New(control, poolKey, guildId, index, customName)
     return rank
 end
 
-function ZO_GuildRank_Keyboard:SetIconIndex(iconIndex)  
-    if(self:GetIconIndex() ~= iconIndex) then
+function ZO_GuildRank_Keyboard:SetIconIndex(iconIndex)
+    if self:GetIconIndex() ~= iconIndex then
         ZO_GuildRank_Shared.SetIconIndex(self, iconIndex)
         self:SetSelected(GUILD_RANKS:GetSelectedRankId() == self.id)
     end
@@ -33,7 +35,7 @@ function ZO_GuildRank_Keyboard:GetHeaderControl()
 end
 
 function ZO_GuildRank_Keyboard:RefreshAnchor(prevRank)
-    if(prevRank) then
+    if prevRank then
         self.control:SetAnchor(TOPLEFT, prevRank:GetHeaderControl(), BOTTOMLEFT, 0, -10)
     else
         self.control:SetAnchor(TOPLEFT, nil, TOPLEFT, 0, 0)
@@ -41,7 +43,7 @@ function ZO_GuildRank_Keyboard:RefreshAnchor(prevRank)
 end
 
 function ZO_GuildRank_Keyboard:SetSelected(selected)
-    if(selected) then
+    if selected then
         GetControl(self.control, "Icon"):SetTexture(GetGuildRankListDownIcon(self.iconIndex))
     else
         GetControl(self.control, "Icon"):SetTexture(GetGuildRankListUpIcon(self.iconIndex))
@@ -63,12 +65,6 @@ end
 
 local ZO_GuildRanks_Keyboard = ZO_GuildRanks_Shared:Subclass()
 
-local SET_CHECK = 1
-local SET_ICON = 2
-
-local ROW_HEIGHT = 30
-local COLUMN_WIDTH = 300
-
 function ZO_GuildRanks_Keyboard:New(...)
     local guildRanks = ZO_GuildRanks_Shared.New(self, ...)
     guildRanks:Initialize(...)
@@ -76,24 +72,50 @@ function ZO_GuildRanks_Keyboard:New(...)
 end
 
 local function OnBlockingSceneActivated()
-    GUILD_RANKS:AttemptSaveAndExit()
+    GUILD_RANKS:SaveAndExit()
 end
 
 function ZO_GuildRanks_Keyboard:Initialize(control)
+    ZO_GuildRanks_Shared.Initialize(self, control)
+
+    self.rankIconButtonContainer = self.control:GetNamedChild("RankIconButtonIconContainer")
+    self.rankIconDisplayControl = self.control:GetNamedChild("RankIcon")
+
+    -- Initialize grid list object
+    local ALWAYS_ANIMATE = true
+    self.permissionsContainer = self.control:GetNamedChild("PermissionsContainer")
+    local permissionsGridListControl = self.permissionsContainer:GetNamedChild("PermissionsPanel")
+    self.permissionsGridListControl = permissionsGridListControl
+
+    self.rankIconPickerButton = self.rankIconButtonContainer:GetNamedChild("Frame")
+    self.rankIconIconControl = self.rankIconButtonContainer:GetNamedChild("Icon")
+
+    local function OnRankIconPickerClicked()
+        self:OnRankIconPickerClicked()
+    end
+
+    ZO_CheckButton_SetCheckState(self.rankIconPickerButton, true)
+    ZO_CheckButton_Enable(self.rankIconPickerButton)
+    self.rankIconPickerButton:SetHandler("OnClicked", OnRankIconPickerClicked)
+
+    self.templateData =
+    {
+        gridListClass = ZO_GridScrollList_Keyboard,
+        entryTemplate = "ZO_GuildRank_PermissionCheckboxTile_Keyboard_Control",
+        entryWidth = ZO_GUILD_RANK_PERMISSON_CHECKBOX_KEYBOARD_WIDTH,
+        entryHeight = ZO_GUILD_RANK_PERMISSON_CHECKBOX_KEYBOARD_HEIGHT,
+        headerTemplate = "ZO_GuildRanks_Keyboard_Header_Template",
+        headerHeight = ZO_GUILD_RANK_HEADER_TEMPLATE_KEYBOARD_HEIGHT,
+    }
+
+    self:InitializePermissionsGridList()
+
     self.rankNameEditBG = GetControl(control, "RankNameEditBG")
     self.rankNameDisplay = GetControl(control, "RankNameDisplay")
     self.rankNameEdit = GetControl(control, "RankNameEdit")
     self.rankNameEdit:SetMaxInputChars(MAX_GUILD_RANK_NAME_LENGTH)
 
-    self.permissionsContainer = GetControl(control, "Permissions")
-    self.iconsContainer = GetControl(control, "Icons")
-    local paneScrollChild = GetControl(control, "PaneScrollChild")
-    self.permissionsContainer:SetParent(paneScrollChild)
-    self.iconsContainer:SetParent(paneScrollChild)
-    self.iconsContainer:SetAnchor(TOPLEFT, nil, TOPLEFT, 0, 0)
-
-    self.iconHighlight = self.iconsContainer:GetNamedChild("Highlight")
-    self.headerPool = ZO_ControlPool:New("ZO_RankHeader", GetControl(control, "List"), "Header")
+    self.headerPool = ZO_ControlPool:New("ZO_RankHeader", control:GetNamedChild("List"), "Header")
     self.headerPool:SetCustomFactoryBehavior(function(header)
                                                     for i = 1, header:GetNumChildren() do
                                                         local child = header:GetChild(i)
@@ -126,59 +148,31 @@ function ZO_GuildRanks_Keyboard:Initialize(control)
 
     self:InitializeKeybindDescriptor()
     self:InitializeAddRankDialog(ADD_RANK_DIALOG_NAME)
-    self:CreatePermissions()
-    self:CreateIconSelectors()
 
     GUILD_RANKS_SCENE = ZO_Scene:New("guildRanks", SCENE_MANAGER)
     GUILD_RANKS_SCENE:RegisterCallback("StateChange",   function(oldState, newState)
                                                             if(newState == SCENE_SHOWING) then
-                                                                MAIN_MENU_MANAGER:SetBlockingScene("guildRanks", OnBlockingSceneActivated)      
-                                                                KEYBIND_STRIP:RemoveDefaultExit()                                                          
+                                                                MAIN_MENU_MANAGER:SetBlockingScene("guildRanks", OnBlockingSceneActivated)
+                                                                KEYBIND_STRIP:RemoveDefaultExit()
                                                                 KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
                                                             elseif(newState == SCENE_HIDING) then
                                                                 self:StopDragging()
                                                             elseif(newState == SCENE_HIDDEN) then
-                                                                self:Cancel()                                                                
+                                                                self:Save()
                                                                 KEYBIND_STRIP:RemoveKeybindButtonGroup(self.keybindStripDescriptor)
                                                                 KEYBIND_STRIP:RestoreDefaultExit()
-                                                                -- Blocking scene is cleared in ConfirmExit() to prevent the scene manager from exiting then re-entering the main menu
+                                                                -- Blocking scene is cleared in SaveAndExit() to prevent the scene manager from exiting then re-entering the main menu
                                                             end
                                                         end)
+end
+
+function ZO_GuildRanks_Keyboard:OnRankIconPickerClicked()
+    ZO_Dialogs_ShowDialog("RankIconPicker")
 end
 
 function ZO_GuildRanks_Keyboard:InitializeKeybindDescriptor()
     self.keybindStripDescriptor =
     {
-        --Cancel
-        {
-            alignment = KEYBIND_STRIP_ALIGN_RIGHT,
-            name = GetString(SI_GUILD_RANKS_CANCEL),
-            keybind = "UI_SHORTCUT_NEGATIVE",
-        
-            callback = function()
-                self:Cancel()
-            end,
-
-            visible = function()                
-                return self.canSave
-            end,
-        },
-
-        -- Save
-        {
-            alignment = KEYBIND_STRIP_ALIGN_RIGHT,
-            name = GetString(SI_GUILD_RANKS_SAVE),
-            keybind = "UI_SHORTCUT_PRIMARY",
-        
-            callback = function()
-                self:Save()
-            end,
-
-            visible = function()                
-                return self.canSave
-            end,
-        },
-
         --Add Rank
         {
             alignment = KEYBIND_STRIP_ALIGN_CENTER,
@@ -202,8 +196,8 @@ function ZO_GuildRanks_Keyboard:InitializeKeybindDescriptor()
 
             callback = function()
                 local selectedRank = self:GetRankById(self.selectedRankId)
-                if(self:IsRankOccupied(selectedRank)) then
-                    ZO_Dialogs_ShowDialog("GUILD_REMOVE_RANK_WARNING", {rankId = self.selectedRankId})
+                if self:IsRankOccupied(selectedRank) then
+                    ZO_Dialogs_ShowDialog("GUILD_REMOVE_RANK_WARNING", { rankId = self.selectedRankId })
                 else
                     self:RemoveRank(self.selectedRankId)
                 end
@@ -219,83 +213,55 @@ function ZO_GuildRanks_Keyboard:InitializeKeybindDescriptor()
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             name = GetString(SI_EXIT_BUTTON),
             keybind = "UI_SHORTCUT_EXIT",
-            ethereal = true,
             callback = function()
-                self:AttemptSaveAndExit()
+                self:SaveAndExit()
             end,
         },
     }
 end
 
 function ZO_GuildRanks_Keyboard:Save()
-    if(self.canSave) then
-        if(ZO_GuildRanks_Shared.Save(self)) then
+    if self.canSave then
+        if ZO_GuildRanks_Shared.Save(self) then
             self.savePending = true
             self.savePendingGuildId = self.guildId
             self:RefreshSaveEnabled()
-		    PlaySound(SOUNDS.GUILD_RANK_SAVED)
+            PlaySound(SOUNDS.GUILD_RANK_SAVED)
         end
     end
 end
 
-local HEADER_SPACING_OFFSET_Y = 30
-
-function ZO_GuildRanks_Keyboard:CreatePermissions()
-    local prevRow
-    local permissionId = 0
-
-    self.permissionControls = {}
-
-    for rowIndex = 1, #ZO_GUILD_RANKS_PERMISSIONS do
-        local rowInfo = ZO_GUILD_RANKS_PERMISSIONS[rowIndex]
-        for columnIndex = 1, 2 do
-            if(rowInfo[columnIndex] ~= nil) then
-                permissionId = permissionId + 1
-                local permission = rowInfo[columnIndex]
-                local permissionControl = CreateControlFromVirtual("ZO_GuildRanksPermission", self.permissionsContainer, "ZO_GuildPermission", permissionId)
-                permissionControl.permission = permission
-                permissionControl:SetAnchor(TOPLEFT, nil, TOPLEFT, (columnIndex - 1) * COLUMN_WIDTH, (rowIndex - 1) * ROW_HEIGHT + HEADER_SPACING_OFFSET_Y)
-                table.insert(self.permissionControls, permissionControl)
-
-                local check = GetControl(permissionControl, "Check")
-                ZO_CheckButton_SetLabelText(check, GetString("SI_GUILDPERMISSION", permission))
-            end
-        end
-    end
+function ZO_GuildRanks_Keyboard:OnPermissionGridListEntryToggle(...)
+    self:GetRankById(self.selectedRankId):SetPermission(...)
+    self.permissionsGridList:RefreshGridList()
 end
 
-local ICON_SELECTORS_PER_ROW = 10
-local ICON_SELECTORS_PADDING = 8
-local ICON_SELECTOR_SIZE = 48
-local ICONS_OFFSET_X = 10
-local ICONS_OFFSET_Y = 35
+function ZO_GuildRanks_Keyboard:GetSelectedRank()
+    return self:GetRankById(self.selectedRankId)
+end
 
-function ZO_GuildRanks_Keyboard:CreateIconSelectors()
-    self.iconSelectorControls = {}
-    local iconSelectorId = 0
-    for i = 1, GetNumGuildRankIcons() do
-        local iconSelector = CreateControlFromVirtual("ZO_GuildRanksIconSelector", self.iconsContainer, "ZO_GuildRankIconSelector", iconSelectorId)
-        iconSelector.iconIndex = i
-        local row = zo_floor((i - 1) / ICON_SELECTORS_PER_ROW)
-        local col = (i - 1) % ICON_SELECTORS_PER_ROW
-        iconSelector:SetAnchor(TOPLEFT, nil, TOPLEFT, col * (ICON_SELECTOR_SIZE + ICON_SELECTORS_PADDING) + ICONS_OFFSET_X, row * (ICON_SELECTOR_SIZE + ICON_SELECTORS_PADDING) + ICONS_OFFSET_Y)
-        iconSelector:GetNamedChild("Icon"):SetTexture(GetGuildRankLargeIcon(i))
-        iconSelectorId = iconSelectorId + 1
-        table.insert(self.iconSelectorControls, iconSelector)
+function ZO_GuildRanks_Keyboard:CreatePermissionDataObject(index, permission)
+    local data = ZO_GuildRanks_Shared.CreatePermissionDataObject(self, index, permission)
+
+    data.mousedOverRank = function()
+        return self.mousedOverRank
     end
+
+    return data
 end
 
 function ZO_GuildRanks_Keyboard:SetGuildId(guildId)
     ZO_GuildRanks_Shared.SetGuildId(self, guildId)
 
     self:RefreshRanksFromGuildData()
+    self:RefreshEditPermissions()
 end
 
 function ZO_GuildRanks_Keyboard:RefreshRanksFromGuildData()
-    if(self.guildId) then
+    if self.guildId then
         self.headerPool:ReleaseAllObjects()
         self.ranks = {}
-    
+
         local firstRankId
         for i = 1, GetNumGuildRanks(self.guildId) do
             local header, key = self.headerPool:AcquireObject()
@@ -303,7 +269,7 @@ function ZO_GuildRanks_Keyboard:RefreshRanksFromGuildData()
             self.ranks[i] = rank
             rank:SetSelected(false)
 
-            if(not firstRankId) then
+            if not firstRankId then
                 firstRankId = rank.id
             end
         end
@@ -313,9 +279,11 @@ function ZO_GuildRanks_Keyboard:RefreshRanksFromGuildData()
 
         local lastSelectedRankId = self.selectedRankId
         self.selectedRankId = nil
-        if(not lastSelectedRankId or not self:SelectRank(lastSelectedRankId)) then
+        if not lastSelectedRankId or not self:SelectRank(lastSelectedRankId) then
             self:SelectRank(firstRankId)
         end
+
+        self.permissionsGridList:RefreshGridList()
     end
 end
 
@@ -324,7 +292,7 @@ function ZO_GuildRanks_Keyboard:RefreshRankIndices()
         local rank = self.ranks[i]
         for j = 1, GetNumGuildRanks(self.guildId) do
             local rankId = GetGuildRankId(self.guildId, j)
-            if(rank.id == rankId) then
+            if rank.id == rankId then
                 rank.index = j
                 break
             end
@@ -345,9 +313,9 @@ function ZO_GuildRanks_Keyboard:AddRank(rankName, copyPermissionsFromRankIndex)
 end
 
 function ZO_GuildRanks_Keyboard:RemoveRank(rankId)
-    local rank, rankIndex = self:GetRankById(rankId)    
-    if(rank) then
-        if(self.selectedRankId == rankId) then
+    local rank, rankIndex = self:GetRankById(rankId)
+    if rank then
+        if self.selectedRankId == rankId then
             self:SelectRank(nil)
         end
         self.headerPool:ReleaseObject(rank.poolKey)
@@ -357,13 +325,13 @@ function ZO_GuildRanks_Keyboard:RemoveRank(rankId)
         self:RefreshRankHeaderLayout()
         self:RefreshAddRank()
         self:RefreshSaveEnabled()
-		PlaySound(SOUNDS.GUILD_RANK_DELETED)
+        PlaySound(SOUNDS.GUILD_RANK_DELETED)
     end
 end
 
 function ZO_GuildRanks_Keyboard:StartDragging(rank)
-    if(DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT)) then
-        if(rank:IsNewRank() or not IsGuildRankGuildMaster(self.guildId, rank.index)) then
+    if DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT) then
+        if rank:IsNewRank() or not IsGuildRankGuildMaster(self.guildId, rank.index) then
             self.draggingRankId = rank.id
             WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_RESIZE_NS)
             self.control:SetHandler("OnUpdate", self.updateRankOrderCallback)
@@ -377,18 +345,18 @@ function ZO_GuildRanks_Keyboard:UpdateRankOrder()
     local targetIndex = zo_floor(nY * numRanks) + 1
     targetIndex = zo_clamp(targetIndex, 2, numRanks)
     local rank, rankIndex = self:GetRankById(self.draggingRankId)
-    if(rank and rankIndex and targetIndex ~= rankIndex) then
+    if rank and rankIndex and targetIndex ~= rankIndex then
         local tempRank = self.ranks[targetIndex]
         self.ranks[targetIndex] = rank
         self.ranks[rankIndex] = tempRank
         self:RefreshRankHeaderLayout()
         self:RefreshSaveEnabled()
-		PlaySound(SOUNDS.GUILD_RANK_REORDERED)
+        PlaySound(SOUNDS.GUILD_RANK_REORDERED)
     end
 end
 
 function ZO_GuildRanks_Keyboard:StopDragging()
-    if(self.draggingRankId) then
+    if self.draggingRankId then
         self.control:SetHandler("OnUpdate", nil)
         self.draggingRankId = nil
         WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_DO_NOT_CARE)
@@ -405,12 +373,12 @@ function ZO_GuildRanks_Keyboard:RefreshRankHeaderLayout()
 end
 
 function ZO_GuildRanks_Keyboard:SelectRank(rankId, playSound)
-    if(self.selectedRankId ~= rankId) then
-        if(self.selectedRankId) then
+    if self.selectedRankId ~= rankId then
+        if self.selectedRankId then
             local unselectRank = self:GetRankById(self.selectedRankId)
-            if(unselectRank) then
+            if unselectRank then
                 unselectRank:SetSelected(false)
-                if(unselectRank.name == "") then
+                if unselectRank.name == "" then
                     unselectRank:SetName(unselectRank.lastGoodName)
                 end
             end
@@ -419,17 +387,18 @@ function ZO_GuildRanks_Keyboard:SelectRank(rankId, playSound)
         self.selectedRankId = rankId
 
         local selectRank = self:GetRankById(rankId)
-        if(selectRank) then
+        if selectRank then
             selectRank:SetSelected(true)
 
             -- Play sound if as a result of a click
-            if(playSound) then
+            if playSound then
                 PlaySound(SOUNDS.GUILD_RANK_SELECTED)
             end
 
-            self:ClearPermissionIcons()
             self:RefreshRankInfo()
             self:RefreshRemoveRank()
+
+            self.permissionsGridList:RefreshGridList()
 
             return true
         end
@@ -445,18 +414,19 @@ function ZO_GuildRanks_Keyboard:RefreshEditPermissions()
     self.rankNameEditBG:SetHidden(not enabled)
     self.rankNameDisplay:SetHidden(enabled)
 
-    if(enabled) then
-        self.iconsContainer:SetHidden(false)
-        self.permissionsContainer:SetAnchor(TOPLEFT, self.iconsContainer, BOTTOMLEFT, 0, 19)
+    if enabled then
+        self.rankIconButtonContainer:SetHidden(false)
+        self.rankIconDisplayControl:SetHidden(true)
     else
-        self.iconsContainer:SetHidden(true)
-        self.permissionsContainer:SetAnchor(TOPLEFT, self.iconsContainer, TOPLEFT, 0, 0)
-        if(self:NeedsSave()) then
-            self:Cancel()
+        self.rankIconButtonContainer:SetHidden(true)
+        self.rankIconDisplayControl:SetHidden(false)
+        if self:NeedsSave() then
+            self:Reset()
         end
         ZO_Dialogs_ReleaseDialog("GUILD_ADD_RANK")
     end
     self:RefreshSaveEnabled()
+    self.permissionsGridList:CommitGridList()
 end
 
 function ZO_GuildRanks_Keyboard:RefreshAddRank()
@@ -467,7 +437,7 @@ end
 
 function ZO_GuildRanks_Keyboard:RefreshRemoveRank()
     self.removeRankEnabled = false
-    if(DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT)) then
+    if DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT) then
         local selectedRank = self:GetRankById(self.selectedRankId)
         --cant remove the guild rank
         self.removeRankEnabled = not (selectedRank.index ~= nil and IsGuildRankGuildMaster(self.guildId, selectedRank.index))
@@ -482,50 +452,13 @@ function ZO_GuildRanks_Keyboard:RefreshRankInfo()
     local rank = self:GetRankById(self.selectedRankId)
     self.rankNameDisplay:SetText(rank.name)
     self.rankNameEdit:SetText(rank.name)
-    self:RefreshPermissions(rank, SET_CHECK)
-    self:RefreshEditPermissions()
-    self:RefreshIconSelectors()
 end
 
 function ZO_GuildRanks_Keyboard:RefreshRankIcon()
     local rank = self:GetRankById(self.selectedRankId)
-    GetControl(self.control, "RankIcon"):SetTexture(GetGuildRankLargeIcon(rank.iconIndex))
-end
-
-function ZO_GuildRanks_Keyboard:RefreshPermissions(rank, setType)
-    local canPlayerEditPermissions = DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT)
-    for i = 1, #self.permissionControls do
-        local permissionControl = self.permissionControls[i]
-        local permissionEnabled = rank:IsPermissionSet(permissionControl.permission)
-        if(setType == SET_CHECK) then
-            local checkBox = GetControl(permissionControl, "Check")
-            ZO_CheckButton_SetCheckState(checkBox, permissionEnabled)
-            local enabled = canPlayerEditPermissions and CanEditGuildRankPermission(rank.id, permissionControl.permission)
-            ZO_CheckButton_SetEnableState(checkBox, enabled)
-        elseif(setType == SET_ICON) then
-            if(permissionEnabled) then
-                local iconTexture = GetControl(permissionControl, "Icon")
-                iconTexture:SetHidden(false)
-                iconTexture:SetTexture(GetGuildRankSmallIcon(rank.iconIndex))
-            end
-        end
-    end
-end
-
-function ZO_GuildRanks_Keyboard:ClearPermissionIcons()
-    for i = 1, #self.permissionControls do
-        local permissionControl = self.permissionControls[i]
-        local iconTexture = GetControl(permissionControl, "Icon")
-        iconTexture:SetHidden(true)
-    end
-end
-
-function ZO_GuildRanks_Keyboard:RefreshIconSelectors()
-    local selectedRank = self:GetRankById(self.selectedRankId)
-    local selectedIconIndex = selectedRank ~= nil and selectedRank.iconIndex or nil
-    for i = 1, #self.iconSelectorControls do
-        ZO_GuildRanks_Shared_RefreshIcon(self.iconSelectorControls[i], i, selectedIconIndex)
-    end
+    local texture = GetGuildRankLargeIcon(rank.iconIndex)
+    self.rankIconIconControl:SetTexture(texture)
+    self.rankIconDisplayControl:SetTexture(texture)
 end
 
 function ZO_GuildRanks_Keyboard:GetSelectedRankId()
@@ -535,7 +468,7 @@ end
 function ZO_GuildRanks_Keyboard:DoAllRanksHaveAName()
     for i = 1, #self.ranks do
         local rank = self.ranks[i]
-        if(rank.name == "") then
+        if rank.name == "" then
             return false
         end
     end
@@ -543,43 +476,27 @@ function ZO_GuildRanks_Keyboard:DoAllRanksHaveAName()
     return true
 end
 
-function ZO_GuildRanks_Keyboard:Cancel()
+function ZO_GuildRanks_Keyboard:Reset()
     self:ClearSavePending()
     self:RefreshRanksFromGuildData()
 end
 
 function ZO_GuildRanks_Keyboard:CanSave()
-    return not self.savePending and DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT) and self:DoAllRanksHaveAName() and self:NeedsSave() 
+    return not self.savePending and DoesPlayerHaveGuildPermission(self.guildId, GUILD_PERMISSION_PERMISSION_EDIT) and self:DoAllRanksHaveAName() and self:NeedsSave()
 end
 
 function ZO_GuildRanks_Keyboard:IsCurrentBlockingScene()
     return MAIN_MENU_MANAGER:GetBlockingSceneName() == "guildRanks"
 end
 
-function ZO_GuildRanks_Keyboard:AttemptSaveIfBlocking()
-    local attemptedSave = false
-    
+function ZO_GuildRanks_Keyboard:SaveIfBlocking()
     if self:IsCurrentBlockingScene() then
-        self:AttemptSaveAndExit()
-        attemptedSave = true
-    end
-    return attemptedSave
-end
-
-function ZO_GuildRanks_Keyboard:AttemptSaveAndExit()
-    if (self.canSave) then
-        self:ShowRankSaveChangesDialog()
-    else
-        self:ConfirmExit(false)
+        self:SaveAndExit()
     end
 end
 
-function ZO_GuildRanks_Keyboard:ConfirmExit(applyChanges)
-    if applyChanges then
-        self:Save()
-    else
-        self:Cancel()
-    end
+function ZO_GuildRanks_Keyboard:SaveAndExit()
+    self:Save()
 
     if not MAIN_MENU_MANAGER:HasBlockingSceneNextScene() and not self.pendingGuildChange then
         SCENE_MANAGER:HideCurrentScene()
@@ -588,17 +505,9 @@ function ZO_GuildRanks_Keyboard:ConfirmExit(applyChanges)
     MAIN_MENU_MANAGER:ClearBlockingScene(OnBlockingSceneActivated)
 end
 
-function ZO_GuildRanks_Keyboard:CancelExit()
-    MAIN_MENU_MANAGER:CancelBlockingSceneNextScene()
-end
-
 function ZO_GuildRanks_Keyboard:RefreshSaveEnabled()
     self.canSave = self:CanSave()
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
-end
-
-function ZO_GuildRanks_Keyboard:ShowRankSaveChangesDialog(dialogCallback, dialogParams)
-    ZO_Dialogs_ShowDialog("GUILD_RANK_SAVE_CHANGES", { callback = dialogCallback, params = dialogParams })
 end
 
 function ZO_GuildRanks_Keyboard:ChangeSelectedGuild(dialogCallback, dialogParams)
@@ -607,7 +516,10 @@ function ZO_GuildRanks_Keyboard:ChangeSelectedGuild(dialogCallback, dialogParams
     self.pendingGuildChange = self.guildId ~= guildEntry.guildId
 
     if self.pendingGuildChange then
-        self:ShowRankSaveChangesDialog(dialogCallback, dialogParams)
+        self:SaveAndExit()
+        if dialogCallback then
+            dialogCallback(dialogParams)
+        end
     end
 end
 
@@ -628,34 +540,33 @@ end
 
 function ZO_GuildRanks_Keyboard:OnSaveGuildRanksResponse(result, guildId)
     if self:IsGuildPendingChanges(guildId) then
-        if(result ~= SOCIAL_RESULT_NO_ERROR) then
-            self:ClearSavePending()
-            self:Cancel()
+        if result ~= SOCIAL_RESULT_NO_ERROR then
+            self:Reset()
         end
     end
 end
 
 function ZO_GuildRanks_Keyboard:OnGuildRanksChanged(guildId)
-    if(self:IsGuildPendingChanges(guildId) and self.savePending) then
+    if self:IsGuildPendingChanges(guildId) and self.savePending then
         self:ClearSavePending()
         self:RefreshRankIndices()
         self:RefreshSaveEnabled()
-    elseif (self:MatchesGuild(guildId)) then
+    elseif self:MatchesGuild(guildId) then
         self:RefreshRanksFromGuildData()
     end
 end
 
 function ZO_GuildRanks_Keyboard:OnGuildRankChanged(rankIndex, guildId)
-    if(self:IsGuildPendingChanges(guildId) and self.savePending) then
+    if self:IsGuildPendingChanges(guildId) and self.savePending then
         self:ClearSavePending()
         self:RefreshSaveEnabled()
-    elseif (self:MatchesGuild(guildId)) then
+    elseif self:MatchesGuild(guildId) then
         self:RefreshRanksFromGuildData()
     end
 end
 
 function ZO_GuildRanks_Keyboard:OnGuildMemberRankChanged(displayName)
-    if(displayName == GetDisplayName()) then
+    if displayName == GetDisplayName() then
         self:RefreshRankInfo()
     end
 end
@@ -668,20 +579,23 @@ end
 --Local XML
 
 function ZO_GuildRanks_Keyboard:GuildRankHeader_OnMouseEnter(header)
-    local rankId = header.rank.id
-    if(self.selectedRankId ~= rankId) then
-        self:RefreshPermissions(header.rank, SET_ICON)
-    end
     ZO_IconHeader_OnMouseEnter(header)
+
+    self.mousedOverRank = header.rank
+    self.permissionsGridList:RefreshGridList()
 end
 
 function ZO_GuildRanks_Keyboard:GuildRankHeader_OnMouseExit(header)
-    self:ClearPermissionIcons()
+    self.mousedOverRank = nil
+    self.permissionsGridList:RefreshGridList()
+
     ZO_IconHeader_OnMouseExit(header)
 end
 
 function ZO_GuildRanks_Keyboard:GuildRankHeader_OnMouseDown(header)
     local rankId = header.rank.id
+    self:RefreshSaveEnabled()
+    self:Save()
     self:SelectRank(rankId, PLAY_SELECT_RANK_SOUND)
 end
 
@@ -693,36 +607,9 @@ function ZO_GuildRanks_Keyboard:GuildRankHeader_OnDragStart(header)
     self:StartDragging(header.rank)
 end
 
-function ZO_GuildRanks_Keyboard:GuildPermission_OnToggled(permission, checked)
-    local rank = self:GetRankById(self.selectedRankId)
-    rank:SetPermission(permission , checked)
-    GUILD_RANKS:RefreshSaveEnabled()
-end
-
-function ZO_GuildRanks_Keyboard:GuildRankIconSelector_OnMouseEnter(control)
-    self.iconHighlight:ClearAnchors()
-    self.iconHighlight:SetAnchor(CENTER, control, CENTER, 0, 0)
-    self.iconHighlight:SetHidden(false)
-end
-
-function ZO_GuildRanks_Keyboard:GuildRankIconSelector_OnMouseExit(control)
-    self.iconHighlight:SetHidden(true)
-end
-
-function ZO_GuildRanks_Keyboard:GuildRankIconSelector_OnMouseClicked(control)
-    local selectedRank = self:GetRankById(self.selectedRankId)
-    if(selectedRank) then
-        selectedRank:SetIconIndex(control.iconIndex)
-        self:RefreshSaveEnabled()
-        self:RefreshIconSelectors()
-        self:RefreshRankIcon()
-		PlaySound(SOUNDS.GUILD_RANK_LOGO_SELECTED)
-    end
-end
-
 function ZO_GuildRanks_Keyboard:GuildRankNameEdit_OnTextChanged(control)
     local selectedRank = self:GetRankById(self.selectedRankId)
-    if(selectedRank) then
+    if selectedRank then
         selectedRank:SetName(control:GetText())
     end
 end
@@ -733,20 +620,14 @@ function ZO_GuildRankNameEdit_OnTextChanged(self)
     GUILD_RANKS:GuildRankNameEdit_OnTextChanged(self)
 end
 
-function ZO_GuildRankIconSelector_OnMouseEnter(self)
-    GUILD_RANKS:GuildRankIconSelector_OnMouseEnter(self)
+function ZO_GuildRank_RankIconPickerIcon_Keyboard_OnMouseEnter(self)
+    if ZO_CheckButton_IsEnabled(self:GetNamedChild("IconContainerFrame")) then
+        self:GetNamedChild("Highlight"):SetHidden(false)
+    end
 end
 
-function ZO_GuildRankIconSelector_OnMouseExit(self)
-    GUILD_RANKS:GuildRankIconSelector_OnMouseExit(self)
-end
-
-function ZO_GuildRankIconSelector_OnMouseClicked(self)
-    GUILD_RANKS:GuildRankIconSelector_OnMouseClicked(self)
-end
-
-function ZO_GuildPermissionCheck_OnToggled(self, checked)
-    GUILD_RANKS:GuildPermission_OnToggled(self:GetParent().permission, checked)
+function ZO_GuildRank_RankIconPickerIcon_Keyboard_OnMouseExit(self)
+    self:GetNamedChild("Highlight"):SetHidden(true)
 end
 
 function ZO_GuildRankHeaderChild_OnDragStart(self)
@@ -773,3 +654,47 @@ end
 function ZO_GuildRanks_OnInitialized(self)
     GUILD_RANKS = ZO_GuildRanks_Keyboard:New(self)
 end
+
+function ZO_RankIconPickerDialog_OnInitialized(self)
+    self.rankIconPickerGridListControl = self:GetNamedChild("RankIconPickerContainerPanel")
+
+    local function OnRankIconPickedCallback(newIconIndex)
+        local selectedRank = GUILD_RANKS:GetRankById(GUILD_RANKS.selectedRankId)
+        if selectedRank then
+            selectedRank:SetIconIndex(newIconIndex)
+            GUILD_RANKS:RefreshSaveEnabled()
+            self.rankIconPicker:RefreshGridList()
+            GUILD_RANKS:RefreshRankIcon()
+            PlaySound(SOUNDS.GUILD_RANK_LOGO_SELECTED)
+        end
+    end
+
+    self.rankIconPicker = ZO_GuildRankIconPicker_Keyboard:New(self.rankIconPickerGridListControl)
+    self.rankIconPicker:SetGetSelectedRankFunction(function() return GUILD_RANKS:GetRankById(GUILD_RANKS.selectedRankId) end)
+    self.rankIconPicker:SetRankIconPickedCallback(OnRankIconPickedCallback)
+
+    ZO_Dialogs_RegisterCustomDialog("RankIconPicker",
+    {
+        title =
+        {
+            text = SI_GUILD_RANK_ICONS_DIALOG_HEADER,
+        },
+        mainText =
+        {
+            text = "",
+        },
+        setup = function()
+            self.rankIconPicker:RefreshGridList()
+        end,
+        customControl = self,
+        buttons =
+        {
+            [1] =
+            {
+                control = self:GetNamedChild("Close"),
+                text = SI_DIALOG_CLOSE,
+            },
+        }
+    })
+end
+    

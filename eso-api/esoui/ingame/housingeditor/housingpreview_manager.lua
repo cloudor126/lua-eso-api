@@ -20,9 +20,9 @@ function ZO_HousingPreview_Manager:RegisterForEvents()
         local zoneHouseId = GetCurrentZoneHouseId()
         if zoneHouseId > 0 then
             local collectibleId = GetCollectibleIdForHouse(zoneHouseId)
+            local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
             local displayInfo = self.displayInfo
-            local houseName = GetCollectibleName(collectibleId)
-            displayInfo.houseName = zo_strformat(SI_COLLECTIBLE_NAME_FORMATTER, houseName)
+            displayInfo.houseName = collectibleData:GetFormattedName()
             local foundInZoneId = GetHouseFoundInZoneId(zoneHouseId)
             displayInfo.houseFoundInLocation = GetZoneNameById(foundInZoneId)
             local houseCategory = GetHouseCategoryType(zoneHouseId)
@@ -56,18 +56,17 @@ end
 function ZO_HousingPreview_Manager:UpdateHouseStoreData()
     ZO_ClearNumericallyIndexedTable(self.houseStoreData)
     for entryIndex = 1, GetNumStoreItems() do
-        local _, name, _, price, _, meetsRequirementsToBuy, _, _, _, _, _, _, _, entryType = GetStoreEntryInfo(entryIndex)
+        local _, name, _, price, _, meetsRequirementsToBuy, _, _, _, _, _, _, _, entryType, buyStoreFailure, buyErrorStringId = GetStoreEntryInfo(entryIndex)
 
         if entryType == STORE_ENTRY_TYPE_HOUSE_WITH_TEMPLATE then
             local houseTemplateId = GetStoreEntryHouseTemplateId(entryIndex)
-            local requirementsToBuyErrorId = not meetsRequirementsToBuy and GetStoreEntryBuyRequirementErrorId(entryIndex) or nil
             local houseTemplateData =
             {
                 goldStoreEntryIndex = entryIndex,
                 houseTemplateId = houseTemplateId,
                 name = name,
                 goldPrice = price,
-                requirementsToBuyErrorId = requirementsToBuyErrorId,
+                requiredToBuyErrorText = not meetsRequirementsToBuy and ZO_StoreManager_GetRequiredToBuyErrorText(buyStoreFailure, buyErrorStringId) or nil,
             }
 
             table.insert(self.houseStoreData, houseTemplateData)
@@ -104,15 +103,17 @@ function ZO_HousingPreview_Manager:UpdateHouseMarketData(marketState)
                         local marketProductId = marketProductListings[i]
                         local presentationIndex = marketProductListings[i + 1]
 
-                        local currencyType, _, _, costAfterDiscount = GetMarketProductPricingByPresentation(marketProductId, presentationIndex)
+                        local currencyType, cost, costAfterDiscount, discountPercent, esoPlusCost = GetMarketProductPricingByPresentation(marketProductId, presentationIndex)
 
-                        --Don't allow the same currency twice.  This is a nonsense scenario but technically possible.
+                        --Don't allow the same currency twice. This is a nonsense scenario but technically possible.
                         if not houseTemplateData.marketPurchaseOptions[currencyType] then
                             local marketPurchaseData =
                             {
                                 marketProductId = marketProductId,
                                 presentationIndex = presentationIndex,
-                                cost = costAfterDiscount,
+                                cost = cost,
+                                costAfterDiscount = costAfterDiscount,
+                                discountPercent = discountPercent,
                             }
                             houseTemplateData.marketPurchaseOptions[currencyType] = marketPurchaseData
                             houseTemplateData.name = houseTemplateData.name or GetMarketProductDisplayName(marketProductId)
@@ -170,4 +171,4 @@ function ZO_HousingPreview_Manager:RequestOpenMarket()
     end
 end
 
-HOUSE_PREVIEW_MANAGER = ZO_HousingPreview_Manager:New()
+ZO_HOUSE_PREVIEW_MANAGER = ZO_HousingPreview_Manager:New()

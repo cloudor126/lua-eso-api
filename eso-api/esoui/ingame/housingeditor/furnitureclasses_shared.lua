@@ -19,6 +19,7 @@ end
 
 function ZO_FurnitureDataBase:Initialize(...)
     self.passesTextFilter = true
+    self.theme = FURNITURE_THEME_TYPE_ALL
 end
 
 function ZO_FurnitureDataBase:GetRawName()
@@ -93,6 +94,20 @@ function ZO_FurnitureDataBase:IsBeingPreviewed()
     return false
 end
 
+function ZO_FurnitureDataBase:PassesTheme(theme)
+    return theme == FURNITURE_THEME_TYPE_ALL or self.theme == theme
+end
+
+function ZO_FurnitureDataBase:GetRawNameFromCollectibleData(collectibleData)
+    local categoryType = collectibleData:GetCategoryType()
+    --Only house banks include the nickname
+    if categoryType == COLLECTIBLE_CATEGORY_TYPE_HOUSE_BANK then
+        return collectibleData:GetRawNameWithNickname()
+    else
+        return collectibleData:GetName()
+    end
+end
+
 function ZO_FurnitureDataBase:RefreshInfo(...)
     assert(false)  --must be overridden
 end
@@ -128,14 +143,16 @@ function ZO_PlaceableFurnitureItem:RefreshInfo(bagId, slotIndex)
     self.slotIndex = slotIndex
 
     self.furnitureDataId = GetItemFurnitureDataId(bagId, slotIndex)
-    local categoryId, subcategoryId = GetFurnitureDataCategoryInfo(self.furnitureDataId)
+    local categoryId, subcategoryId, furnitureTheme = GetFurnitureDataInfo(self.furnitureDataId)
     self.categoryId = categoryId
     self.subcategoryId = subcategoryId
+    self.theme = furnitureTheme
 
     self.slotData = SHARED_INVENTORY:GenerateSingleSlotData(bagId, slotIndex)
 
     local stackCount = self:GetStackCount()
-    self.formattedStackCount = ZO_AbbreviateNumber(stackCount, NUMBER_ABBREVIATION_PRECISION_TENTHS, USE_LOWERCASE_NUMBER_SUFFIXES)
+    local USE_LOWERCASE_NUMBER_SUFFIXES = false
+    self.formattedStackCount = zo_strformat(SI_NUMBER_FORMAT, ZO_AbbreviateNumber(stackCount, NUMBER_ABBREVIATION_PRECISION_TENTHS, USE_LOWERCASE_NUMBER_SUFFIXES))
 end
 
 function ZO_PlaceableFurnitureItem:Preview()
@@ -235,16 +252,17 @@ end
 function ZO_PlaceableFurnitureCollectible:RefreshInfo(collectibleId)
     self.collectibleId = collectibleId
 
-    local collData = COLLECTIONS_INVENTORY_SINGLETON:GetSingleCollectibleData(collectibleId, IsCollectibleCategoryPlaceableFurniture)
-    if collData then
-        self.rawName = collData.name
+    local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+    if collectibleData and collectibleData:IsPlaceableFurniture() then
+        self.rawName = self:GetRawNameFromCollectibleData(collectibleData)
         self.formattedName = nil
-        self.icon = collData.iconFile
+        self.icon = collectibleData:GetIcon()
 
         self.furnitureDataId = GetCollectibleFurnitureDataId(collectibleId)
-        local categoryId, subcategoryId = GetFurnitureDataCategoryInfo(self.furnitureDataId)
+        local categoryId, subcategoryId, furnitureTheme = GetFurnitureDataInfo(self.furnitureDataId)
         self.categoryId = categoryId
         self.subcategoryId = subcategoryId
+        self.theme = furnitureTheme
     end
 end
 
@@ -283,28 +301,47 @@ function ZO_RetrievableFurniture:Initialize(...)
 end
 
 function ZO_RetrievableFurniture:RefreshInfo(retrievableFurnitureId)
-    if self.retrievableFurnitureId == retrievableFurnitureId then
-        return
+    local rawName, icon, furnitureDataId = GetPlacedHousingFurnitureInfo(retrievableFurnitureId)
+
+    --Only update these on id change. 
+    if retrievableFurnitureId ~= self.retrievableFurnitureId then
+        self.retrievableFurnitureId = retrievableFurnitureId
+        self.icon = icon
+        self.furnitureDataId = furnitureDataId
+        self.quality = GetPlacedHousingFurnitureQuality(retrievableFurnitureId)
+    
+        local categoryId, subcategoryId, furnitureTheme = GetFurnitureDataInfo(furnitureDataId)
+        self.categoryId = categoryId
+        self.subcategoryId = subcategoryId
+        self.theme = furnitureTheme
+
+        local playerWorldX, playerWorldY, playerWorldZ = GetPlayerWorldPositionInHouse()
+        self:RefreshPositionalData(playerWorldX, playerWorldY, playerWorldZ, GetPlayerCameraHeading())
     end
 
-    local rawName, icon, furnitureDataId = GetPlacedHousingFurnitureInfo(retrievableFurnitureId)
-    self.retrievableFurnitureId = retrievableFurnitureId
+    --Refresh the name which depends on the collectible nickname.
+    self.collectibleId = nil
+    local itemLink, collectibleLink = GetPlacedFurnitureLink(retrievableFurnitureId)
+    if collectibleLink ~= "" then
+        local collectibleId = GetCollectibleIdFromLink(collectibleLink)
+        if collectibleId then
+            self.collectibleId = collectibleId
+            local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+            if collectibleData then
+                rawName = self:GetRawNameFromCollectibleData(collectibleData)
+            end
+        end
+    end
     self.rawName = rawName
     self.formattedName = nil
-    self.icon = icon
-    self.furnitureDataId = furnitureDataId
-    self.quality = GetPlacedHousingFurnitureQuality(retrievableFurnitureId)
-    
-    local categoryId, subcategoryId = GetFurnitureDataCategoryInfo(furnitureDataId)
-    self.categoryId = categoryId
-    self.subcategoryId = subcategoryId
-
-    local playerWorldX, playerWorldY, playerWorldZ = GetPlayerWorldPositionInHouse()
-    self:RefreshPositionalData(playerWorldX, playerWorldY, playerWorldZ, GetPlayerCameraHeading())
 end
 
 function ZO_RetrievableFurniture:GetFurnitureId()
     return self.retrievableFurnitureId
+end
+
+function ZO_RetrievableFurniture:GetCollectibleId()
+    return self.collectibleId
 end
 
 function ZO_RetrievableFurniture:GetRetrievableFurnitureId()
@@ -384,33 +421,28 @@ function ZO_HousingMarketProduct:RefreshInfo(marketProductId, presentationIndex)
     self.marketProductId = marketProductId
     self.presentationIndex = presentationIndex
 
-    self.purchaseState = GetMarketProductPurchaseState(marketProductId)
+    self.displayState = ZO_GetMarketProductDisplayState(marketProductId)
 
-    local rawName, description, icon, isNew, isFeatured = GetMarketProductInfo(marketProductId)
-    self.rawName = rawName
+    self.rawName = GetMarketProductDisplayName(marketProductId)
     self.formattedName = nil
 
-    self.icon = icon
+    self.icon = GetMarketProductIcon(marketProductId)
 
-    local currencyType, cost, hasDiscount, costAfterDiscount, discountPercent = self:GetMarketProductPricingByPresentation()
-    self.isFree = (cost == 0 or costAfterDiscount == 0)
-    self.onSale = hasDiscount
-    self.isNew = isNew
+    local currencyType, cost, costAfterDiscount, discountPercent, esoPlusCost = self:GetMarketProductPricingByPresentation()
+    self.isFree = costAfterDiscount == 0
+    self.onSale = discountPercent > 0
+    self.isNew = IsMarketProductNew(marketProductId)
     self.currencyType = currencyType
     self.cost = cost
     self.costAfterDiscount = costAfterDiscount
     self.discountPercent = discountPercent
-
-    if GetMarketProductType(marketProductId) == MARKET_PRODUCT_TYPE_ITEM then
-        self.quality = select(4, GetMarketProductItemInfo(marketProductId))
-    else
-        self.quality = ITEM_QUALITY_NORMAL
-    end
+    self.quality = GetMarketProductQuality(marketProductId)
 
     self.furnitureDataId = GetMarketProductFurnitureDataId(marketProductId)
-    local categoryId, subcategoryId = GetFurnitureDataCategoryInfo(self.furnitureDataId)
+    local categoryId, subcategoryId, furnitureTheme = GetFurnitureDataInfo(self.furnitureDataId)
     self.categoryId = categoryId
     self.subcategoryId = subcategoryId
+    self.theme = furnitureTheme
 end
 
 function ZO_HousingMarketProduct:GetMarketProductId()
@@ -450,17 +482,17 @@ function ZO_HousingMarketProduct:GetMarketProductPricingByPresentation()
     return GetMarketProductPricingByPresentation(self.marketProductId, self.presentationIndex)
 end
 
-function ZO_HousingMarketProduct:GetTimeLeftInSeconds()
-    return GetMarketProductTimeLeftInSeconds(self.marketProductId)
+function ZO_HousingMarketProduct:GetLTOTimeLeftInSeconds()
+    return GetMarketProductLTOTimeLeftInSeconds(self.marketProductId)
 end
 
 function ZO_HousingMarketProduct:IsLimitedTimeProduct()
-    local remainingTime = self:GetTimeLeftInSeconds()
+    local remainingTime = self:GetLTOTimeLeftInSeconds()
     return remainingTime > 0 and remainingTime <= ZO_ONE_MONTH_IN_SECONDS
 end
 
 function ZO_HousingMarketProduct:SetTimeLeftOnLabel(label)
-    local remainingTime = self:GetTimeLeftInSeconds()
+    local remainingTime = self:GetLTOTimeLeftInSeconds()
     if remainingTime > 0 then
         if remainingTime >= ZO_ONE_DAY_IN_SECONDS then
             label:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
@@ -481,6 +513,10 @@ function ZO_HousingMarketProduct.SetCalloutBackgroundColor(leftBackground, right
     centerBackground:SetColor(r, g, b, TEXT_CALLOUT_BACKGROUND_ALPHA)
 end
 
+function ZO_HousingMarketProduct:CanBePurchased()
+    return self.displayState == MARKET_PRODUCT_DISPLAY_STATE_NOT_PURCHASED
+end
+
 --
 --[[ FurnitureCategory ]]--
 --
@@ -493,6 +529,7 @@ function ZO_FurnitureCategory:New(...)
 end
 
 function ZO_FurnitureCategory:Initialize(parent, categoryId)
+    internalassert(parent ~= nil or self:IsRoot(), "Non-root categories must have a parent category")
     self.parentCategory = parent
     self.entriesData = {}
     self.subcategories = {}
@@ -501,8 +538,11 @@ function ZO_FurnitureCategory:Initialize(parent, categoryId)
         self.categoryId = categoryId
         if categoryId == ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY then
             self.name = GetString(SI_HOUSING_FURNITURE_NEEDS_CATEGORIZATION)
+            self.categoryOrder = 0
         else
-            self.name = GetFurnitureCategoryInfo(categoryId)
+            local categoryName, _, _, categoryOrder = GetFurnitureCategoryInfo(categoryId)
+            self.name = categoryName
+            self.categoryOrder = categoryOrder
         end
     end
 end
@@ -563,9 +603,11 @@ function ZO_FurnitureCategory:RemoveSubcategory(subcategoryId)
 end
 
 function ZO_FurnitureCategory:GetSubcategory(subcategoryId)
-    for i, subcategory in ipairs(self.subcategories) do
-        if subcategory.categoryId == subcategoryId then
-            return subcategory, i
+    local subcategories = self.subcategories
+    -- inlined for performance
+    for subcategoryIndex = 1, #self.subcategories do
+        if subcategories[subcategoryIndex].categoryId == subcategoryId then
+            return subcategories[subcategoryIndex], subcategoryIndex
         end
     end
 end
@@ -575,7 +617,7 @@ function ZO_FurnitureCategory:GetHasSubcategories()
 end
 
 function ZO_FurnitureCategory:IsRoot()
-    return self.parentCategory == nil
+    return false
 end
 
 function ZO_FurnitureCategory:GetNumEntryItemsRecursive(filterFunction)
@@ -595,7 +637,11 @@ end
 
 do
     local function SortCategories(a, b)
-        return a.name < b.name
+        if a.categoryOrder == b.categoryOrder then
+            return a.name < b.name
+        end
+
+        return a.categoryOrder < b.categoryOrder
     end
 
     function ZO_FurnitureCategory:SortCategoriesRecursive()
@@ -604,6 +650,59 @@ do
         for i, subcategory in ipairs(self.subcategories) do
             subcategory:SortCategoriesRecursive()
         end
+    end
+end
+
+--
+--[[ RootFurnitureCategory ]]--
+--
+ZO_RootFurnitureCategory = ZO_FurnitureCategory:Subclass()
+
+function ZO_RootFurnitureCategory:New(...)
+    return ZO_FurnitureCategory.New(self, ...)
+end
+
+function ZO_RootFurnitureCategory:Initialize(rootCategoryName)
+    local NO_PARENT = nil
+    local NO_CATEGORY_ID = nil
+    ZO_FurnitureCategory.Initialize(self, NO_PARENT, NO_CATEGORY_ID)
+    self.rootCategoryName = rootCategoryName
+end
+
+function ZO_RootFurnitureCategory:GetRootCategoryName()
+    return self.rootCategoryName
+end
+
+-- Override
+function ZO_RootFurnitureCategory:IsRoot()
+    return true
+end
+
+function ZO_RootFurnitureCategory:GetOrCreateMostSpecificCategory(categoryId, subcategoryId)
+    if categoryId and categoryId > 0 then
+        local categoryData = self:GetSubcategory(categoryId)
+        if not categoryData then
+            self:AddSubcategory(categoryId, ZO_FurnitureCategory:New(self, categoryId))
+            categoryData = self:GetSubcategory(categoryId)
+        end
+
+        if subcategoryId and subcategoryId > 0 then
+            local subcategoryData = categoryData:GetSubcategory(subcategoryId)
+            if not subcategoryData then
+                categoryData:AddSubcategory(subcategoryId, ZO_FurnitureCategory:New(categoryData, subcategoryId))
+                subcategoryData = categoryData:GetSubcategory(subcategoryId)
+            end
+            return subcategoryData
+        else
+            return categoryData
+        end
+    else
+        local categoryData = self:GetSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY)
+        if not categoryData then
+            self:AddSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY, ZO_FurnitureCategory:New(self, ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY))
+            categoryData = self:GetSubcategory(ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY)
+        end
+        return categoryData
     end
 end
 

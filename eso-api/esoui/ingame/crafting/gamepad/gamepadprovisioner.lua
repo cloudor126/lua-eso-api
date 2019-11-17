@@ -1,3 +1,5 @@
+ZO_GAMEPAD_PROVISIONER_INGREDIENTS_BAR_OFFSET_X = (ZO_GAMEPAD_QUADRANT_1_RIGHT_OFFSET + ZO_GAMEPAD_UI_REFERENCE_WIDTH) / 2
+
 local GAMEPAD_PROVISIONER_OPTIONS_TEMPLATE = "ZO_GamepadLeftCheckboxOptionTemplate"
 
 local GAMEPAD_PROVISIONER_OPTION_FILTER_INGREDIENTS = 1
@@ -53,16 +55,15 @@ function ZO_GamepadProvisioner:Initialize(control)
 
             -- refresh the recipe details on show, since they were cleared/hidden when the scene hid
             -- and we may not have had a change in our list to trigger a refresh
-            local targetData = self.recipeList:GetTargetData()
-            self:RefreshRecipeDetails(targetData)
+            self:RefreshRecipeDetails(self:GetRecipeData())
         elseif newState == SCENE_HIDDEN then
             SYSTEMS:GetObject("craftingResults"):SetCraftingTooltip(nil)
             ZO_GamepadGenericHeader_Deactivate(self.header)
             self.recipeList:Deactivate()
 
             -- refresh the recipe details passing nil in to appropriately hide/clear the tooltip and ingredient list
-            local NO_SELECTED_DATA = nil
-            self:RefreshRecipeDetails(NO_SELECTED_DATA)
+            local NO_RECIPE = nil
+            self:RefreshRecipeDetails(NO_RECIPE)
 
             self.control:GetNamedChild("IngredientsBar"):SetHidden(false)
 
@@ -83,9 +84,6 @@ function ZO_GamepadProvisioner:Initialize(control)
 
             KEYBIND_STRIP:RemoveDefaultExit()
             KEYBIND_STRIP:AddKeybindButtonGroup(self.optionsKeybindStripDescriptor)
-            
-            self.inOptionsMenu = false
-            self.isCrafting = false
         elseif newState == SCENE_HIDDEN then
             self.optionList:Deactivate()
 
@@ -129,8 +127,6 @@ function ZO_GamepadProvisioner:Initialize(control)
     self:InitializeKeybindStripDescriptors()
     self:InitializeDetails()
 
-    local titleString = ZO_GamepadCraftingUtils_GetLineNameForCraftingType(CRAFTING_TYPE_PROVISIONING)
-
     ZO_GamepadCraftingUtils_InitializeGenericHeader(self, ZO_GAMEPAD_HEADER_TABBAR_CREATE)
 
     CALLBACK_MANAGER:RegisterCallback("CraftingAnimationsStarted", function() 
@@ -142,13 +138,7 @@ function ZO_GamepadProvisioner:Initialize(control)
     CALLBACK_MANAGER:RegisterCallback("CraftingAnimationsStopped", function() 
         if SCENE_MANAGER:IsShowing(self.mainSceneName) then
             self.recipeList:SetActive(true)
-
-            self.isCrafting = false
         end
-    end)
-
-    self.control:RegisterForEvent(EVENT_INVENTORY_IS_FULL, function()
-        self.isCrafting = false
     end)
 
     self:SetDefaultProvisioningSettings()
@@ -169,18 +159,18 @@ ZO_GamepadProvisioner.EMBEDDED_SETTINGS =
 }
 
 function ZO_GamepadProvisioner:InitializeSettings()
-    local function GenerateTab(nameStringId, filterType)
+    local function GenerateTab(filterType)
         return {
-            text = GetString(nameStringId),
+            text = GetString("SI_PROVISIONERSPECIALINGREDIENTTYPE", filterType),
             callback = function()
                 self:OnTabFilterChanged(filterType)
             end,
         }
     end
 
-    local foodTab = GenerateTab(SI_PROVISIONER_FILTER_COOK, PROVISIONER_SPECIAL_INGREDIENT_TYPE_SPICES)
-    local drinkTab = GenerateTab(SI_PROVISIONER_FILTER_BREW, PROVISIONER_SPECIAL_INGREDIENT_TYPE_FLAVORING)
-    local furnishingsTab = GenerateTab(SI_PROVISIONER_FILTER_FURNISHINGS, PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING)
+    local foodTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_SPICES)
+    local drinkTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_FLAVORING)
+    local furnishingsTab = GenerateTab(PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING)
 
     local provisioningSettings = ZO_GamepadProvisioner.PROVISIONING_SETTINGS
     provisioningSettings.tabs = {foodTab, drinkTab, furnishingsTab}
@@ -220,6 +210,8 @@ end
 function ZO_GamepadProvisioner:InitializeKeybindStripDescriptors()
     -- back descriptors for screen / options screen
     local startButton = {
+        --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+        name = "Gamepad Provisioner Default Exit",
         alignment = KEYBIND_STRIP_ALIGN_LEFT,
         keybind = "UI_SHORTCUT_EXIT",
         order = -10000,
@@ -245,11 +237,7 @@ function ZO_GamepadProvisioner:InitializeKeybindStripDescriptors()
         end
     }
 
-    local optionsBackButton = ZO_ShallowTableCopy(backButton)
-    optionsBackButton.callback = function()
-        self.inOptionsMenu = false
-        SCENE_MANAGER:HideCurrentScene()
-    end
+    local optionsBackButton = KEYBIND_STRIP:GetDefaultGamepadBackButtonDescriptor()
 
     -- recipe list keybinds
     self.mainKeybindStripDescriptor =
@@ -260,38 +248,44 @@ function ZO_GamepadProvisioner:InitializeKeybindStripDescriptors()
         {
             name = function()
                 local cost = 0
-                local targetData = self.recipeList:GetTargetData()
-                if targetData then
-                    cost = GetCostToCraftProvisionerItem(targetData.recipeListIndex, targetData.recipeIndex)
+                local recipeData = self:GetRecipeData()
+                if recipeData then
+                    cost = GetCostToCraftProvisionerItem(recipeData.recipeListIndex, recipeData.recipeIndex)
                 end
                 return ZO_CraftingUtils_GetCostToCraftString(cost)
             end,
-
             keybind = "UI_SHORTCUT_SECONDARY",
-
+            gamepadOrder = 1000,
             callback = function()
-                if not self.inOptionsMenu then
-                    self.isCrafting = true
-                    self:Create()
-                end
+                self:Create(1)
             end,
+            enabled = function()
+                return self:ShouldCraftButtonBeEnabled()
+            end,
+        },
 
-            visible = function() return not ZO_CraftingUtils_IsPerformingCraftProcess() and self:IsCraftable() end,
+        -- Craft multiple
+        {
+            name = GetString(SI_GAMEPAD_CRAFT_MULTIPLE),
+            keybind = "UI_SHORTCUT_QUATERNARY",
+            gamepadOrder = 1010,
+            callback = function()
+                local itemLink = GetRecipeResultItemLink(self:GetRecipeIndices())
+                ZO_GamepadCraftingUtils_ShowMultiCraftDialog(self, itemLink)
+            end,
+            enabled = function()
+                return self:ShouldMultiCraftButtonBeEnabled()
+            end,
         },
 
         -- Options (filtering)
         {
             name = GetString(SI_CHAT_CONFIG_OPTIONS),
-
             keybind = "UI_SHORTCUT_TERTIARY",
-
+            gamepadOrder = 1020,
             callback = function()
-                if not self.isCrafting then
-                    self.inOptionsMenu = true
-                    self:ShowOptions()
-                end
+                self:ShowOptions()
             end,
-
             visible = function()
                 return not ZO_CraftingUtils_IsPerformingCraftProcess()
             end,
@@ -308,15 +302,16 @@ function ZO_GamepadProvisioner:InitializeKeybindStripDescriptors()
             end,
 
             keybind = "UI_SHORTCUT_RIGHT_STICK",
+            gamepadOrder = 1030,
 
             callback = function()
                 self:TogglePreviewMode()
             end,
 
             visible = function()
-                local targetData = self.recipeList:GetTargetData()
-                if targetData then
-                    return self:CanPreviewRecipe(targetData)
+                local recipeData = self:GetRecipeData()
+                if recipeData then
+                    return self:CanPreviewRecipe(recipeData)
                 else
                     return false
                 end
@@ -405,6 +400,11 @@ end
 
 function ZO_GamepadProvisioner:OnTabFilterChanged(filterType)
     if self.filterType ~= filterType then
+        if self.filterType == PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING then
+            if SYSTEMS:GetObject("itemPreview"):IsInteractionCameraPreviewEnabled() then
+                self:TogglePreviewMode()
+            end
+        end
         self.filterType = filterType
         self:DirtyRecipeList()
     end
@@ -418,22 +418,22 @@ function ZO_GamepadProvisioner:RefreshRecipeList()
     -- first construct the full table of filtered recipes
     local recipeDataEntries = {}
 
-    local checkNumCreatable = self.optionDataList[GAMEPAD_PROVISIONER_OPTION_FILTER_INGREDIENTS].currentValue
-    local checkSkills = self.optionDataList[GAMEPAD_PROVISIONER_OPTION_FILTER_SKILLS].currentValue
+    local requireIngredients = self.optionDataList[GAMEPAD_PROVISIONER_OPTION_FILTER_INGREDIENTS].currentValue
+    local requireSkills = self.optionDataList[GAMEPAD_PROVISIONER_OPTION_FILTER_SKILLS].currentValue
     local craftingInteractionType = GetCraftingInteractionType()
     
     local recipeData = PROVISIONER_MANAGER:GetRecipeData()
     for _, recipeList in pairs(recipeData) do
         for _, recipe in ipairs(recipeList.recipes) do
-            if self:DoesRecipePassFilter(recipe.specialIngredientType, checkNumCreatable, recipe.numCreatable, checkSkills, recipe.tradeskillsLevelReqs, recipe.qualityReq, craftingInteractionType, recipe.requiredCraftingStationType) then
+            if self:DoesRecipePassFilter(recipe.specialIngredientType, requireIngredients, recipe.maxIterationsForIngredients, requireSkills, recipe.tradeskillsLevelReqs, recipe.qualityReq, craftingInteractionType, recipe.requiredCraftingStationType) then
                 local dataEntry = ZO_GamepadEntryData:New(zo_strformat(SI_PROVISIONER_RECIPE_NAME_COUNT_NONE, recipe.name), recipe.iconFile, recipe.iconFile)
                 dataEntry:SetDataSource(recipe)
                 dataEntry:SetNameColors(dataEntry:GetColorsBasedOnQuality(recipe.quality))
                 dataEntry:SetSubLabelColors(ZO_ERROR_COLOR, ZO_ERROR_COLOR)
-                dataEntry:SetStackCount(recipe.numCreatable)
+                dataEntry:SetStackCount(recipe.maxIterationsForIngredients)
                 dataEntry:SetSubLabelTemplate("ZO_ProvisioningSubLabelTemplate")
 
-                if not recipe.passesTradeskillLevelReqs or not recipe.passesQualityLevelReq or recipe.numCreatable == 0 then
+                if not recipe.passesTradeskillLevelReqs or not recipe.passesQualityLevelReq or recipe.maxIterationsForIngredients == 0 then
                     dataEntry:SetIconTint(ZO_ERROR_COLOR, ZO_ERROR_COLOR)
                 end
 
@@ -483,14 +483,13 @@ function ZO_GamepadProvisioner:RefreshRecipeList()
 end
 
 function ZO_GamepadProvisioner:TogglePreviewMode()
-    ITEM_PREVIEW_GAMEPAD:ToggleInteractionCameraPreview(FRAME_TARGET_CRAFTING_GAMEPAD_FRAGMENT, FRAME_PLAYER_ON_SCENE_HIDDEN_FRAGMENT, FURNITURE_BROWSER_GAMEPAD_ITEM_PREVIEW_OPTIONS_FRAGMENT)
+    ITEM_PREVIEW_GAMEPAD:ToggleInteractionCameraPreview(FRAME_TARGET_CRAFTING_GAMEPAD_FRAGMENT, FRAME_PLAYER_ON_SCENE_HIDDEN_FRAGMENT, GAMEPAD_NAV_QUADRANT_2_3_4_FURNITURE_ITEM_PREVIEW_OPTIONS_FRAGMENT)
     if ITEM_PREVIEW_GAMEPAD:IsInteractionCameraPreviewEnabled() then
         self.control:GetNamedChild("IngredientsBar"):SetHidden(true)
     else
         self.control:GetNamedChild("IngredientsBar"):SetHidden(false)
     end
-    local targetData = self.recipeList:GetTargetData()
-    self:RefreshRecipeDetails(targetData)
+    self:RefreshRecipeDetails(self:GetRecipeData())
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.mainKeybindStripDescriptor)
 end
 
@@ -557,19 +556,8 @@ function ZO_GamepadProvisioner:SelectOption()
     self.optionsChanged = true
 end
 
-function ZO_GamepadProvisioner:IsCraftable()
-    local targetData = self.recipeList:GetTargetData()
-    if targetData then
-        return targetData.numCreatable > 0
-           and targetData.passesTradeskillLevelReqs
-           and targetData.passesQualityLevelReq
-    end
-    return false
-end
-
-function ZO_GamepadProvisioner:Create()
-    local targetData = self.recipeList:GetTargetData()
-    CraftProvisionerItem(targetData.recipeListIndex, targetData.recipeIndex)
+function ZO_GamepadProvisioner:GetRecipeData()
+    return self.recipeList:GetTargetData()
 end
 
 function ZO_GamepadProvisioner_Initialize(control)

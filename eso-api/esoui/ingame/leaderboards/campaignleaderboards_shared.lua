@@ -43,16 +43,6 @@ function ZO_LeaderboardCampaignSelector_Shared:OnQueryTypeChanged(tabData)
     end
 end
 
-function ZO_LeaderboardCampaignSelector_Shared:IsHomeSelectable()
-    return GetAssignedCampaignId() ~= 0
-end
-
-function ZO_LeaderboardCampaignSelector_Shared:IsGuestSelectable()
-    local currentId = GetCurrentCampaignId()
-    local assignedId = GetAssignedCampaignId()
-    return currentId ~= 0 and currentId ~= assignedId
-end
-
 -----------------
 -- Campaign Leaderboards Shared
 -----------------
@@ -78,11 +68,11 @@ function ZO_CampaignLeaderboardsManager_Shared:InitializeTimer()
             local secsUntilEnd = GetSecondsUntilCampaignEnd(self.campaignId)
 
             if secsUntilStart > 0 then
-                self.timerLabelIdentifier = SI_CAMPAIGN_LEADERBOARDS_REOPENS_IN_TIMER
+                self.timerLabelIdentifier = SI_LEADERBOARDS_REOPENS_IN_TIMER
                 self.timerLabelData = ZO_FormatTime(secsUntilStart, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_TWELVE_HOUR)
                 self.scoringInfoData = GetString(SI_CAMPAIGN_LEADERBOARDS_SCORING_CLOSED)
             elseif secsUntilEnd > 0 then
-                self.timerLabelIdentifier = SI_CAMPAIGN_LEADERBOARDS_CLOSES_IN_TIMER
+                self.timerLabelIdentifier = SI_LEADERBOARDS_CLOSES_IN_TIMER
                 self.timerLabelData = ZO_FormatTime(secsUntilEnd, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_TWELVE_HOUR)
                 self.scoringInfoText = GetString(SI_CAMPAIGN_LEADERBOARDS_SCORING_OPEN)
             else
@@ -139,7 +129,7 @@ function ZO_CampaignLeaderboardsManager_Shared:AddCategoriesToParentSystem()
         return
     end
 
-    local header = self.leaderboardSystem:AddCategory(GetString(SI_CAMPAIGN_LEADERBOARDS_ALLIANCE_WAR), "EsoUI/Art/Journal/leaderboard_indexIcon_ava_up.dds", "EsoUI/Art/Journal/leaderboard_indexIcon_ava_down.dds", "EsoUI/Art/Journal/leaderboard_indexIcon_ava_over.dds")
+    local header = self.leaderboardSystem:AddCategory(GetString(SI_CAMPAIGN_LEADERBOARDS_CATEGORIES_HEADER), "EsoUI/Art/Journal/leaderboard_indexIcon_ava_up.dds", "EsoUI/Art/Journal/leaderboard_indexIcon_ava_down.dds", "EsoUI/Art/Journal/leaderboard_indexIcon_ava_over.dds")
 
     local function GetMaxRank()
         return GetCampaignLeaderboardMaxRank(self.campaignId)

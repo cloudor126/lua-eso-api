@@ -10,7 +10,7 @@
 -- @param self
 -- @param #number addOnIndex
 -- @param #number addOnDependencyIndex
--- @return #string,#boolean name,active
+-- @return #string,#boolean,#boolean,#integer,#integer name,exists,active,minVersion,version
 -- @function[parent = #AddOnManager] GetAddOnDependencyInfo
 
 -------------------------------------------------------------------------------
@@ -21,7 +21,7 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #number addOnIndex
--- @return #string,#string,#string,#string,#boolean,#AddOnLoadState,#boolean name,title,author,description,enabled,state,isOutOfDate
+-- @return #string,#string,#string,#string,#boolean,#AddOnLoadState,#boolean,#boolean name,title,author,description,enabled,state,isOutOfDate,isLibrary
 -- @function[parent = #AddOnManager] GetAddOnInfo
 
 -------------------------------------------------------------------------------
@@ -29,6 +29,18 @@
 -- @param #number addOnIndex
 -- @return #integer numDependencies
 -- @function[parent = #AddOnManager] GetAddOnNumDependencies
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @return #string directoryPath
+-- @function[parent = #AddOnManager] GetAddOnRootDirectoryPath
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number addOnIndex
+-- @return #integer version
+-- @function[parent = #AddOnManager] GetAddOnVersion
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -43,6 +55,11 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @function[parent = #AddOnManager] RemoveAddOnFilter
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string addOnName
+-- @function[parent = #AddOnManager] RequestAddOnSavedVariablesPrioritySave
 
 -------------------------------------------------------------------------------
 -- @param self

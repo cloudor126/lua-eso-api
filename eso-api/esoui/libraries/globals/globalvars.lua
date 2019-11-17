@@ -1,7 +1,5 @@
 
 -- TODO: Window and Animation managers could arguably be exposed as global functions
-
-
 WINDOW_MANAGER = GetWindowManager()     
 ANIMATION_MANAGER = GetAnimationManager()
 EVENT_MANAGER = GetEventManager()
@@ -17,15 +15,7 @@ function CreateControl(name, parent, controlType)
 end
 
 function CreateControlFromVirtual(name, parent, templateName, optionalNameSuffix)
-    if(optionalNameSuffix) then
-        local suffixType = type(optionalNameSuffix)
-        
-        if(suffixType == "number" or suffixType == "string") then
-            name = name..optionalNameSuffix
-        end
-    end
-    
-    return WINDOW_MANAGER:CreateControlFromVirtual(name, parent, templateName)
+    return WINDOW_MANAGER:CreateControlFromVirtual(name, parent, templateName, optionalNameSuffix)
 end
 
 function ApplyTemplateToControl(control, templateName)

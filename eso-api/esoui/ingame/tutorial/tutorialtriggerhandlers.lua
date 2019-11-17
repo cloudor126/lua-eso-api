@@ -13,8 +13,10 @@ local TutorialTriggerHandlers = {
         end
     end,    
     
-    [EVENT_MISSING_LURE] = function()
-        return TUTORIAL_TRIGGER_ATTEMPTED_TO_FISH_WITHOUT_BAIT
+    [EVENT_CLIENT_INTERACT_RESULT] = function(result)
+        if result == CLIENT_INTERACT_RESULT_NO_LURE then
+            return TUTORIAL_TRIGGER_ATTEMPTED_TO_FISH_WITHOUT_BAIT
+        end
     end,
 
     [EVENT_LEVEL_UPDATE] = function(unit, level)
@@ -25,7 +27,7 @@ local TutorialTriggerHandlers = {
         end
     end,
 
-    [EVENT_SKILL_POINTS_CHANGED] = function(oldPoints, newPoints, oldPartialPoints, newPartialPoints)
+    [EVENT_SKILL_POINTS_CHANGED] = function(oldPoints, newPoints, oldPartialPoints, newPartialPoints, changeReason)
         if oldPartialPoints ~= newPartialPoints then
             return TUTORIAL_TRIGGER_SKYSHARDS_DISCOVERED
         end
@@ -92,10 +94,6 @@ local TutorialTriggerHandlers = {
         if IsInOutlawZone() then
             TriggerTutorial(TUTORIAL_TRIGGER_REFUGE_ENTERED)
         end
-    end,
-
-    [EVENT_JUSTICE_LIVESTOCK_SLAIN] = function()
-        return TUTORIAL_TRIGGER_LIVESTOCK_SLAIN
     end,
 
     [EVENT_MOUNTED_STATE_CHANGED] = function(isMounted)

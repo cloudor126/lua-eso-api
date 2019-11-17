@@ -154,6 +154,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #boolean isPaused
+-- @function[parent = #AnimationTimeline] IsPaused
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #boolean isPlaying
 -- @function[parent = #AnimationTimeline] IsPlaying
 
@@ -161,6 +166,10 @@
 -- @param self
 -- @return #boolean reversed
 -- @function[parent = #AnimationTimeline] IsPlayingBackward
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] Pause
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -187,6 +196,10 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @function[parent = #AnimationTimeline] PlayInstantlyToStart
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AnimationTimeline] Resume
 
 -------------------------------------------------------------------------------
 -- @param self

@@ -34,8 +34,8 @@ function ZO_HousingPreviewDialog_Shared:Initialize(control, dialogName)
     local function SetupPurchaseOptionControl(rootName)
         local purchaseOptionControl = self.purchaseOptionsControl:GetNamedChild(rootName)
         purchaseOptionControl.button = purchaseOptionControl:GetNamedChild("Button")
-        purchaseOptionControl.currencyNameLabel = purchaseOptionControl:GetNamedChild("CurrencyNameLabel")
         purchaseOptionControl.errorLabel = purchaseOptionControl:GetNamedChild("ErrorLabel")
+        purchaseOptionControl.textCallout = purchaseOptionControl:GetNamedChild("TextCallout")
         return purchaseOptionControl
     end
 
@@ -56,6 +56,8 @@ function ZO_HousingPreviewDialog_Shared:Initialize(control, dialogName)
     ZO_Dialogs_RegisterCustomDialog(self.dialogName, self.dialogInfo)
 
     self:RegisterForCallbacks()
+
+    self.control:RegisterForEvent(EVENT_PENDING_INTERACTION_CANCELLED, function() if not self.control:IsHidden() then self:ReleaseDialog() end end)
 end
 
 function ZO_HousingPreviewDialog_Shared:InitializeTemplateComboBox()
@@ -85,8 +87,24 @@ function ZO_HousingPreviewDialog_Shared:BuildDialogInfo()
 end
 
 function ZO_HousingPreviewDialog_Shared:RegisterForCallbacks()
-    HOUSE_PREVIEW_MANAGER:RegisterCallback("OnHouseTemplateDataUpdated", function() self:RefreshTemplateComboBox() end)
-    HOUSE_PREVIEW_MANAGER:RegisterCallback("OnPlayerActivated", function() self:RefreshDisplayInfo() end)
+    local function OnHouseTemplateDataUpdated()
+        if self.control:IsHidden() then
+            self.houseTemplatesDirty = true
+        else
+            self:RefreshTemplateComboBox()
+        end
+    end
+
+    local function OnPlayerActivated()
+        if self.control:IsHidden() then
+            self.displayInfoDirty = true
+        else
+            self:RefreshDisplayInfo()
+        end
+    end
+
+    ZO_HOUSE_PREVIEW_MANAGER:RegisterCallback("OnHouseTemplateDataUpdated", OnHouseTemplateDataUpdated)
+    ZO_HOUSE_PREVIEW_MANAGER:RegisterCallback("OnPlayerActivated", OnPlayerActivated)
 end
 
 do
@@ -94,12 +112,12 @@ do
 
     function ZO_HousingPreviewDialog_Shared:RefreshTemplateComboBox()
         local comboBox = self.templateComboBox
-    
+
         local currentlyPreviewedTemplateId = GetCurrentHousePreviewTemplateId()
 
         comboBox:ClearItems()
 
-        local templateData = HOUSE_PREVIEW_MANAGER:GetFullHouseTemplateData()
+        local templateData = ZO_HOUSE_PREVIEW_MANAGER:GetFullHouseTemplateData()
 
         local function OnFilterChanged(comboBox, entryText, entry)
             self:OnFilterChanged(entry.data)
@@ -128,21 +146,23 @@ do
         else
             self:OnFilterChanged(NO_DATA)
         end
+
+        self.houseTemplatesDirty = false
     end
 end
 
 function ZO_HousingPreviewDialog_Shared:RefreshDisplayInfo()
-    local displayInfo = HOUSE_PREVIEW_MANAGER:GetDisplayInfo()
+    local displayInfo = ZO_HOUSE_PREVIEW_MANAGER:GetDisplayInfo()
     self.dialogInfo.title.text = displayInfo.houseName
     self.locationDataLabel:SetText(ZO_CachedStrFormat(SI_ZONE_NAME, displayInfo.houseFoundInLocation))
     self.houseTypeDataLabel:SetText(displayInfo.houseCategory)
     self.houseImageControl:SetTexture(displayInfo.backgroundImage)
+
+    self.displayInfoDirty = false
 end
 
 do
     local DONT_USE_SHORT_FORMAT = false
-    local NOT_GAME_CURRENCY = nil
-    local NOT_MARKET_CURRENCY = nil
     local NO_ERROR = nil
 
     local function ResetPurchaseOptionControl(control)
@@ -150,33 +170,101 @@ do
         control:SetWidth(0)
     end
 
-    function ZO_HousingPreviewDialog_Shared:SetupPurchaseOptionControl(control, price, gameCurrency, marketCurrency, errorStringId)
+    function ZO_HousingPreviewDialog_Shared:SetupPurchaseOptionControl(control, currencyType, currencyLocation, price, priceAfterDiscount, discountPercent, requiredToBuyErrorText, getRemainingTimeFunction)
         control:SetHidden(false)
-    
-        local uiCurrency = gameCurrency or ZO_Currency_MarketCurrencyToUICurrency(marketCurrency)
 
-        local priceText = ZO_CurrencyControl_FormatCurrencyAndAppendIcon(price, DONT_USE_SHORT_FORMAT, uiCurrency, IsInGamepadPreferredMode())
+        local priceText = ZO_CurrencyControl_FormatCurrencyAndAppendIcon(priceAfterDiscount, DONT_USE_SHORT_FORMAT, currencyType, IsInGamepadPreferredMode())
         local currencyColor = ZO_SELECTED_TEXT
-        local noError = true
-        if errorStringId then
-            control.errorLabel:SetText(GetErrorString(errorStringId))
-            noError = false
+        if requiredToBuyErrorText then
             currencyColor = ZO_DISABLED_TEXT
-        elseif gameCurrency and GetCarriedCurrencyAmount(gameCurrency) < price then
+        elseif (currencyType ~= CURT_CROWNS and currencyType ~= CURT_CROWN_GEMS) and GetCurrencyAmount(currencyType, currencyLocation) < priceAfterDiscount then
             currencyColor = ZO_ERROR_COLOR
         end
 
         priceText = currencyColor:Colorize(priceText)
 
-        control.button:SetEnabled(noError)
-        control.currencyNameLabel:SetHidden(not noError)
+        local noError = requiredToBuyErrorText == nil
+        local onSale = discountPercent > 0
         control.errorLabel:SetHidden(noError)
 
-        control.button:SetText(priceText)
-        control.button.price = price
-        control.button.errorStringId = errorStringId
+        if noError and onSale then
+            local calloutUpdateHandler
+            self:UpdateSaleRemainingTimeCalloutText(control, discountPercent, getRemainingTimeFunction)
+            local remainingTime = getRemainingTimeFunction and getRemainingTimeFunction(control, discountPercent) or 0
+            if remainingTime > 0 then
+                calloutUpdateHandler = function() self:UpdateSaleRemainingTimeCalloutText(control, discountPercent, getRemainingTimeFunction) end
+            else
+                calloutUpdateHandler = nil
+            end
+
+            control.textCallout:SetHandler("OnUpdate", calloutUpdateHandler)
+        else
+            control.textCallout:SetHidden(true)
+        end
+
+        local buttonControl = control.button
+
+        local priceLabel = buttonControl:GetNamedChild("Price")
+        if priceLabel then
+            priceLabel:SetText(priceText)
+            priceLabel:ClearAnchors()
+
+            local previousPriceLabel = buttonControl:GetNamedChild("PreviousPrice")
+            if onSale then
+                local previousPriceText = ZO_CurrencyControl_FormatCurrency(price, DONT_USE_SHORT_FORMAT)
+
+                previousPriceLabel:SetText(previousPriceText)
+                previousPriceLabel:ClearAnchors()
+
+                -- We want to layout the two price controls so that they appear centered within the "button"
+                -- so we need to offset the previousPriceLabel based on the overall width of the two controls
+                local halfPriceLabelsWidth = (previousPriceLabel:GetWidth() + priceLabel:GetWidth()) / 2
+                local previousPriceOffsetX = -(halfPriceLabelsWidth - previousPriceLabel:GetWidth())
+
+                previousPriceLabel:SetAnchor(RIGHT, buttonControl, CENTER, previousPriceOffsetX)
+
+                priceLabel:SetAnchor(LEFT, previousPriceLabel, RIGHT, 10)
+            else
+                priceLabel:SetAnchor(CENTER, buttonControl, CENTER)
+            end
+
+            previousPriceLabel:SetHidden(not onSale)
+        end
+        buttonControl.price = priceAfterDiscount
+        buttonControl.errorString = requiredToBuyErrorText
+
         control:SetWidth(self.purchaseOptionSectionWidth)
         control.errorLabel:SetWidth(self.purchaseOptionSectionWidth - (ZO_HOUSING_PREVIEW_ERROR_LABEL_PADDING_X * 2))
+    end
+
+    function ZO_HousingPreviewDialog_Shared:GetMarketProductSaleRemainingTime(control, discountPercent)
+        local purchaseData = control and control.button and control.button.purchaseData
+        local marketProductId = purchaseData and purchaseData.marketProductId
+
+        return GetMarketProductSaleTimeLeftInSeconds(marketProductId)
+    end
+
+    function ZO_HousingPreviewDialog_Shared:UpdateSaleRemainingTimeCalloutText(control, discountPercent, getRemainingTimeFunction)
+        local discountPercentText = zo_strformat(SI_MARKET_DISCOUNT_PRICE_PERCENT_FORMAT, discountPercent)
+        local remainingTime = getRemainingTimeFunction and getRemainingTimeFunction(control, discountPercent) or 0
+        -- if there is no time left remaining then the MarketProduct is not limited time
+        -- because when a limited time product reaches 0 it is removed from the store
+        if remainingTime > 0 and remainingTime <= ZO_ONE_MONTH_IN_SECONDS then
+            local remainingTimeText
+            if remainingTime >= ZO_ONE_DAY_IN_SECONDS then
+                remainingTimeText = ZO_FormatTime(remainingTime, TIME_FORMAT_STYLE_SHOW_LARGEST_UNIT_DESCRIPTIVE, TIME_FORMAT_PRECISION_SECONDS)
+                control.textCallout:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
+            else
+                remainingTimeText = ZO_FormatTimeLargestTwo(remainingTime, TIME_FORMAT_STYLE_DESCRIPTIVE_MINIMAL)
+                control.textCallout:SetModifyTextType(MODIFY_TEXT_TYPE_NONE)
+            end
+            local calloutText = string.format("%s %s", discountPercentText, remainingTimeText)
+            control.textCallout:SetText(calloutText)
+        else
+            control.textCallout:SetText(discountPercentText)
+        end
+
+        control.textCallout:SetHidden(false)
     end
 
     function ZO_HousingPreviewDialog_Shared:OnFilterChanged(entryData)
@@ -206,16 +294,18 @@ do
 
             --Setup individual options
             if entryData.goldStoreEntryIndex then
-                self:SetupPurchaseOptionControl(self.goldPurchaseOptionControl, entryData.goldPrice, CURT_MONEY, NOT_MARKET_CURRENCY, entryData.requirementsToBuyErrorId)
+                local NO_DISCOUNT_PERCENT = 0
+                self:SetupPurchaseOptionControl(self.goldPurchaseOptionControl, CURT_MONEY, CURRENCY_LOCATION_CHARACTER, entryData.goldPrice, entryData.goldPrice, NO_DISCOUNT_PERCENT, entryData.requiredToBuyErrorText)
                 self.goldPurchaseOptionControl.button.goldStoreEntryIndex = entryData.goldStoreEntryIndex
                 self.goldPurchaseOptionControl.button.templateName = entryData.name
             end
 
             if entryData.marketPurchaseOptions then
-                for currencyType, purchaseData in pairs(entryData.marketPurchaseOptions) do
-                    local marketControl = self.marketPurchaseOptionControlsByCurrencyType[currencyType]
+                for marketCurrencyType, purchaseData in pairs(entryData.marketPurchaseOptions) do
+                    local marketControl = self.marketPurchaseOptionControlsByCurrencyType[marketCurrencyType]
+                    local currencyType = ZO_Currency_MarketCurrencyToUICurrency(marketCurrencyType)
                     --Currently there are no requirement failures for market options, but there could be in the future, and here is where we would handle them
-                    self:SetupPurchaseOptionControl(marketControl, purchaseData.cost, NOT_GAME_CURRENCY, currencyType, NO_ERROR)
+                    self:SetupPurchaseOptionControl(marketControl, currencyType, CURRENCY_LOCATION_ACCOUNT, purchaseData.cost, purchaseData.costAfterDiscount, purchaseData.discountPercent, NO_ERROR, function(...) return self:GetMarketProductSaleRemainingTime(...) end)
                     marketControl.button.purchaseData = purchaseData
                 end
             end
@@ -224,12 +314,21 @@ do
 end
 
 function ZO_HousingPreviewDialog_Shared:ShowDialog()
+    if self.displayInfoDirty then
+        self:RefreshDisplayInfo()
+    end
+    
     ZO_Dialogs_ShowPlatformDialog(self.dialogName)
+
+    if self.houseTemplatesDirty then
+        self:RefreshTemplateComboBox()
+    end
 end
 
 function ZO_HousingPreviewDialog_Shared:OnDialogShowing()
+    StopAllMovement()
     RequestOpenHouseStore()
-    HOUSE_PREVIEW_MANAGER:RequestOpenMarket()
+    ZO_HOUSE_PREVIEW_MANAGER:RequestOpenMarket()
 end
 
 function ZO_HousingPreviewDialog_Shared:ReleaseDialog()
@@ -253,20 +352,21 @@ function ZO_HousingPreviewDialog_Shared:PreviewSelectedTemplate()
 end
 
 function ZO_HousingPreviewDialog_Shared:BuyForGold(control)
-    if control.price and GetCarriedCurrencyAmount(CURT_MONEY) < control.price then
+    if control.price and GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) < control.price then
         ZO_AlertEvent(EVENT_UI_ERROR, SI_ERROR_CANT_AFFORD_OPTION)
-    elseif control.errorStringId then
-        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.GENERAL_ALERT_ERROR, GetErrorString(control.errorStringId))
+    elseif control.errorString then
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.GENERAL_ALERT_ERROR, control.errorString)
     else
         self:ReleaseDialog()
         RequestOpenHouseStore()
         local priceText = ZO_CurrencyControl_FormatCurrencyAndAppendIcon(control.price, DONT_USE_SHORT_FORMAT, CURT_MONEY, IsInGamepadPreferredMode())
-        local displayInfo = HOUSE_PREVIEW_MANAGER:GetDisplayInfo()
+        local displayInfo = ZO_HOUSE_PREVIEW_MANAGER:GetDisplayInfo()
         ZO_Dialogs_ShowPlatformDialog("CONFIRM_BUY_HOUSE_FOR_GOLD", { goldStoreEntryIndex = control.goldStoreEntryIndex }, { mainTextParams={ displayInfo.houseName, control.templateName, priceText }})
     end
 end
 
 function ZO_HousingPreviewDialog_Shared:BuyFromMarket(control)
     self:ReleaseDialog()
-    RequestPurchaseMarketProduct(control.purchaseData.marketProductId, control.purchaseData.presentationIndex)
+    local IS_PURCHASE = false
+    RequestPurchaseMarketProduct(control.purchaseData.marketProductId, control.purchaseData.presentationIndex, IS_PURCHASE)
 end

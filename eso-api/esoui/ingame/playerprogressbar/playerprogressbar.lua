@@ -267,33 +267,31 @@ function SkillBarType:New(barTypeId, ...)
     return PlayerProgressBarType.New(self, PPB_CLASS_SKILL, barTypeId, ...)
 end
 
-function SkillBarType:Initialize(barTypeClass, barTypeId, skillType, skillIndex, ...)
-    PlayerProgressBarType.Initialize(self, barTypeClass, barTypeId, ...)
-    self.skillType = skillType
-    self.skillIndex = skillIndex
+function SkillBarType:Initialize(barTypeClass, barTypeId, skillType, skillLineIndex, ...)
+    PlayerProgressBarType.Initialize(self, barTypeClass, barTypeId, skillType, skillLineIndex, ...)
+    self.skillLineData = SKILLS_DATA_MANAGER:GetSkillLineDataByIndices(skillType, skillLineIndex)
     self:SetBarGradient(ZO_SKILL_XP_BAR_GRADIENT_COLORS)
     self:SetBarGlow(ZO_SKILL_XP_BAR_GLOW_COLOR)
-    local name = GetSkillLineInfo(skillType, skillIndex)
-    self:SetLevelTypeText(name)
+    self:SetLevelTypeText(self.skillLineData:GetName())
     self:SetTooltipCurrentMaxFormat(SI_EXPERIENCE_CURRENT_MAX_PERCENT)
 end
 
 function SkillBarType:GetLevelSize(rank)
-    local startXP, nextRankStartXP = GetSkillLineRankXPExtents(self.skillType, self.skillIndex, rank)
+    local skillType, skillLineIndex = self.skillLineData:GetIndices()
+    local startXP, nextRankStartXP = GetSkillLineRankXPExtents(skillType, skillLineIndex, rank)
     if(startXP ~= nil and nextRankStartXP ~= nil) then
         return nextRankStartXP - startXP
     else
         return nil
     end
 end
-            
+
 function SkillBarType:GetLevel()
-    local name, rank = GetSkillLineInfo(self.skillType, self.skillIndex)
-    return rank
+    return self.skillLineData:GetCurrentRank()
 end
-            
+
 function SkillBarType:GetCurrent()
-    local lastRankXP, nextRankXP, currentXP = GetSkillLineXPInfo(self.skillType, self.skillIndex)
+    local lastRankXP, nextRankXP, currentXP = self.skillLineData:GetRankXPValues()
     return currentXP - lastRankXP
 end
 
@@ -470,6 +468,10 @@ function PlayerProgressBar:GetBarTypeInfo()
     return self.barTypes[self.barType]
 end
 
+function PlayerProgressBar:GetBarTypeInfoByBarType(barType)
+    return self.barTypes[barType]
+end
+
 function PlayerProgressBar:GetCurrentInfo()
     local barTypeInfo = self:GetBarTypeInfo()
     local level = barTypeInfo:GetLevel()
@@ -534,6 +536,9 @@ end
 
 function PlayerProgressBar:SetBarMode(mode)
     self.barMode = mode
+    if mode == PPB_MODE_CURRENT then
+        self.lastSetCurrentTraceback = string.format("(%d) %s", GetGameTimeMilliseconds(), debug.traceback())
+    end
 end
 
 function PlayerProgressBar:GetOwner()
@@ -588,44 +593,49 @@ function PlayerProgressBar:Show()
 end
 
 function PlayerProgressBar:UpdateBar(overrideLevel)
-    local barTypeInfo = self:GetBarTypeInfo()
-    ZO_StatusBar_SetGradientColor(self.barControl, barTypeInfo:GetBarGradient(overrideLevel))
-    ZO_StatusBar_SetGradientColor(self.enlightenedBarControl, barTypeInfo:GetBarGradient(overrideLevel))
+    if internalassert(self.barType ~= nil, string.format("(%d) IncStart: %s\nLast Set Current:\n%s\nLast Hide:\n%s", GetGameTimeMilliseconds(), tostring(self.increaseStart), self.lastSetCurrentTraceback or "", self.lastHideTraceback or "")) then
+        local barTypeInfo = self:GetBarTypeInfo()
+        if barTypeInfo then
+            ZO_StatusBar_SetGradientColor(self.barControl, barTypeInfo:GetBarGradient(overrideLevel))
+            ZO_StatusBar_SetGradientColor(self.enlightenedBarControl, barTypeInfo:GetBarGradient(overrideLevel))
 
-    for i = 1, self.glowContainer:GetNumChildren() do
-        local glowTexture = self.glowContainer:GetChild(i)
-        glowTexture:SetColor(barTypeInfo:GetBarGlow(overrideLevel):UnpackRGB())
-    end
+            for i = 1, self.glowContainer:GetNumChildren() do
+                local glowTexture = self.glowContainer:GetChild(i)
+                glowTexture:SetColor(barTypeInfo:GetBarGlow(overrideLevel):UnpackRGB())
+            end
 
-    local levelTypeText = barTypeInfo:GetLevelTypeText()
-    if levelTypeText then
-        self.levelTypeLabel:SetText(zo_strformat(SI_LEVEL_BAR_LABEL, levelTypeText))
-        self.levelTypeLabel:SetHidden(false)
-        self.levelTypeLabel:SetColor(barTypeInfo:GetBarLevelColor():UnpackRGBA())
-    else
-        self.levelTypeLabel:SetHidden(true)
-        self.levelTypeLabel:SetText("")
-    end
+            local levelTypeText = barTypeInfo:GetLevelTypeText()
+            if levelTypeText then
+                self.levelTypeLabel:SetText(zo_strformat(SI_LEVEL_BAR_LABEL, levelTypeText))
+                self.levelTypeLabel:SetHidden(false)
+                self.levelTypeLabel:SetColor(barTypeInfo:GetBarLevelColor():UnpackRGBA())
+            else
+                self.levelTypeLabel:SetHidden(true)
+                self.levelTypeLabel:SetText("")
+            end
 
-    if barTypeInfo.barTypeClass == PPB_CLASS_CP then
-        self.championPointsLabel:SetHidden(false)
-        self.championIcon:SetHidden(false)
-    else
-        self.championPointsLabel:SetHidden(true)
-        self.championIcon:SetHidden(true)
-    end
+            if barTypeInfo.barTypeClass == PPB_CLASS_CP then
+                self.championPointsLabel:SetHidden(false)
+                self.championIcon:SetHidden(false)
+            else
+                self.championPointsLabel:SetHidden(true)
+                self.championIcon:SetHidden(true)
+            end
 
-    if(barTypeInfo:GetIcon(overrideLevel) ~= nil) then
-        self.levelTypeIcon:SetHidden(false)
-        self.levelTypeIcon:SetTexture(barTypeInfo:GetIcon(overrideLevel))
-    else
-        self.levelTypeIcon:SetHidden(true)
+            if(barTypeInfo:GetIcon(overrideLevel) ~= nil) then
+                self.levelTypeIcon:SetHidden(false)
+                self.levelTypeIcon:SetTexture(barTypeInfo:GetIcon(overrideLevel))
+            else
+                self.levelTypeIcon:SetHidden(true)
+            end
+        end
     end
 end
 
 function PlayerProgressBar:Hide()
     if(self.barState ~= PPB_STATE_HIDDEN and self.barState ~= PPB_STATE_HIDING) then
         self.fadeTimeline:PlayBackward()
+        self.lastHideTraceback = string.format("(%d) %s", GetGameTimeMilliseconds(), debug.traceback())
         CALLBACK_MANAGER:FireCallbacks("PlayerProgressBarFadingOut")
         self:SetBarState(PPB_STATE_HIDING)
     end
@@ -637,7 +647,6 @@ function PlayerProgressBar:ShowIncrease(barType, startLevel, start, stop, increa
             waitBeforeShowMS = zo_max(FADE_DURATION_MS, waitBeforeShowMS)
             self:Hide()
         end
-
         self.pendingShowIncrease = { barType, startLevel, start, stop, increaseSound, owner }
         self:WaitBeforeShow(waitBeforeShowMS)
     end
@@ -671,7 +680,6 @@ function PlayerProgressBar:RefreshCurrentBar()
         self:SetBarValue(level, current, max)
         self:UpdateBar()
         self:SetLevelLabelText(level)
-
     end
 end
 
@@ -743,9 +751,9 @@ function PlayerProgressBar:OnWaitBeforeShowComplete()
     local barType, startLevel, start, stop, sound, owner = unpack(self.pendingShowIncrease)
     self.pendingShowIncrease = nil
 
-    local needsShow = self.barType ~= barType
+    local needsShow = self.barState == PPB_STATE_HIDING or self.barState == PPB_STATE_HIDDEN
     self.barType = barType
-    self.barMode = PPB_MODE_INCREASE
+    self:SetBarMode(PPB_MODE_INCREASE)
 
     self.increaseStartLevel = startLevel
     self.increaseStart = start
@@ -815,7 +823,11 @@ function PlayerProgressBar:SetLevelLabelText(text)
     else
         self.levelLabel:SetText(text)
     end
-    self.levelLabel:SetColor(barTypeInfo:GetBarLevelColor():UnpackRGBA())
+    if barTypeInfo then
+        self.levelLabel:SetColor(barTypeInfo:GetBarLevelColor():UnpackRGBA())
+    else
+        internalassert(false, string.format("(%d) IncStart: %s\nLast Set Current:\n%s\nLast Hide:\n%s", GetGameTimeMilliseconds(), tostring(self.increaseStart), self.lastSetCurrentTraceback or "", self.lastHideTraceback or ""))
+    end
 end
 
 function PlayerProgressBar:OnWaitBeforeStopGlowingComplete()
@@ -852,19 +864,16 @@ function PlayerProgressBar:IsDoneShowing()
     return not self.increaseHoldBeforeFadeOut and self.increaseReadyToHide
 end
 
-function PlayerProgressBar:OnComplete()
-    self:ClearIncreaseData()
-    self:FireCallbacks("Complete")
-end
-
 function PlayerProgressBar:OnDoneShowing()
-    if(CENTER_SCREEN_ANNOUNCE:DoesNextEventHaveBarType(self.barType)) then
+    if(CENTER_SCREEN_ANNOUNCE:DoesNextMessageHaveBarType(self.barType)) then
+        self:ClearIncreaseData()
         self:SetBarMode(PPB_MODE_WAITING_FOR_INCREASE)
-        self:OnComplete()
-    elseif(not CENTER_SCREEN_ANNOUNCE:DoesNextEventHaveBar() and self.baseType == self.barType) then
+        self:FireCallbacks("Complete")
+    elseif(not CENTER_SCREEN_ANNOUNCE:DoesNextMessageHaveBarParams() and self.baseType == self.barType) then
+        self:ClearIncreaseData()
         self:SetBarMode(PPB_MODE_CURRENT)
         self:RefreshCurrentBar()
-        self:OnComplete()
+        self:FireCallbacks("Complete")
     else
         self:Hide()
     end
@@ -906,10 +915,11 @@ function PlayerProgressBar:OnFadeOutComplete()
     self:SetBarState(PPB_STATE_HIDDEN)
     self.control:SetHidden(true)
 
-    local nextAnnouncementHasBar = CENTER_SCREEN_ANNOUNCE:DoesNextEventHaveBar()
+    local nextAnnouncementHasBar = CENTER_SCREEN_ANNOUNCE:DoesNextMessageHaveBarParams()
 
-    if(oldBarMode == PPB_MODE_INCREASE) then
-        self:OnComplete()
+    if oldBarMode == PPB_MODE_INCREASE then
+        self:ClearIncreaseData()
+        self:FireCallbacks("Complete")
     end
 
     if(self.baseType and not nextAnnouncementHasBar and not self.pendingShowIncrease) then

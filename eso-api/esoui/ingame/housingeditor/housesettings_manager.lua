@@ -51,12 +51,12 @@ function ZO_HouseSettings_Manager:Initialize()
     self.permissionPresets = {}
     self.defaultAccessSettings = {}
 
-    for i = HOUSE_PERMISSION_PRESET_SETTING_MIN_VALUE, HOUSE_PERMISSION_PRESET_SETTING_MAX_VALUE do
+    for i = HOUSE_PERMISSION_PRESET_SETTING_ITERATION_BEGIN, HOUSE_PERMISSION_PRESET_SETTING_ITERATION_END do
         local presetName = GetString("SI_HOUSEPERMISSIONPRESETSETTING", i)
         self.permissionPresets[i] = presetName
     end
 
-    for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MIN_VALUE, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MAX_VALUE do
+    for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_BEGIN, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_END do
         local presetName = GetString("SI_HOUSEPERMISSIONDEFAULTACCESSSETTING", i)
         self.defaultAccessSettings[i] = presetName
     end
@@ -84,6 +84,8 @@ function ZO_HouseSettings_Manager:GetDefaultHousingPermission(houseId)
             return HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_DECORATOR
         elseif preset == HOUSE_PERMISSION_PRESET_SETTING_VISITOR then
             return HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_VISITOR
+        elseif preset == HOUSE_PERMISSION_PRESET_SETTING_LIMITED_VISITOR then
+            return HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_LIMITED_VISITOR
         end
     end
     return HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_NO_ACCESS
@@ -100,26 +102,38 @@ function ZO_HouseSettings_Manager:GetHousingPermissionsFromDefaultAccess(default
     elseif defaultAccessType == HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_DECORATOR then
         canAccess = true
         preset = HOUSE_PERMISSION_PRESET_SETTING_DECORATOR
+    elseif defaultAccessType == HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_LIMITED_VISITOR then
+        canAccess = true
+        preset = HOUSE_PERMISSION_PRESET_SETTING_LIMITED_VISITOR
     end
 
     return canAccess, preset
 end
 
+local function ZO_HouseSettings_HouseEntrySort(left, right)
+    return ZO_TableOrderingFunction(left, right, "name", ZO_SORT_BY_NAME, ZO_SORT_ORDER_UP)
+end
+
 function ZO_HouseSettings_Manager:SetupCopyPermissionsCombobox(dropdown, currentHouse, callback)
     dropdown:SetSelectedItemText(GetString(SI_DIALOG_COPY_HOUSING_PERMISSION_DEFAULT_CHOICE))
 
-    local currentIndex = 1
     local allHouses = COLLECTIONS_BOOK_SINGLETON:GetOwnedHouses()
+    local houseEntries = {}
+
     for collectibleId, houseData in pairs(allHouses) do
         if houseData.houseId ~= currentHouse then
-            local name = GetCollectibleName(collectibleId)
-            local nickname = GetCollectibleNickname(collectibleId)
-            local newEntry = dropdown:CreateItemEntry(zo_strformat(SI_COLLECTIONS_HOUSING_DISPLAY_NAME_FORMAT, name, nickname), callback)
+            local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(collectibleId)
+            local newEntry = dropdown:CreateItemEntry(zo_strformat(SI_COLLECTIONS_HOUSING_DISPLAY_NAME_FORMAT, collectibleData:GetName(), collectibleData:GetNickname()), callback)
             newEntry.houseId = houseData.houseId
-            newEntry.houseIndex = currentIndex
-            dropdown:AddItem(newEntry)
-            currentIndex = currentIndex + 1
+            table.insert(houseEntries, newEntry)
         end
+    end
+
+    table.sort(houseEntries, ZO_HouseSettings_HouseEntrySort)
+
+    for index, houseEntry in ipairs(houseEntries) do
+        houseEntry.houseIndex = index
+        dropdown:AddItem(houseEntry)
     end
 end
 

@@ -80,12 +80,13 @@ end
 function ZO_TooltipStyledObject:GetFontString(...)
     local fontFace = self:GetProperty("fontFace", ...)
     local fontSize = self:GetProperty("fontSize", ...)
-    local fontStyle = self:GetProperty("fontStyle", ...)
-    if(fontFace and fontSize) then
+    if fontFace and fontSize then
         if type(fontSize) == "number" then
             fontSize = tostring(fontSize)
         end
-        if(fontStyle) then
+
+        local fontStyle = self:GetProperty("fontStyle", ...)
+        if fontStyle then
             return string.format("%s|%s|%s", fontFace, fontSize, fontStyle)
         else
             return string.format("%s|%s", fontFace, fontSize)
@@ -123,11 +124,6 @@ function ZO_TooltipStyledObject:FormatLabel(label, text, ...)
     else
         label:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
     end
-end
-
---where ... is the list of styles
-function ZO_TooltipStyledObject:FormatTexture(texture, path, ...)
-    texture:SetTexture(path)
 end
 
 --where ... is the list of styles
@@ -172,9 +168,9 @@ function ZO_TooltipStyledObject:GetStyles()
     return self.styles
 end
 
-function ZO_TooltipStyledObject:SetStyles(...)    
+function ZO_TooltipStyledObject:SetStyles(...)
     self.styles = {...}
-    self:ApplyStyles()    
+    self:ApplyStyles()
 end
 
 function ZO_TooltipStyledObject:ApplyStyles()
@@ -370,12 +366,15 @@ function ZO_TooltipSection:Initialize(parent)
     ZO_TooltipStyledObject.Initialize(self, parent)
     self.contentsControl = self:GetNamedChild("Contents")
 
-    self.labelPool = self:CreateMetaControlPool(ZO_TooltipSection.labelPool)
-    self.texturePool = self:CreateMetaControlPool(ZO_TooltipSection.texturePool)
-    self.colorPool = self:CreateMetaControlPool(ZO_TooltipSection.colorPool)
-    self.statValuePairPool = self:CreateMetaControlPool(ZO_TooltipSection.statValuePairPool)
-    self.statValueSliderPool = self:CreateMetaControlPool(ZO_TooltipSection.statValueSliderPool)
-    self.sectionPool = self:CreateMetaControlPool(ZO_TooltipSection.sectionPool)
+    if not self.hasInitialized then
+        self.labelPool = self:CreateMetaControlPool(ZO_TooltipSection.labelPool)
+        self.texturePool = self:CreateMetaControlPool(ZO_TooltipSection.texturePool)
+        self.colorPool = self:CreateMetaControlPool(ZO_TooltipSection.colorPool)
+        self.statValuePairPool = self:CreateMetaControlPool(ZO_TooltipSection.statValuePairPool)
+        self.statValueSliderPool = self:CreateMetaControlPool(ZO_TooltipSection.statValueSliderPool)
+        self.sectionPool = self:CreateMetaControlPool(ZO_TooltipSection.sectionPool)
+        self.hasInitialized = true
+    end
 
     self.statusBarPools = {}
 end
@@ -623,12 +622,13 @@ end
 
 function ZO_TooltipSection:AddControl(control, primarySize, secondarySize, ...)
     control:SetParent(self.contentsControl)
-    local spacing = self:GetNextSpacing(...)
     control:ClearAnchors()
-    if(self:ShouldAdvanceSecondaryCursor(primarySize, spacing)) then
+
+    local spacing = self:GetNextSpacing(...)
+    if self:ShouldAdvanceSecondaryCursor(primarySize, spacing) then
         local advanceAmount = self.maxSecondarySizeOnLine + (self:GetProperty("childSecondarySpacing") or 0)
         self.secondaryCursor = self.secondaryCursor + advanceAmount
-        if(not self:IsSecondaryDimensionFixed()) then
+        if not self:IsSecondaryDimensionFixed() then
             self:AddToSecondaryDimension(advanceAmount)
         end
         self.maxSecondarySizeOnLine = 0
@@ -638,33 +638,40 @@ function ZO_TooltipSection:AddControl(control, primarySize, secondarySize, ...)
     end
     self.primaryCursor = self.primaryCursor + spacing
     self.maxSecondarySizeOnLine = zo_max(self.maxSecondarySizeOnLine, secondarySize)
-    if(not self:IsSecondaryDimensionFixed()) then
-        if(self:IsVertical()) then
+    if not self:IsSecondaryDimensionFixed() then
+        if self:IsVertical() then
             self:SetSecondaryDimension(self.maxSecondarySizeOnLine + self.secondaryCursor + self.paddingLeft + self.paddingRight)
         else
             self:SetSecondaryDimension(self.maxSecondarySizeOnLine + self.secondaryCursor + self.paddingTop + self.paddingBottom)
         end
     end
-    local offsetX = self:IsVertical() and self.secondaryCursor * self.secondaryCursorDirection or self.primaryCursor * self.primaryCursorDirection
-    local offsetY = self:IsVertical() and self.primaryCursor * self.primaryCursorDirection or self.secondaryCursor * self.secondaryCursorDirection
-    control.offsetX = offsetX
-    control.offsetY = offsetY
-    if(not self.isPrimaryDimensionCentered) then
-        control:SetAnchor(self.layoutRootAnchor, nil, self.layoutRootAnchor, offsetX, offsetY)
+
+    if self:IsVertical() then
+        control.offsetX = self.secondaryCursor * self.secondaryCursorDirection
+        control.offsetY = self.primaryCursor * self.primaryCursorDirection
+    else
+        control.offsetX = self.primaryCursor * self.primaryCursorDirection
+        control.offsetY = self.secondaryCursor * self.secondaryCursorDirection
     end
 
-    if(not self:IsPrimaryDimensionFixed()) then
+    if not self.isPrimaryDimensionCentered then
+        control:SetAnchor(self.layoutRootAnchor, nil, self.layoutRootAnchor, control.offsetX, control.offsetY)
+    end
+
+    if not self:IsPrimaryDimensionFixed() then
         self:AddToPrimaryDimension(primarySize + spacing)
     end
+
     self.primaryCursor = self.primaryCursor + primarySize
     self.numControls = self.numControls + 1
     self.firstInLine = false
 
-    if(self.isPrimaryDimensionCentered) then
+    if self.isPrimaryDimensionCentered then
         local centerOffsetPrimary = ((self.innerPrimaryDimension - self.primaryCursor) / 2) * self.primaryCursorDirection
-        for i = 1, self.contentsControl:GetNumChildren() do
+        local numChildren = self.contentsControl:GetNumChildren()
+        for i = 1, numChildren do
             local childControl = self.contentsControl:GetChild(i)
-			local childSecondaryOffset = self:IsVertical() and childControl.offsetX or childControl.offsetY
+            local childSecondaryOffset = self:IsVertical() and childControl.offsetX or childControl.offsetY
             if childSecondaryOffset == self.secondaryCursor then
                 local modifiedOffsetX = childControl.offsetX + (self:IsVertical() and 0 or centerOffsetPrimary)
                 local modifiedOffsetY = childControl.offsetY + (self:IsVertical() and centerOffsetPrimary or 0)
@@ -731,6 +738,11 @@ function ZO_TooltipSection:AddSimpleCurrency(currencyType, amount, options, show
         function(label, ...)
             self:FormatLabel(label, "", ...)        -- This is so it uses the correct styling
             ZO_CurrencyControl_SetSimpleCurrency(label, currencyType, amount, options, showAll, notEnough)
+            -- ZO_CurrencyControl_SetSimpleCurrency will set the font in this case so the fontString attribute need to be updated to reflect
+            -- the new font so that the label will be reset correctly when added back into the label pool.
+            if options.font then
+                label.fontString = options.font
+            end
         end
 
     self:AddCustom(customFunction, ...)
@@ -761,7 +773,7 @@ end
 --where ... is the list of styles
 function ZO_TooltipSection:AddTexture(path, ...)
     local texture = self.texturePool:AcquireObject()
-    self:FormatTexture(texture, path, ...)
+    texture:SetTexture(path)
 
     local desaturation = self:GetProperty("desaturation", ...) or 0
     texture:SetDesaturation(desaturation)
@@ -858,7 +870,7 @@ function ZO_TooltipSection:AcquireStatValueSlider(...)
     return statValueSlider
 end
 
-function ZO_TooltipSection:AddStatValuePair(statValuePair)    
+function ZO_TooltipSection:AddStatValuePair(statValuePair)
     self:AddDimensionedControl(statValuePair)
     statValuePair:UpdateFontOffset()
 end
@@ -889,8 +901,9 @@ end
 ZO_Tooltip = {}
 
 function ZO_Tooltip:Initialize(control, styleNamespace, style)
-    zo_mixin(control, ZO_TooltipStyledObject, ZO_TooltipSection, self)    
+    zo_mixin(control, ZO_TooltipStyledObject, ZO_TooltipSection, self)
     ZO_TooltipSection.Initialize(control)
+
     control.styleNamespace = styleNamespace
     control:SetStyles(control:GetStyle(style or "tooltip"))
     control:SetClearOnHidden(true)
@@ -920,9 +933,9 @@ local RELATIVE_POINT_FROM_POINT =
 
 function ZO_Tooltip:SetOwner(owner, point, offsetX, offsetY, relativePoint)
     self.owner = owner
-    if(owner) then
+    if owner then
         self:ClearAnchors()
-        if(relativePoint == nil) then
+        if relativePoint == nil then
             relativePoint = RELATIVE_POINT_FROM_POINT[point]
         end
         self:SetAnchor(point, owner, relativePoint, offsetX or 0, offsetY or 0)
@@ -935,4 +948,24 @@ end
 
 function ZO_Tooltip:GetStyle(styleName)
     return self.styleNamespace[styleName]
+end
+
+function ZO_Tooltip:LayoutTitleAndDescriptionTooltip(title, description)
+    self:LayoutTitleAndMultiSectionDescriptionTooltip(title, description)
+end
+
+function ZO_Tooltip:LayoutTitleAndMultiSectionDescriptionTooltip(title, ...)
+    --Title
+    if title then
+        local headerSection = self:AcquireSection(self:GetStyle("bodyHeader"))
+        headerSection:AddLine(title, self:GetStyle("title"))
+        self:AddSection(headerSection)
+    end
+
+    --Body
+    for i = 1, select("#", ...) do
+        local bodySection = self:AcquireSection(self:GetStyle("bodySection"))
+        bodySection:AddLine(select(i, ...), self:GetStyle("bodyDescription"))
+        self:AddSection(bodySection)
+    end
 end

@@ -52,7 +52,7 @@ function ZO_HousingFurnitureList_Gamepad:Initialize(owner)
         local statusIndicator = control.statusIndicator
         if statusIndicator then
             if data.isFromCrownStore and not data.furnitureObject.marketProductId then
-                statusIndicator:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(UI_ONLY_CURRENCY_CROWNS))
+                statusIndicator:AddIcon(ZO_Currency_GetPlatformCurrencyIcon(CURT_CROWNS))
             end
 
             statusIndicator:Show()
@@ -62,13 +62,16 @@ function ZO_HousingFurnitureList_Gamepad:Initialize(owner)
     local PRICE_LABEL_PADDING_X = 5
 
     local function MarketProductEntryDataSetup(control, data, selected, ...)
+        local canBePurchased = data.furnitureObject:CanBePurchased()
+        data.iconDesaturation = canBePurchased and 0 or 1
+        data.disabled = not canBePurchased
         FurnitureEntryDataSetup(control, data, selected, ...)
 
         local furnitureObject = data.furnitureObject
 
         ZO_CurrencyControl_SetSimpleCurrency(control.priceLabel, ZO_Currency_MarketCurrencyToUICurrency(furnitureObject.currencyType), furnitureObject.costAfterDiscount, ZO_GAMEPAD_CURRENCY_OPTIONS, CURRENCY_SHOW_ALL)
         
-        local priceWidth = control.priceLabel:GetTextWidth() 
+        local priceWidth = control.priceLabel:GetTextWidth()
         control.label:SetDimensions(ZO_GAMEPAD_DEFAULT_LIST_ENTRY_WIDTH_AFTER_INDENT - PRICE_LABEL_PADDING_X - priceWidth)
 
         if furnitureObject.onSale then
@@ -90,7 +93,7 @@ function ZO_HousingFurnitureList_Gamepad:Initialize(owner)
             subLabelTextColor = selected and ZO_MARKET_PRODUCT_BACKGROUND_BRIGHTNESS_COLOR or ZO_MARKET_DIMMED_COLOR
             control.subLabel1:SetText(zo_strformat(SI_MARKET_DISCOUNT_PRICE_PERCENT_FORMAT, furnitureObject.discountPercent))
             control.subLabel1:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
-        elseif furnitureObject.isNew then
+        elseif furnitureObject.isNew and canBePurchased then -- only show the new tag if the product isn't purchased
             subLabelBackgroundColor = selected and ZO_MARKET_PRODUCT_NEW_COLOR or ZO_MARKET_PRODUCT_NEW_DIMMED_COLOR
             subLabelTextColor = selected and ZO_MARKET_PRODUCT_BACKGROUND_BRIGHTNESS_COLOR or ZO_MARKET_DIMMED_COLOR
             control.subLabel1:SetText(GetString(SI_MARKET_TILE_CALLOUT_NEW))
@@ -192,16 +195,9 @@ function ZO_HousingFurnitureList_Gamepad:InitializeKeybindStripDescriptors()
         {
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             name = GetString(SI_GAMEPAD_HOUSING_FURNITURE_BROWSER_TOGGLE_INFO),
-            keybind = "UI_SHORTCUT_INPUT_RIGHT",
+            keybind = "UI_SHORTCUT_LEFT_STICK",
             callback = ToggleFurnitureRightInfoState,
             visible = ToggleViewKeybindEnabled,
-        },
-
-        {
-            ethereal = true,
-            keybind = "UI_SHORTCUT_INPUT_LEFT",
-            callback = ToggleFurnitureRightInfoState,
-            enabled = ToggleViewKeybindEnabled,
         },
     }
 
@@ -317,10 +313,6 @@ function ZO_HousingFurnitureList_Gamepad:SwitchActiveList(list)
 end
 
 do
-    local NO_CATEGORY_NAME = nil
-    local NO_NICKNAME = nil
-    local IS_PURCHASEABLE = true
-    local BLANK_HINT = ""
     local HIDE_VISUAL_LAYER_INFO = false
     local NO_COOLDOWN = nil
     local HIDE_BLOCK_REASON = false
@@ -334,21 +326,10 @@ do
                     if furnitureObject.bagId and furnitureObject.slotIndex then
                         GAMEPAD_TOOLTIPS:LayoutBagItem(GAMEPAD_RIGHT_TOOLTIP, furnitureObject.bagId, furnitureObject.slotIndex)
                     elseif furnitureObject.marketProductId then
-                        local productId = furnitureObject.marketProductId
-                        local productType = GetMarketProductType(productId)
-                        if productType == MARKET_PRODUCT_TYPE_COLLECTIBLE then
-                            local collectibleId, _, name, type, description, owned, isPlaceholder = GetMarketProductCollectibleInfo(productId)
-                            GAMEPAD_TOOLTIPS:LayoutCollectible(GAMEPAD_RIGHT_TOOLTIP, collectibleId, NO_CATEGORY_NAME, name, NO_NICKNAME, IS_PURCHASEABLE, description, BLANK_HINT, isPlaceholder, HIDE_VISUAL_LAYER_INFO, NO_COOLDOWN, HIDE_BLOCK_REASON)
-                        elseif productType == MARKET_PRODUCT_TYPE_ITEM then
-                            local itemLink = GetMarketProductItemLink(productId)
-                            local stackCount = GetMarketProductStackCount(productId)
-                            GAMEPAD_TOOLTIPS:LayoutItemWithStackCountSimple(GAMEPAD_RIGHT_TOOLTIP, itemLink, stackCount)
-                        end
+                        GAMEPAD_TOOLTIPS:LayoutMarketProductListing(GAMEPAD_RIGHT_TOOLTIP, furnitureObject.marketProductId, furnitureObject.presentationIndex)
                     elseif furnitureObject.collectibleId then
-                        local collectibleId = furnitureObject.collectibleId
-                        local name, description, _, _, _, purchasable, _, _, hint, isPlaceholder = GetCollectibleInfo(collectibleId)
-                        local nickname = GetCollectibleNickname(collectibleId)
-                        GAMEPAD_TOOLTIPS:LayoutCollectible(GAMEPAD_RIGHT_TOOLTIP, collectibleId, NO_COLLECTION_NAME, name, nickname, purchaseable, description, hint, isPlaceholder, HIDE_VISUAL_LAYER_INFO, NO_COOLDOWN, HIDE_BLOCK_REASON)
+                        local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(furnitureObject.collectibleId)
+                        GAMEPAD_TOOLTIPS:LayoutCollectibleFromData(GAMEPAD_RIGHT_TOOLTIP, collectibleData, HIDE_VISUAL_LAYER_INFO, NO_COOLDOWN, HIDE_BLOCK_REASON)
                     elseif furnitureObject.retrievableFurnitureId then
                         local itemLink, collectibleLink = GetPlacedFurnitureLink(furnitureObject.retrievableFurnitureId)
                         if itemLink ~= "" then
@@ -397,14 +378,13 @@ end
 
 do
     local function CreateCategoryEntryData(categoryData)
-        local name, gamepadIcon
         local categoryId = categoryData:GetCategoryId()
-        if categoryId == ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY then
-            gamepadIcon = ZO_NO_TEXTURE_FILE -- TODO: get an icon for this category
-        else
+        local gamepadIcon = ZO_NO_TEXTURE_FILE
+        if categoryId ~= ZO_FURNITURE_NEEDS_CATEGORIZATION_FAKE_CATEGORY then
             gamepadIcon = GetFurnitureCategoryGamepadIcon(categoryId)
         end
-        local formattedName = zo_strformat(SI_HOUSING_FURNITURE_CATEGORY_FORMAT, categoryData:GetName(), categoryData:GetNumEntryItemsRecursive())
+        -- Avoiding zo_strformat for performance, this will get run for every category every time the number of entries could have changed
+        local formattedName = string.format("%s (%d)", categoryData:GetName(), categoryData:GetNumEntryItemsRecursive())
         local itemsData = ZO_GamepadEntryData:New(formattedName, gamepadIcon)
         itemsData.categoryId = categoryId
         itemsData.categoryData = categoryData
@@ -565,7 +545,7 @@ function ZO_HousingSettingsList_Gamepad:Initialize(userGroup, control, owner, da
     ZO_SocialOptionsDialogGamepad.Initialize(self)
     ZO_ScrollList_AddDataType(self.list, dataType, "ZO_HousingPermissionsRow_Gamepad", ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_ROW_HEIGHT, function(control, data) self:SetupRow(control, data) end)
     self:SetEmptyText(GetString(SI_GAMEPAD_HOUSING_PERMISSIONS_NO_ENTRIES))
-    self:SetupSort(ZO_HOUSING_SETTINGS_LIST_ENTRY_SORT_KEYS, "displayName", ZO_SORT_ORDER_DOWN)
+    self:SetupSort(ZO_HOUSING_SETTINGS_LIST_ENTRY_SORT_KEYS, "displayName", ZO_SORT_ORDER_UP)
 end
 
 function ZO_HousingSettingsList_Gamepad:InitializeKeybinds()
@@ -618,8 +598,13 @@ function ZO_HousingSettingsList_Gamepad:BuildOptionsList()
         return self:BuildChangeUserGroupPermissionsOption()
     end
 
+    local function ShouldShowGamerCardOption()
+        return IsConsoleUI() and (self.rowDataType == ZO_SETTINGS_VISITOR_DATA_TYPE or self.rowDataType == ZO_SETTINGS_BANLIST_DATA_TYPE)
+    end
+
     self:AddOptionTemplate(groupingId, BuildChangeUserGroupPermissionsOption, ZO_HousingSettingsList_Gamepad.SelectedDataHasPreset)
     self:AddOptionTemplate(groupingId, BuildRemoveUserGroupOption)
+    self:AddOptionTemplate(groupingId, ZO_SocialOptionsDialogGamepad.BuildGamerCardOption, ShouldShowGamerCardOption)
 end
 
 function ZO_HousingSettingsList_Gamepad:SelectedDataHasPreset()
@@ -657,16 +642,17 @@ function ZO_HousingSettingsList_Gamepad:RefreshTooltip()
     -- Do nothing, because housing permission list doesn't use a tooltip like other social lists
 end
 
+--ZO_GamepadInteractiveSortFilterList override
 function ZO_HousingSettingsList_Gamepad:InitializeDropdownFilter()
-    -- housing permission list doesn't use a the dropdown
-    local filterControl = self.contentHeader:GetNamedChild("DropdownFilter")
-    local filterDropdownControl = filterControl:GetNamedChild("Dropdown")
+    -- housing permission list doesn't use a dropdown
+    self.filterControl = self.contentHeader:GetNamedChild("DropdownFilter")
+    local filterDropdownControl = self.filterControl:GetNamedChild("Dropdown")
     self.filterDropdown = ZO_ComboBox_ObjectFromContainer(filterDropdownControl)
-    filterControl:SetHidden(true)
+    self.filterControl:SetHidden(true)
 end
 
-function ZO_HousingSettingsList_Gamepad:EntrySelectionCallback(oldData, newData)
-    ZO_GamepadInteractiveSortFilterList.EntrySelectionCallback(self, oldData, newData)
+function ZO_HousingSettingsList_Gamepad:OnSelectionChanged(oldData, newData)
+    ZO_GamepadInteractiveSortFilterList.OnSelectionChanged(self, oldData, newData)
     self:SetupOptions(newData)
 end
 
@@ -756,7 +742,7 @@ function ZO_HousingSettingsVisitorList_Gamepad:New(...)
 end
 
 function ZO_HousingSettingsVisitorList_Gamepad:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_INDIVIDUAL)
     ZO_HousingSettings_BuildMasterList_Visitor(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_Gamepad_CreateScrollData)
 end
@@ -777,7 +763,7 @@ function ZO_HousingSettingsBanList_Gamepad:New(...)
 end
 
 function ZO_HousingSettingsBanList_Gamepad:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_INDIVIDUAL)
     ZO_HousingSettings_BuildMasterList_Ban(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_Gamepad_CreateScrollData)
 end
@@ -797,7 +783,7 @@ function ZO_HousingSettingsGuildVisitorList_Gamepad:New(...)
 end
 
 function ZO_HousingSettingsGuildVisitorList_Gamepad:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_GUILD)
     ZO_HousingSettings_BuildMasterList_Visitor(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_Gamepad_CreateScrollData)
 end
@@ -817,7 +803,7 @@ function ZO_HousingSettingsGuildBanList_Gamepad:New(...)
 end
 
 function ZO_HousingSettingsGuildBanList_Gamepad:BuildMasterList()
-    self.currentHouse = self.owner.currentHouse
+    self.currentHouse = GetCurrentZoneHouseId()
     self.numPermissions = GetNumHousingPermissions(self.currentHouse, HOUSE_PERMISSION_USER_GROUP_GUILD)
     ZO_HousingSettings_BuildMasterList_Ban(self.currentHouse, self.userGroup, self.numPermissions, self.masterList, ZO_HousingSettingsList_Gamepad_CreateScrollData)
 end

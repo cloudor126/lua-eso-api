@@ -6,9 +6,12 @@ end
 
 function ZO_GamepadEnchanting:Initialize(control)
     self.slotCreationAnimationName = "gamepad_enchanting_creation"
+    self.mainSceneName = "gamepad_enchanting_mode"
+
     self.containerControl = control:GetNamedChild("Container")
 
     self.modeList = ZO_GamepadVerticalItemParametricScrollList:New(self.containerControl:GetNamedChild("Mode"))
+    self.modeList:SetAlignToScreenCenter(true)
     self.modeList:AddDataTemplate("ZO_GamepadItemEntryTemplate", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, MenuEntryTemplateEquality)
     self:InitializeModes()
 
@@ -27,31 +30,34 @@ function ZO_GamepadEnchanting:Initialize(control)
         end
     end)
 
-    local titleString = ZO_GamepadCraftingUtils_GetLineNameForCraftingType(CRAFTING_TYPE_ENCHANTING)
-
     ZO_GamepadCraftingUtils_InitializeGenericHeader(self, ZO_GAMEPAD_HEADER_TABBAR_DONT_CREATE)
-    ZO_GamepadCraftingUtils_SetupGenericHeader(self, titleString)
-    ZO_GamepadCraftingUtils_RefreshGenericHeader(self)
 end
 
 function ZO_GamepadEnchanting:InitializeModes()
     self.modeList:Clear()
     local data = ZO_GamepadEntryData:New(GetString(SI_ENCHANTING_CREATION), "EsoUI/Art/Crafting/Gamepad/gp_crafting_menuIcon_create.dds")
     data.mode = ENCHANTING_MODE_CREATION
-    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data, nil, 0, nil, 0)
+    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data)
     
     data = ZO_GamepadEntryData:New(GetString(SI_ENCHANTING_EXTRACTION), "EsoUI/Art/Crafting/Gamepad/gp_crafting_menuIcon_deconstruct.dds")
     data.mode = ENCHANTING_MODE_EXTRACTION
-    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data, nil, 0, nil, 0)
+    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data)
 
     local recipeCraftingSystem = GetTradeskillRecipeCraftingSystem(CRAFTING_TYPE_ENCHANTING)
     local recipeCraftingSystemName = GetString("SI_RECIPECRAFTINGSYSTEM", recipeCraftingSystem)
     data = ZO_GamepadEntryData:New(recipeCraftingSystemName, GetGamepadRecipeCraftingSystemMenuTextures(CRAFTING_TYPE_ENCHANTING))
     data.mode = ENCHANTING_MODE_RECIPES
-    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data, nil, 0, nil, 0)
+    self.modeList:AddEntry("ZO_GamepadItemEntryTemplate", data)
 
     self.modeList:Commit()
 end
+
+local GAMEPAD_CRAFTING_ENCHANTING_ITEM_SORT =
+{
+    customSortData = { tiebreaker = "bestItemCategoryName" },
+    bestItemCategoryName = { tiebreaker = "text" },
+    text = {},
+}
 
 function ZO_GamepadEnchanting:InitializeInventory()
     local inventory = self.containerControl:GetNamedChild("Inventory")
@@ -108,9 +114,15 @@ function ZO_GamepadEnchanting:InitializeInventory()
             end
         end
     )
+
+    self.inventory:SetOverrideItemSort(function(left, right)
+        return ZO_TableOrderingFunction(left, right, "customSortData", GAMEPAD_CRAFTING_ENCHANTING_ITEM_SORT, ZO_SORT_ORDER_UP)
+    end)
 end
 
 function ZO_GamepadEnchanting:InitializeEnchantingScenes()
+    ZO_SharedEnchanting.InitializeEnchantingScenes(self)
+
     self.enchantingStationInteraction =
     {
         type = "Enchanting Station",
@@ -122,7 +134,7 @@ function ZO_GamepadEnchanting:InitializeEnchantingScenes()
 
     local skillLineXPBarFragment = ZO_FadeSceneFragment:New(ZO_GamepadEnchantingTopLevelSkillInfo)
 
-    GAMEPAD_ENCHANTING_MODE_SCENE_ROOT = ZO_InteractScene:New("gamepad_enchanting_mode", SCENE_MANAGER, self.enchantingStationInteraction)
+    GAMEPAD_ENCHANTING_MODE_SCENE_ROOT = ZO_InteractScene:New(self.mainSceneName, SCENE_MANAGER, self.enchantingStationInteraction)
     GAMEPAD_ENCHANTING_MODE_SCENE_ROOT:AddFragment(skillLineXPBarFragment)
     GAMEPAD_ENCHANTING_MODE_SCENE_ROOT:RegisterCallback("StateChange", function(oldState, newState)
         if newState == SCENE_SHOWING then
@@ -189,24 +201,12 @@ function ZO_GamepadEnchanting:InitializeEnchantingScenes()
             self.extractionSlotContainer:SetHidden(true)
         end
     end)
-
-    self.control:RegisterForEvent(EVENT_CRAFTING_STATION_INTERACT, function(eventCode, craftingType)
-        if craftingType == CRAFTING_TYPE_ENCHANTING and IsInGamepadPreferredMode() then
-            SCENE_MANAGER:Show("gamepad_enchanting_mode")
-        end
-    end)
-
-    self.control:RegisterForEvent(EVENT_END_CRAFTING_STATION_INTERACT, function(eventCode, craftingType)
-        if craftingType == CRAFTING_TYPE_ENCHANTING then
-            SCENE_MANAGER:ShowBaseScene()
-        end
-    end)
 end
 
 function ZO_GamepadEnchanting:InitializeCreationSlots()
     self.runeSlotContainer = self.control:GetNamedChild("RuneSlotContainer")
 
-    self.creationCraftingBar = ZO_GamepadCraftingIngredientBar:New(self.runeSlotContainer, ZO_GAMEPAD_CRAFTING_UTILS_SLOT_SPACING)
+    self.creationCraftingBar = ZO_GamepadCraftingIngredientBar:New(self.runeSlotContainer)
     self.creationCraftingBar:AddDataTemplate("ZO_GamepadEnchantingRuneCraftingSlot", ZO_GamepadEnchantingRuneCraftingSlotTemplateSetup)
 
     self.creationCraftingBar:Clear()
@@ -299,19 +299,25 @@ function ZO_GamepadEnchanting:DataSelectionCallback(list, selectedData)
     end
 end
 
-
 function ZO_GamepadEnchantingRuneCraftingSlotTemplateSetup(control, data)
     data.slot = ZO_SharedEnchantRuneSlot:New(data.owner, control, data.slotIcon, data.slotIconDrag, data.slotIconNegative, data.soundPlaced, data.soundRemoved, data.type, data.inventory, data.emptySlotIcon)
+    data.slot:RegisterCallback("ItemsChanged", function()
+        data.owner:OnSlotChanged()
+    end)
 end
 
 function ZO_GamepadEnchantingRuneExtractionSlotTemplateSetup(control, data)
-    data.slot = ZO_EnchantExtractionSlot_Gamepad:New(data.owner, control, data.inventory)
+    local MULTIPLE_ITEMS_TEXTURE = "EsoUI/Art/Crafting/Gamepad/GP_smithing_multiple_enchantingSlot.dds"
+    data.slot = ZO_EnchantExtractionSlot_Gamepad:New(data.owner, control, MULTIPLE_ITEMS_TEXTURE, data.inventory)
+    data.slot:RegisterCallback("ItemsChanged", function()
+        data.owner:OnSlotChanged()
+    end)
 end
 
 function ZO_GamepadEnchanting:InitializeExtractionSlots()
     self.extractionSlotContainer = self.control:GetNamedChild("ExtractionSlotContainer")
 
-    self.extractionCraftingBar = ZO_GamepadCraftingIngredientBar:New(self.extractionSlotContainer, ZO_GAMEPAD_CRAFTING_UTILS_SLOT_SPACING)
+    self.extractionCraftingBar = ZO_GamepadCraftingIngredientBar:New(self.extractionSlotContainer)
     self.extractionCraftingBar:AddDataTemplate("ZO_GamepadEnchantingRuneExtractionSlot", ZO_GamepadEnchantingRuneExtractionSlotTemplateSetup)
 
     self.slotAnimation = ZO_CraftingCreateSlotAnimation:New(self.sceneName)
@@ -325,6 +331,9 @@ function ZO_GamepadEnchanting:InitializeExtractionSlots()
     self.extractionCraftingBar:AddEntry("ZO_GamepadEnchantingRuneExtractionSlot", newData)
     self.extractionSlot = newData.slot
 
+    self.extractionSlotAnimation = ZO_CraftingEnchantExtractSlotAnimation_Gamepad:New("gamepad_enchanting_extraction", function() return self.enchantingMode == ENCHANTING_MODE_EXTRACTION end)
+    self.extractionSlotAnimation:AddSlot(self.extractionSlot)
+
     self.extractionCraftingBar:Commit()
 end
 
@@ -335,7 +344,8 @@ function ZO_GamepadEnchanting:InitializeKeybindStripDescriptors()
     {
         alignment = KEYBIND_STRIP_ALIGN_LEFT,
 
-        {    
+        -- Slot/Unslot
+        {
             name = function()
                 self:UpdateExtractionSlotTexture()
                 if self:IsCurrentSelected() then
@@ -345,12 +355,6 @@ function ZO_GamepadEnchanting:InitializeKeybindStripDescriptors()
                 end
             end,
             keybind = "UI_SHORTCUT_PRIMARY",
-            visible = function() 
-                local isCraftingInProgress = ZO_CraftingUtils_IsPerformingCraftProcess()
-                local selectedData = self.inventory:CurrentSelection() 
-                local canCraftItem = selectedData and selectedData.meetsUsageRequirement
-                return canCraftItem and not isCraftingInProgress
-            end,
             callback = function() 
                 if self:IsCurrentSelected() then
                     self:Remove()
@@ -360,8 +364,17 @@ function ZO_GamepadEnchanting:InitializeKeybindStripDescriptors()
 
                 KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindEnchantingStripDescriptor)
             end,
+            enabled = function() 
+                if ZO_CraftingUtils_IsPerformingCraftProcess() then
+                    return false
+                end
+                local selectedData = self.inventory:CurrentSelection() 
+                local canSlotItem = selectedData and selectedData.meetsUsageRequirement
+                return canSlotItem
+            end,
         },
 
+        -- Craft/Deconstruct
         {
             name = function()
                 if self.enchantingMode == ENCHANTING_MODE_CREATION then
@@ -372,28 +385,79 @@ function ZO_GamepadEnchanting:InitializeKeybindStripDescriptors()
                 end
             end,
             keybind = "UI_SHORTCUT_SECONDARY",
+            gamepadOrder = 1000,
             callback = function()
-                if self.enchantingMode == ENCHANTING_MODE_EXTRACTION then
-                    PlaySound(SOUNDS.ENCHANTING_EXTRACT_START_ANIM)
+                if self.enchantingMode == ENCHANTING_MODE_CREATION then
+                    self:Create(1)
+                else
+                    self:ExtractSingle()
                 end
-
-                self:Create() 
             end,
-            visible = function() return not ZO_CraftingUtils_IsPerformingCraftProcess() and self:IsCraftable() end,
+            enabled = function()
+                if self.enchantingMode == ENCHANTING_MODE_CREATION then
+                    return self:ShouldCraftButtonBeEnabled()
+                else
+                    return self:ShouldDeconstructButtonBeEnabled() and self.extractionSlot:HasOneItem()
+                end
+            end,
+        },
+
+        -- Craft/Deconstruct multiple
+        {
+            name = function()
+                if self.enchantingMode == ENCHANTING_MODE_CREATION then
+                    return GetString(SI_GAMEPAD_CRAFT_MULTIPLE)
+                else
+                    return GetString(SI_CRAFTING_EXTRACT_MULTIPLE)
+                end
+            end,
+            keybind = "UI_SHORTCUT_QUATERNARY",
+            gamepadOrder = 1010,
+            callback = function()
+                if self.enchantingMode == ENCHANTING_MODE_CREATION then
+                    local itemLink = GetEnchantingResultingItemLink(self:GetAllCraftingBagAndSlots())
+                    ZO_GamepadCraftingUtils_ShowMultiCraftDialog(self, itemLink)
+                else
+                    if self.extractionSlot:HasOneItem() then
+                        -- This is one virtual slot, but because enchanting glyphs do not stack it represents multiple real slots
+                        -- Limit the max quantity to match the max number of real slots
+                        local virtualBagId, virtualSlotIndex = self.extractionSlot:GetItemBagAndSlot(1)
+                        local maxIterations = zo_min(self.inventory:GetStackCount(virtualBagId, virtualSlotIndex), MAX_ITEM_SLOTS_PER_DECONSTRUCTION)
+                        local function PerformDeconstructPartial(iterations)
+                            self:ExtractPartialStack(iterations)
+                        end
+
+                        ZO_GamepadCraftingUtils_ShowDeconstructPartialStackDialog(virtualBagId, virtualSlotIndex, maxIterations, PerformDeconstructPartial)
+                    else
+                        self:ConfirmExtractAll()
+                    end
+                end
+            end,
+            enabled = function()
+                if self.enchantingMode == ENCHANTING_MODE_CREATION then
+                    return self:ShouldMultiCraftButtonBeEnabled()
+                else
+                    return self:ShouldDeconstructButtonBeEnabled() and self.extractionSlot:GetStackCount() > 1
+                end
+            end,
         },
 
         -- Clear selections
         {
             name = GetString(SI_CRAFTING_CLEAR_SELECTIONS),
             keybind = "UI_SHORTCUT_TERTIARY",
-
+            gamepadOrder = 1020,
             callback = function()
                 self:ClearSelections()
                 self:UpdateSelection()
                 KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindEnchantingStripDescriptor)
             end,
-
-            visible = function() return not ZO_CraftingUtils_IsPerformingCraftProcess() and self:HasSelections() end,
+            visible = function()
+                return not ZO_CraftingUtils_IsPerformingCraftProcess()
+            end,
+            enabled = function()
+                return self:HasSelections()
+            end,
         },
     }
 
@@ -407,7 +471,7 @@ function ZO_GamepadEnchanting:InitializeKeybindStripDescriptors()
 end
 
 function ZO_GamepadEnchanting:UpdateExtractionSlotTexture()
-    if self.enchantingMode == ENCHANTING_MODE_EXTRACTION and not self.extractionSlot:HasItem() then
+    if self.enchantingMode == ENCHANTING_MODE_EXTRACTION and not self.extractionSlot:HasItems() then
         local bagId, slotIndex = self.inventory:CurrentSelectionBagAndSlot()
         self.extractionSlot:SetBackdrop(bagId, slotIndex)
     end
@@ -427,6 +491,14 @@ function ZO_GamepadEnchanting:SelectMode()
     end
 end
 
+function ZO_GamepadEnchanting:CanShowScene()
+    return IsInGamepadPreferredMode()
+end
+
+function ZO_GamepadEnchanting:IsSceneShowing()
+    return SCENE_MANAGER:IsShowing(self.mainSceneName) or SCENE_MANAGER:IsShowing("gamepad_enchanting_creation") or SCENE_MANAGER:IsShowing("gamepad_enchanting_extraction")
+end
+
 function ZO_GamepadEnchanting:SetEnchantingMode(enchantingMode)
     if self.enchantingMode ~= enchantingMode then
 
@@ -434,18 +506,17 @@ function ZO_GamepadEnchanting:SetEnchantingMode(enchantingMode)
 
         if enchantingMode == ENCHANTING_MODE_CREATION then
             GAMEPAD_CRAFTING_RESULTS:SetCraftingTooltip(self.resultTooltip)
-            self.inventory.noRunesLabel:SetText(GetString(SI_ENCHANTING_NO_RUNES))
+            self.inventory:SetNoItemLabelText(GetString(SI_ENCHANTING_NO_RUNES))
 
             GAMEPAD_CRAFTING_RESULTS:SetTooltipAnimationSounds(SOUNDS.ENCHANTING_CREATE_TOOLTIP_GLOW)
 
             TriggerTutorial(TUTORIAL_TRIGGER_ENCHANTING_CREATION_OPENED)
         elseif enchantingMode == ENCHANTING_MODE_EXTRACTION then
-            self.inventory.noRunesLabel:SetText(GetString(SI_ENCHANTING_NO_GLYPHS))
+            self.inventory:SetNoItemLabelText(GetString(SI_ENCHANTING_NO_GLYPHS))
+            self:ClearSelections()
 
             TriggerTutorial(TUTORIAL_TRIGGER_ENCHANTING_EXTRACTION_OPENED)
         end
-
-        self:ClearSelections()
 
         self.inventory:HandleDirtyEvent()
 
@@ -460,24 +531,19 @@ function ZO_GamepadEnchanting:UpdateSelection()
     if self.enchantingMode == ENCHANTING_MODE_CREATION then
         local rune1BagId, rune1SlotIndex, rune2BagId, rune2SlotIndex, rune3BagId, rune3SlotIndex = self:GetAllCraftingBagAndSlots()
         for _, data in pairs(self.inventory.list.dataList) do
+            local isSlotted = false
             if data.bagId == rune1BagId and data.slotIndex == rune1SlotIndex then
-                data.isEquippedInCurrentCategory = true
+                isSlotted = true
             elseif data.bagId == rune2BagId and data.slotIndex == rune2SlotIndex then
-                data.isEquippedInCurrentCategory = true
+                isSlotted = true
             elseif data.bagId == rune3BagId and data.slotIndex == rune3SlotIndex then
-                data.isEquippedInCurrentCategory = true
-            else
-                data.isEquippedInCurrentCategory = false
+                isSlotted = true
             end
+            ZO_GamepadCraftingUtils_SetEntryDataSlotted(data, isSlotted)
         end
     else
-        local bagId, slotIndex = self.extractionSlot:GetBagAndSlot()
         for _, data in pairs(self.inventory.list.dataList) do
-            if data.bagId == bagId and data.slotIndex == slotIndex then
-                data.isEquippedInCurrentCategory = true
-            else
-                data.isEquippedInCurrentCategory = false
-            end
+            ZO_GamepadCraftingUtils_SetEntryDataSlotted(data, self.extractionSlot:ContainsBagAndSlot(data.bagId, data.slotIndex))
         end
     end
     self.inventory.list:RefreshVisible()
@@ -485,69 +551,30 @@ end
 
 function ZO_GamepadEnchanting:Select()
     local bagId, slotIndex = self.inventory:CurrentSelectionBagAndSlot()
-    local usedInCraftingType, _, runeType, rankRequirement, rarityRequirement = GetItemCraftingInfo(bagId, slotIndex)
-    if usedInCraftingType == CRAFTING_TYPE_ENCHANTING then
-        if self.enchantingMode == ENCHANTING_MODE_CREATION then
-            if DoesRunePassRequirements(runeType, rankRequirement, rarityRequirement) then
-                local slot = self.runeSlots[runeType]
-                self:SetRuneSlotItem(runeType, bagId, slotIndex)
-                ZO_GamepadCraftingUtils_PlaySlotBounceAnimation(self.runeSlots[self.activeSlot])
-            end
-        elseif self.enchantingMode == ENCHANTING_MODE_EXTRACTION then
-            self:SetExtractionSlotItem(bagId, slotIndex)
-            ZO_GamepadCraftingUtils_PlaySlotBounceAnimation(self.extractionSlot)
-        end
+    local changedSlot = self:AddItemToCraft(bagId, slotIndex)
+    if changedSlot then
+        ZO_GamepadCraftingUtils_PlaySlotBounceAnimation(changedSlot)
     end
     self:UpdateSelection()
 end
 
 function ZO_GamepadEnchanting:Remove()
     local bagId, slotIndex = self.inventory:CurrentSelectionBagAndSlot()
-    local usedInCraftingType, _, runeType, rankRequirement, rarityRequirement = GetItemCraftingInfo(bagId, slotIndex)
-    if usedInCraftingType == CRAFTING_TYPE_ENCHANTING then
-        if self.enchantingMode == ENCHANTING_MODE_CREATION then
-            local slot = self.runeSlots[runeType]
-            self:SetRuneSlotItem(runeType, nil)
-        elseif self.enchantingMode == ENCHANTING_MODE_EXTRACTION then
-            self:SetExtractionSlotItem(nil)
-        end
-    end
+    self:RemoveItemFromCraft(bagId, slotIndex)
     self:UpdateSelection()
 end
 
-function ZO_GamepadEnchanting:IsCurrentSelected()
-    if self.enchantingMode == ENCHANTING_MODE_CREATION then
-        for i, slot in ipairs(self.runeSlots) do
-            if slot:HasItem() then
-                local bagId, slotIndex = slot:GetBagAndSlot()
-                local selectedBagId, selectedSlotIndex = self.inventory:CurrentSelectionBagAndSlot()
-                if bagId == selectedBagId and slotIndex == selectedSlotIndex then
-                    return true
-                end
-            end
-        end
-    elseif self.enchantingMode == ENCHANTING_MODE_EXTRACTION then
-        if self.extractionSlot:HasItem() then
-            local bagId, slotIndex = self.extractionSlot:GetBagAndSlot()
-            local selectedBagId, selectedSlotIndex = self.inventory:CurrentSelectionBagAndSlot()
-            return bagId == selectedBagId and slotIndex == selectedSlotIndex
-        end
-    end
-
-    return false
-end
-
 function ZO_GamepadEnchanting:UpdateTooltip()
-    if self.enchantingMode == ENCHANTING_MODE_CREATION and self:IsCraftable() then
+    if self:IsCraftable() then
         self.resultTooltip:SetHidden(false)
         self.resultTooltip.tip:ClearLines()
         self.resultTooltip.tip:LayoutEnchantingPreview(self:GetAllCraftingBagAndSlots())
-    elseif self.enchantingMode == ENCHANTING_MODE_EXTRACTION and self:IsCraftable() then
+    elseif self:IsExtractable() and self.extractionSlot:HasOneItem() then
         self.resultTooltip:SetHidden(false)
 
         self.resultTooltip.tip:ClearLines()
 
-        local bagId, slotIndex = self.extractionSlot:GetBagAndSlot()
+        local bagId, slotIndex = self.extractionSlot:GetItemBagAndSlot(1)
         local icon = GetItemInfo(bagId, slotIndex)
 
         local itemLink = GetItemLink(bagId, slotIndex)
@@ -566,13 +593,8 @@ end
 function ZO_GamepadEnchantingInventory:Initialize(owner, control, ...)
     local inventory = ZO_GamepadCraftingInventory.Initialize(self, control, ...)
     self.owner = owner
-    self.noRunesLabel = control.noItemsLabel
     self.filterType = NO_FILTER
     self.runeSlots = self.owner.runeSlots
-end
-
-function ZO_GamepadEnchantingInventory:AddListDataTypes()
-    self:AddVerticalScrollDataTypes("ZO_GamepadItemSubEntry")
 end
 
 function ZO_GamepadEnchantingInventory:IsLocked(bagId, slotIndex)
@@ -609,21 +631,17 @@ end
 function ZO_GamepadEnchantingInventory:Refresh(data)
     local filterType
     local titleString = nil
+    local enchantingMode = self.owner:GetEnchantingMode()
 
-    if self.owner:GetEnchantingMode() == ENCHANTING_MODE_CREATION then
+    if enchantingMode == ENCHANTING_MODE_CREATION then
         filterType = self.filterType
         titleString = GetString(SI_ENCHANTING_CREATION)
-    elseif self.owner:GetEnchantingMode() == ENCHANTING_MODE_EXTRACTION then
+    elseif enchantingMode == ENCHANTING_MODE_EXTRACTION then
         filterType = EXTRACTION_FILTER
         titleString = GetString(SI_ENCHANTING_EXTRACTION)
     end
     local validItemIds = self:EnumerateInventorySlotsAndAddToScrollData(IsEnchantingItem, DoesEnchantingItemPassFilter, filterType, data)
     self.owner:OnInventoryUpdate(validItemIds)
-    if self.owner:GetEnchantingMode() == ENCHANTING_MODE_NONE then
-        self.noRunesLabel:SetHidden(true)
-    else
-        self.noRunesLabel:SetHidden(#data > 0)
-    end
 
     if titleString then
         ZO_GamepadCraftingUtils_SetupGenericHeader(self.owner, titleString)
@@ -650,33 +668,26 @@ function ZO_EnchantExtractionSlot_Gamepad:New(...)
     return ZO_SharedEnchantExtractionSlot.New(self, ...)
 end
 
-function ZO_EnchantExtractionSlot_Gamepad:Initialize(owner, control, craftingInventory)
-    ZO_SharedEnchantExtractionSlot.Initialize(self, owner, control, craftingInventory)
-    self.nameLabel = control:GetNamedChild("Name")
+function ZO_EnchantExtractionSlot_Gamepad:Initialize(owner, control, multipleItemsTexture, craftingInventory)
+    ZO_SharedEnchantExtractionSlot.Initialize(self, owner, control, multipleItemsTexture, craftingInventory)
 end
 
 function ZO_EnchantExtractionSlot_Gamepad:ClearDropCalloutTexture()
-    self.dropCallout:SetTexture("EsoUI/Art/Crafting/crafting_enchanting_glyphSlot_empty.dds")
+    local NO_TEXTURE = ""
+    self:SetEmptyTexture(NO_TEXTURE)
     self.previousGlyph = ITEMTYPE_NONE
 end
 
 function ZO_EnchantExtractionSlot_Gamepad:SetBackdrop(bagId, slotIndex)
-    local function ShowExtractionSlotEmptySlotIcon(iconPath)
-        -- need to handle this one differently because it needs to switch empty slot icons on the fly using one crafting slot
-        self.emptySlotIcon = iconPath
-        self.control:GetNamedChild("EmptySlotIcon"):SetTexture(self.emptySlotIcon)
-        self:ShowEmptySlotIcon(true)
-    end
-    
     local usedInCraftingType, craftingSubItemType, runeType = GetItemCraftingInfo(bagId, slotIndex)
 
     if self.previousGlyph ~= craftingSubItemType then
         if craftingSubItemType == ITEMTYPE_GLYPH_WEAPON then
-            ShowExtractionSlotEmptySlotIcon("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_pentagon.dds")
+            self:SetEmptyTexture("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_pentagon.dds")
         elseif craftingSubItemType == ITEMTYPE_GLYPH_ARMOR then
-            ShowExtractionSlotEmptySlotIcon("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_shield.dds")
+            self:SetEmptyTexture("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_shield.dds")
         elseif craftingSubItemType == ITEMTYPE_GLYPH_JEWELRY then
-            ShowExtractionSlotEmptySlotIcon("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_round.dds")
+            self:SetEmptyTexture("EsoUI/Art/Crafting/Gamepad/gp_crafting_enchanting_glyphSlot_round.dds")
         else
             craftingSubItemType = ITEMTYPE_NONE
         end

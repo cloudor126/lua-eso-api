@@ -35,6 +35,8 @@ ZO_ID_REQUEST_TYPE_ACCOUNT_ID = "accountId"
 ZO_ID_REQUEST_TYPE_CHARACTER_NAME = "characterName"
 ZO_ID_REQUEST_TYPE_DISPLAY_NAME = "displayName"
 ZO_ID_REQUEST_TYPE_GUILD_INFO = "guildInfo"
+ZO_ID_REQUEST_TYPE_GUILD_APPLICATION_INFO = "guildApplicationInfo"
+ZO_ID_REQUEST_TYPE_GUILD_BLACKLIST_INFO = "guildBlacklistInfo"
 ZO_ID_REQUEST_TYPE_FRIEND_INFO = "friendInfo"
 ZO_ID_REQUEST_TYPE_IGNORE_INFO = "ignoreInfo"
 ZO_ID_REQUEST_TYPE_GROUP_INFO = "groupInfo"
@@ -47,6 +49,7 @@ ZO_ID_REQUEST_TYPE_TRIAL_OF_THE_WEEK_LEADERBOARD = "trialOfTheWeekLeaderboard"
 ZO_ID_REQUEST_TYPE_CHALLENGE_LEADERBOARD = "challengeLeaderboard"
 ZO_ID_REQUEST_TYPE_CHALLENGE_OF_THE_WEEK_LEADERBOARD = "challengeOfTheWeekLeaderboard"
 ZO_ID_REQUEST_TYPE_HOME_SHOW_LEADERBOARD = "homeShowLeaderboard"
+ZO_ID_REQUEST_TYPE_BATTLEGROUND_LEADERBOARD = "battlegroundLeaderboard"
 
 local CONSOLE_INFO_FUNCTIONS = 
 {
@@ -54,6 +57,8 @@ local CONSOLE_INFO_FUNCTIONS =
     [ZO_ID_REQUEST_TYPE_CHARACTER_NAME] = GetConsoleInfoFromCharName,
     [ZO_ID_REQUEST_TYPE_DISPLAY_NAME] = GetConsoleInfoFromDisplayName,
     [ZO_ID_REQUEST_TYPE_GUILD_INFO] = GetConsoleInfoFromGuildMember,
+    [ZO_ID_REQUEST_TYPE_GUILD_APPLICATION_INFO] = GetConsoleInfoFromGuildApplicationIndex,
+    [ZO_ID_REQUEST_TYPE_GUILD_BLACKLIST_INFO] = GetConsoleInfoFromGuildBlacklistIndex,
     [ZO_ID_REQUEST_TYPE_FRIEND_INFO] = GetConsoleInfoFromFriend,
     [ZO_ID_REQUEST_TYPE_IGNORE_INFO] = GetConsoleInfoFromIgnore,
     [ZO_ID_REQUEST_TYPE_GROUP_INFO] = GetConsoleInfoFromGroupMember,
@@ -66,6 +71,7 @@ local CONSOLE_INFO_FUNCTIONS =
     [ZO_ID_REQUEST_TYPE_CHALLENGE_LEADERBOARD] = GetConsoleInfoFromChallengeLeaderboardEntry,
     [ZO_ID_REQUEST_TYPE_CHALLENGE_OF_THE_WEEK_LEADERBOARD] = GetConsoleInfoFromChallengeOfTheWeekLeaderboardEntry,
     [ZO_ID_REQUEST_TYPE_HOME_SHOW_LEADERBOARD] = GetConsoleInfoFromHomeShowLeaderboardEntry,
+    [ZO_ID_REQUEST_TYPE_BATTLEGROUND_LEADERBOARD] = GetConsoleInfoFromBattlegroundLeaderboardEntry,
 }
 
 function PlayerConsoleInfoRequestManager:RequestId(idRequestType, block, callback, ...)

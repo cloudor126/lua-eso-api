@@ -6,7 +6,7 @@ function ZO_CampaignOverviewManager:New(control)
 
     CAMPAIGN_OVERVIEW_SCENE = ZO_Scene:New("campaignOverview", SCENE_MANAGER)
     CAMPAIGN_OVERVIEW_SCENE:RegisterCallback("StateChange", function(oldState, newState)
-                                                                if(newState == SCENE_SHOWING) then
+                                                                if newState == SCENE_SHOWING then
                                                                     manager:ChangeCategory(manager.overviewType)
                                                                 end
                                                             end)
@@ -62,7 +62,6 @@ function ZO_CampaignOverviewManager:InitializeCategories()
     local function CategorySetup(node, control, overviewType, down)
         local info = CAMPAIGN_OVERVIEW_TYPE_INFO[overviewType]
 
-        local name = GetCampaignRulesetName(rulesetId)
         control.text:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
         control.text:SetText(info.name)
         control.overviewType = overviewType
@@ -73,7 +72,7 @@ function ZO_CampaignOverviewManager:InitializeCategories()
         ZO_IconHeader_Setup(control, down)
     end
     local function CategorySelected(control, overviewType, selected, reselectingDuringRebuild)
-        if(selected) then
+        if selected then
             self:ChangeCategory(overviewType)
         end
         CategorySetup(nil, control, overviewType, selected)
@@ -91,7 +90,7 @@ function ZO_CampaignOverviewManager:RefreshCategories()
 
     for categoryType, categoryInfo in ipairs(CAMPAIGN_OVERVIEW_TYPE_INFO) do
         if not categoryInfo.visible or categoryInfo.visible() then
-            self.tree:AddNode("ZO_CampaignOverviewType", categoryType, nil, SOUNDS.CAMPAIGN_BLADE_SELECTED)
+            self.tree:AddNode("ZO_CampaignOverviewType", categoryType)
         end
     end
 

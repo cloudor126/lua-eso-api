@@ -8,6 +8,7 @@ end
 
 function ZO_LootInventory_Gamepad:Initialize(control)
     local DONT_CREATE_TABBAR = false
+    ZO_Loot_Gamepad_Base.Initialize(self, GAMEPAD_LEFT_TOOLTIP)
     ZO_Gamepad_ParametricList_Screen.Initialize(self, control, DONT_CREATE_TABBAR)
 
     self.initialLootUpdate = true
@@ -30,20 +31,6 @@ end
 function ZO_LootInventory_Gamepad:SetupList(list)
     list:AddDataTemplate("ZO_GamepadItemSubEntryTemplate", ZO_SharedGamepadEntry_OnSetup)
     self.itemList = list
-end
-
-function ZO_LootInventory_Gamepad:OnSelectionChanged(list, selectedData, oldSelectedData)
-    KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
-    GAMEPAD_TOOLTIPS:ClearLines(GAMEPAD_LEFT_TOOLTIP)
-
-    if selectedData then
-        if not selectedData.currencyType then 
-            local itemLink = GetLootItemLink(selectedData.lootId)
-            GAMEPAD_TOOLTIPS:LayoutItemWithStackCountSimple(GAMEPAD_LEFT_TOOLTIP, itemLink, selectedData.stackCount)
-        end
-
-        self:UpdateButtonTextOnSelection(selectedData)
-    end
 end
 
 function ZO_LootInventory_Gamepad:DeferredInitialize()

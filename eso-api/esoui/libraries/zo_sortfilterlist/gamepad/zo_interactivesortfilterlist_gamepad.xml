@@ -16,6 +16,10 @@
         <Backdrop name="ZO_GamepadInteractiveSortFilterDefaultHighlight" inherits="ZO_GamepadWhiteOutlineHighlight" tier="HIGH" layer="OVERLAY" blendMode="ADD" virtual="true">
             <AnchorFill />
         </Backdrop>
+        
+        <Backdrop name="ZO_GamepadInteractiveSortFilterThickHighlight" inherits="ZO_GamepadWhiteOutlineThick" tier="HIGH" layer="OVERLAY" blendMode="ADD" virtual="true">
+            <AnchorFill />
+        </Backdrop>
 
         <Backdrop name="ZO_GamepadInteractiveFilterHighlight" inherits="ZO_GamepadInteractiveSortFilterDefaultHighlight" virtual="true">
             <Anchor point="TOPLEFT" offsetX="-ZO_GAMEPAD_INTERACTIVE_FILTER_HIGHLIGHT_PADDING" offsetY="-ZO_GAMEPAD_INTERACTIVE_FILTER_HIGHLIGHT_PADDING" />
@@ -27,12 +31,16 @@
             <Anchor point="BOTTOMRIGHT" offsetX="ZO_GAMEPAD_INTERACTIVE_FILTER_HIGHLIGHT_PADDING" />
         </Backdrop>
         
-        <Control name="ZO_GamepadInteractiveFilterHeader" inherits="ZO_SortHeader" virtual="true">
+        <Control name="ZO_GamepadInteractiveFilterHeaderAppearance" inherits="ZO_SortHeaderAppearance" virtual="true">
             <Dimensions y="ZO_GAMEPAD_INTERACTIVE_FILTER_LIST_ROW_HEIGHT" />
             <Controls>
                 <Label name="$(parent)Name" override="true" font="ZoFontGamepad27" />
             </Controls>
         </Control>
+
+        <Control name="ZO_GamepadInteractiveFilterHeader" inherits="ZO_GamepadInteractiveFilterHeaderAppearance ZO_SortHeaderBehavior" virtual="true" />
+
+        <Control name="ZO_GamepadDisabledInteractiveFilterHeader" inherits="ZO_GamepadInteractiveFilterHeaderAppearance" virtual="true" />
 
         <Control name="ZO_GamepadInteractiveFilterDropdown" virtual="true">
             <Dimensions x="350" y="48"/>
@@ -106,7 +114,7 @@
             </Controls>
         </Control>
 
-        <Control name="ZO_GamepadInteractiveSortFilterListControl" virtual ="true">
+        <Control name="ZO_GamepadInteractiveSortFilterListControl" virtual="true">
             <Controls>
                 <Control name="$(parent)Container" inherits="ZO_GamepadGrid_NavQuadrant_ContainerAnchors" >
                     <Controls>

@@ -130,6 +130,7 @@
 -- @param #boolean showAdvised
 -- @param #boolean showBadMorph
 -- @param #integer:nilable overrideRank
+-- @param #integer:nilable overrideAbilityId
 -- @function[parent = #TooltipControl] SetActiveSkill
 
 -------------------------------------------------------------------------------
@@ -269,6 +270,12 @@
 -- @param #integer marketProductId
 -- @param #boolean showCollectiblePurchasableHint
 -- @function[parent = #TooltipControl] SetMarketProduct
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer marketProductId
+-- @param #luaindex:nilable presentationIndex
+-- @function[parent = #TooltipControl] SetMarketProductListing
 
 -------------------------------------------------------------------------------
 -- @param self

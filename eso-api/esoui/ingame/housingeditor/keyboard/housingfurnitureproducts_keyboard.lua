@@ -8,21 +8,44 @@ function ZO_HousingFurnitureProducts_Keyboard:InitializeKeybindStrip()
     self.keybindStripDescriptor =
     {
         alignment = KEYBIND_STRIP_ALIGN_CENTER,
+        -- purchase
         {
             name = GetString(SI_HOUSING_FURNITURE_BROWSER_PURCHASE_KEYBIND),
             keybind = "UI_SHORTCUT_PRIMARY",
             callback = function()
                 local mostRecentlySelectedData = self:GetMostRecentlySelectedData()
-                self:RequestPurchase(mostRecentlySelectedData)
+                local IS_PURCHASE = false
+                self:RequestPurchase(mostRecentlySelectedData, IS_PURCHASE)
             end,
             enabled = function()
-                local hasMostRecentlySelectedData = self:GetMostRecentlySelectedData() ~= nil
-                if not hasMostRecentlySelectedData then
+                local mostRecentlySelectedData = self:GetMostRecentlySelectedData()
+                if mostRecentlySelectedData == nil then
                     return false, GetString(SI_HOUSING_BROWSER_MUST_CHOOSE_TO_PURCHASE)
+                elseif not mostRecentlySelectedData:CanBePurchased() then
+                    local expectedPurchaseResult = CouldPurchaseMarketProduct(mostRecentlySelectedData.marketProductId, mostRecentlySelectedData.presentationIndex)
+                    return false, GetString("SI_MARKETPURCHASABLERESULT", expectedPurchaseResult)
                 end
                 return true
             end,
         },
+        -- gift
+        {
+            name = GetString(SI_HOUSING_FURNITURE_BROWSER_GIFT_KEYBIND),
+            keybind = "UI_SHORTCUT_TERTIARY",
+            callback = function()
+                local mostRecentlySelectedData = self:GetMostRecentlySelectedData()
+                local IS_GIFT = true
+                self:RequestPurchase(mostRecentlySelectedData, IS_GIFT)
+            end,
+            visible = function()
+                local mostRecentlySelectedData = self:GetMostRecentlySelectedData()
+                if mostRecentlySelectedData ~= nil then
+                    return IsMarketProductGiftable(mostRecentlySelectedData.marketProductId, mostRecentlySelectedData.presentationIndex)
+                end
+                return false
+            end,
+        },
+        -- end preview
         {
             name = GetString(SI_CRAFTING_EXIT_PREVIEW_MODE),
             keybind = "UI_SHORTCUT_NEGATIVE",
@@ -30,11 +53,28 @@ function ZO_HousingFurnitureProducts_Keyboard:InitializeKeybindStrip()
                 self:ClearSelection()
             end,
             visible = function()
-                local hasSelection = self:GetMostRecentlySelectedData() ~= nil
+                local hasSelection = self:GetMostRecentlySelectedData() ~= nil and IsCurrentlyPreviewing()
                 return hasSelection
             end,
         },
     }
+end
+
+function ZO_HousingFurnitureProducts_Keyboard:InitializeThemeSelector()
+    self.purchaseThemeDropdown = self.contents:GetNamedChild("Dropdown")
+
+    local function OnThemeChanged(comboBox, entryText, entry)
+        SHARED_FURNITURE:SetPurchaseFurnitureTheme(entry.furnitureTheme)
+    end
+
+    ZO_HousingSettingsTheme_SetupDropdown(self.purchaseThemeDropdown, OnThemeChanged)
+end
+
+
+function ZO_HousingFurnitureProducts_Keyboard:OnShowing()
+    ZO_HousingFurnitureList.OnShowing(self)
+
+    UpdateMarketDisplayGroup(MARKET_DISPLAY_GROUP_HOUSE_EDITOR)
 end
 
 function ZO_HousingFurnitureProducts_Keyboard:OnSearchTextChanged(editBox)
@@ -52,38 +92,53 @@ function ZO_HousingFurnitureProducts_Keyboard:AddListDataTypes()
     self.MarketProductFurnitureOnMouseDoubleClickCallback = function(control, buttonIndex)
         if buttonIndex == MOUSE_BUTTON_INDEX_LEFT then
             local data = ZO_ScrollList_GetData(control)
-            self:RequestPurchase(data)
+            local IS_PURCHASE = false
+            self:RequestPurchase(data, IS_PURCHASE)
         end
     end
 
     self:AddDataType(ZO_HOUSING_MARKET_PRODUCT_DATA_TYPE, "ZO_MarketProductFurnitureSlot", ZO_HOUSING_FURNITURE_LIST_ENTRY_HEIGHT, function(...) self:SetupMarketProductFurnitureRow(...) end, ZO_HousingFurnitureBrowser_Keyboard.OnHideFurnitureRow)
 end
 
-function ZO_HousingFurnitureProducts_Keyboard:RequestPurchase(data)
+function ZO_HousingFurnitureProducts_Keyboard:RequestPurchase(data, isGift)
     ClearTooltip(ItemTooltip)
-    RequestPurchaseMarketProduct(data.marketProductId, data.presentationIndex)
+    RequestPurchaseMarketProduct(data.marketProductId, data.presentationIndex, isGift)
 end
 
 do
     local CURRENCY_ICON_SIZE = "100%"
+    local INHERIT_ICON_COLOR = true
 
     function ZO_HousingFurnitureProducts_Keyboard:SetupMarketProductFurnitureRow(rowControl, marketProductFurnitureObject)
-        rowControl.name:SetText(marketProductFurnitureObject:GetFormattedName())
+        local canBePurchased = marketProductFurnitureObject:CanBePurchased()
+        local nameColorR, nameColorG, nameColorB
+        local currencyColorR, currencyColorG, currencyColorB
+        local iconDesaturation
+        if canBePurchased then
+            local quality = marketProductFurnitureObject:GetQuality()
+            nameColorR, nameColorG, nameColorB = GetInterfaceColor(INTERFACE_COLOR_TYPE_ITEM_QUALITY_COLORS, quality)
+            currencyColorR, currencyColorG, currencyColorB = ZO_SELECTED_TEXT:UnpackRGB()
+            iconDesaturation = 0
+        else
+            nameColorR, nameColorG, nameColorB = ZO_DISABLED_TEXT:UnpackRGB()
+            currencyColorR, currencyColorG, currencyColorB = ZO_DISABLED_TEXT:UnpackRGB()
+            iconDesaturation = 1
+        end
 
-        local quality = marketProductFurnitureObject:GetQuality()
-        local r, g, b = GetInterfaceColor(INTERFACE_COLOR_TYPE_ITEM_QUALITY_COLORS, quality)
-        rowControl.name:SetColor(r, g, b, 1)
+        rowControl.name:SetText(marketProductFurnitureObject:GetFormattedName())
+        rowControl.name:SetColor(nameColorR, nameColorG, nameColorB, 1)
 
         rowControl.icon:SetTexture(marketProductFurnitureObject:GetIcon())
+        rowControl.icon:SetDesaturation(iconDesaturation)
 
         -- setup the cost
-        local currencyType, cost, hasDiscount, costAfterDiscount, discountPercent = marketProductFurnitureObject:GetMarketProductPricingByPresentation()
+        local currencyType, cost, costAfterDiscount, discountPercent, esoPlusCost = marketProductFurnitureObject:GetMarketProductPricingByPresentation()
         local onSale = discountPercent > 0
 
         rowControl.textCallout:ClearAnchors()
 
         if onSale then
-            rowControl.previousCost:SetText(ZO_CommaDelimitNumber(cost))
+            rowControl.previousCost:SetText(zo_strformat(SI_NUMBER_FORMAT, ZO_CommaDelimitNumber(cost)))
             rowControl.textCallout:SetAnchor(RIGHT, rowControl.previousCost, LEFT, -10)
         else
             rowControl.textCallout:SetAnchor(RIGHT, rowControl.cost, LEFT, -10)
@@ -91,9 +146,13 @@ do
 
         rowControl.previousCost:SetHidden(not onSale)
 
-        local currencyIcon = ZO_Currency_GetPlatformFormattedCurrencyIcon(ZO_Currency_MarketCurrencyToUICurrency(currencyType), CURRENCY_ICON_SIZE)
-        local currencyString = zo_strformat(SI_CURRENCY_AMOUNT_WITH_ICON, ZO_CommaDelimitNumber(costAfterDiscount), currencyIcon)
+        -- format the price with the currency icon
+        -- done this way so we can easily change the color of the string
+        local currencyIcon = ZO_Currency_GetKeyboardFormattedCurrencyIcon(ZO_Currency_MarketCurrencyToUICurrency(currencyType), CURRENCY_ICON_SIZE, INHERIT_ICON_COLOR)
+        local currencyString = string.format("%s %s", zo_strformat(SI_NUMBER_FORMAT, ZO_CommaDelimitNumber(costAfterDiscount)), currencyIcon)
+
         rowControl.cost:SetText(currencyString)
+        rowControl.cost:SetColor(currencyColorR, currencyColorG, currencyColorB, 1)
 
         local textCalloutBackgroundColor
         local textCalloutTextColor
@@ -108,7 +167,7 @@ do
             textCalloutTextColor = ZO_SELECTED_TEXT
             rowControl.textCallout:SetText(zo_strformat(SI_MARKET_DISCOUNT_PRICE_PERCENT_FORMAT, marketProductFurnitureObject.discountPercent))
             rowControl.textCallout:SetModifyTextType(MODIFY_TEXT_TYPE_UPPERCASE)
-        elseif marketProductFurnitureObject.isNew then
+        elseif marketProductFurnitureObject.isNew and canBePurchased then -- only show the new tag if the product isn't purchased
             textCalloutBackgroundColor = ZO_MARKET_PRODUCT_NEW_COLOR
             textCalloutTextColor = ZO_SELECTED_TEXT
             rowControl.textCallout:SetText(GetString(SI_MARKET_TILE_CALLOUT_NEW))

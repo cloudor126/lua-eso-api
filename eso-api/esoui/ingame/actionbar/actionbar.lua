@@ -7,8 +7,7 @@ local ACTION_BUTTON_TEMPLATE = "ZO_ActionButton"
 local ULTIMATE_ABILITY_BUTTON_TEMPLATE = "ZO_UltimateActionButton"
 
 local function GetRemappedActionSlotNum(slotNum)
-    if slotNum > ACTION_BAR_FIRST_UTILITY_BAR_SLOT and slotNum <= ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_UTILITY_BAR_SIZE
-    then
+    if slotNum > ACTION_BAR_FIRST_UTILITY_BAR_SLOT and slotNum <= ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_UTILITY_BAR_SIZE then
         return ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1
     else
         return slotNum
@@ -29,36 +28,21 @@ function ZO_ActionBar_GetButton(slotNum)
     return g_actionBarButtons[remappedSlotNum]
 end
 
-local function CanUseActionSlots()
+function ZO_ActionBar_CanUseActionSlots()
     return ((not IsGameCameraActive() and not IsInteractionCameraActive()) or SCENE_MANAGER:IsShowing("hud")) and not IsUnitDead("player")
 end
 
-function ActionButtonDownAndUp(slotNum)
-    if CanUseActionSlots() then
-        local button = ZO_ActionBar_GetButton(slotNum)
-        if button then
-            button:HandlePressAndRelease()
-        end
-    end
-end
-
-function ActionButtonDown(slotNum)
-    if CanUseActionSlots() then
-        local button = ZO_ActionBar_GetButton(slotNum)
-        if button then
-            button:HandlePress()
-        end
-    end
-end
-
-function ActionButtonUp(slotNum)
+function ZO_ActionBar_OnActionButtonDown(slotNum)
     local button = ZO_ActionBar_GetButton(slotNum)
     if button then
-        if CanUseActionSlots() then
-            button:HandleRelease()
-        else
-            button:ResetVisualState() --in case CanUseActionSlots() returns false after ActionButtonDown already fired.
-        end
+        button:OnPress()
+    end
+end
+
+function ZO_ActionBar_OnActionButtonUp(slotNum)
+    local button = ZO_ActionBar_GetButton(slotNum)
+    if button then
+        button:OnRelease()
     end
 end
 
@@ -75,8 +59,7 @@ function ZO_ActionBar_AttemptPlacement(slotNum)
 end
 
 function ZO_ActionBar_AttemptPickup(slotNum)
-    if(AreActionBarsLocked())
-    then
+    if AreActionBarsLocked() then
         return
     end
 
@@ -85,21 +68,15 @@ function ZO_ActionBar_AttemptPickup(slotNum)
 end
 
 local g_currentUltimateMax = 0
-local g_ultimateBarFull = nil
 local g_ultimateReadyBurstTimeline = nil
 local g_ultimateReadyLoopTimeline = nil
-local g_ultimateFillTimeline = nil
 local g_ultimateBarFillLeftTimeline = nil
 local g_ultimateBarFillRightTimeline = nil
-
-local ZO_ULTIMATE_BAR_GRADIENT_COLORS = { ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_ULTIMATE_BAR, ULTIMATE_BAR_COLOR_BAR_START)), ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_ULTIMATE_BAR, ULTIMATE_BAR_COLOR_BAR_END)) }
-local ZO_ULTIMATE_BAR_FULL_GRADIENT_COLORS = { ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_ULTIMATE_BAR, ULTIMATE_BAR_COLOR_FULL_BAR_START)), ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_ULTIMATE_BAR, ULTIMATE_BAR_COLOR_FULL_BAR_END)) }
 
 local function UpdateCurrentUltimateMax()
     local cost, mechanic = GetSlotAbilityCost(ACTION_BAR_ULTIMATE_SLOT_INDEX + 1)
 
-    if(mechanic == POWERTYPE_ULTIMATE)
-    then
+    if mechanic == POWERTYPE_ULTIMATE then
         g_currentUltimateMax = cost
     else
         g_currentUltimateMax = 0
@@ -107,7 +84,7 @@ local function UpdateCurrentUltimateMax()
 end
 
 local function StopUltimateReadyAnimations()
-    if(g_ultimateReadyBurstTimeline) then
+    if g_ultimateReadyBurstTimeline then
         g_ultimateReadyBurstTimeline:Stop()
         g_ultimateReadyLoopTimeline:Stop()
         if ZO_RZCHROMA_EFFECTS then
@@ -117,13 +94,13 @@ local function StopUltimateReadyAnimations()
 end
 
 local function PlayUltimateReadyAnimations(ultimateReadyBurstTexture, ultimateReadyLoopTexture)
-    if(not g_ultimateReadyBurstTimeline) then
+    if not g_ultimateReadyBurstTimeline then
         g_ultimateReadyBurstTimeline = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyBurst", ultimateReadyBurstTexture)
         g_ultimateReadyLoopTimeline = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyLoop", ultimateReadyLoopTexture)
         g_ultimateReadyBurstTimeline:SetHandler("OnPlay", function() PlaySound(SOUNDS.ABILITY_ULTIMATE_READY) end)
 
         local function OnStop(self)
-            if(self:GetProgress() == 1.0) then
+            if self:GetProgress() == 1.0 then
                 ultimateReadyBurstTexture:SetHidden(true)
                 g_ultimateReadyLoopTimeline:PlayFromStart()
                 ultimateReadyLoopTexture:SetHidden(false)
@@ -219,9 +196,9 @@ local function SetUltimateMeter(ultimateCount, setProgressNoAnim)
     local ultimateFillFrame = GetControl(ultimateSlot, "Frame")
 
     local isGamepad = IsInGamepadPreferredMode()
-    
-    if(isSlotUsed) then
-        if(ultimateCount >= g_currentUltimateMax) then
+
+    if isSlotUsed then
+        if ultimateCount >= g_currentUltimateMax then
             --hide progress bar
             barTexture:SetHidden(true)
             leadingEdge:SetHidden(true)
@@ -247,7 +224,7 @@ local function SetUltimateMeter(ultimateCount, setProgressNoAnim)
             ultimateFillLeftTexture:SetHidden(not isGamepad)
             ultimateFillRightTexture:SetHidden(not isGamepad)
             ultimateFillFrame:SetHidden(not isGamepad)
-        
+
             -- update both platforms progress bars
             local slotHeight = ultimateSlot:GetHeight()
             local percentComplete = ultimateCount / g_currentUltimateMax
@@ -262,7 +239,7 @@ local function SetUltimateMeter(ultimateCount, setProgressNoAnim)
             ultimateButton:AnchorKeysOut()
         end
 
-		ultimateButton:UpdateUltimateNumber()
+        ultimateButton:UpdateUltimateNumber()
     else
         --stop animation
         ultimateReadyBurstTexture:SetHidden(true)
@@ -298,24 +275,14 @@ local function OnItemSlotChanged(eventCode, itemSoundCategory)
     PlayItemSound(itemSoundCategory, ITEM_SOUND_ACTION_SLOT)
 end
 
-local function OnAbilitySlotted(eventCode, newAbilitySlotted, slotNum)
-    if(newAbilitySlotted == true)
-    then
-        PlaySound(SOUNDS.ABILITY_SLOTTED)
-    else
-        PlaySound(SOUNDS.ABILITY_SLOT_CLEARED)
-    end
-end
-
 local function HandleSlotChanged(slotNum)
     local btn = ZO_ActionBar_GetButton(slotNum)
-    if(btn and not btn.noUpdates)
-    then
+    if btn and not btn.noUpdates then
         btn:HandleSlotChanged()
 
         local buttonTemplate = ZO_GetPlatformTemplate(ACTION_BUTTON_TEMPLATE)
 
-        if(slotNum == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1) then
+        if slotNum == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1 then
             buttonTemplate = ZO_GetPlatformTemplate(ULTIMATE_ABILITY_BUTTON_TEMPLATE)
             UpdateUltimateMeter()
         end
@@ -326,8 +293,7 @@ end
 
 local function HandleStateChanged(slotNum)
     local btn = ZO_ActionBar_GetButton(slotNum)
-    if(btn and not btn.noUpdates)
-    then
+    if btn and not btn.noUpdates then
         btn:UpdateState()
     end
 end
@@ -340,15 +306,13 @@ local function HandleAbilityUsed(slotNum)
 end
 
 local function UpdateAllSlots(eventCode)
-    for physicalSlotNum in pairs(g_actionBarButtons)
-    do
+    for physicalSlotNum in pairs(g_actionBarButtons) do
         HandleSlotChanged(physicalSlotNum)
     end
 end
 
 local function UpdateCooldowns()
-    for i, button in pairs(g_actionBarButtons)
-    do
+    for i, button in pairs(g_actionBarButtons) do
         button:UpdateCooldown()
     end
 end
@@ -364,18 +328,14 @@ local function MakeActionButton(physicalSlot, buttonStyle, buttonObject)
 end
 
 local function HandleInventoryChanged(eventCode, bag, slot)
-    for _, physicalSlot in pairs(g_actionBarButtons)
-    do
-        if(physicalSlot)
-        then
+    for _, physicalSlot in pairs(g_actionBarButtons) do
+        if physicalSlot then
             local slotType = GetSlotType(physicalSlot:GetSlot())
-            if(slotType == ACTION_TYPE_ITEM) then
-                local itemCount = GetSlotItemCount(physicalSlot:GetSlot())
-                local consumable = IsSlotItemConsumable(physicalSlot:GetSlot())
-                physicalSlot:SetupCount(itemCount, consumable)
+            if slotType == ACTION_TYPE_ITEM then
+                physicalSlot:SetupCount()
                 physicalSlot:UpdateState()
-		    elseif(slotType == ACTION_TYPE_ABILITY) then
-				physicalSlot:UpdateState()
+            elseif slotType == ACTION_TYPE_ABILITY then
+                physicalSlot:UpdateState()
             end
         end
     end
@@ -383,9 +343,9 @@ end
 
 local function ShowHiddenButtons()
     g_showHiddenButtonsRefCount = g_showHiddenButtonsRefCount + 1
-    if(g_showHiddenButtonsRefCount == 1) then
+    if g_showHiddenButtonsRefCount == 1 then
         for _, control in pairs(g_actionBarButtons) do
-            if(control:GetButtonType() == ACTION_BUTTON_TYPE_HIDDEN) then
+            if control:GetButtonType() == ACTION_BUTTON_TYPE_HIDDEN then
                 control.slot:SetHidden(false)
             end
         end
@@ -394,10 +354,10 @@ end
 
 local function HideHiddenButtons()
     g_showHiddenButtonsRefCount = g_showHiddenButtonsRefCount - 1
-    if(g_showHiddenButtonsRefCount == 0) then
+    if g_showHiddenButtonsRefCount == 0 then
         for _, control in pairs(g_actionBarButtons) do
-            if(control:GetButtonType() == ACTION_BUTTON_TYPE_HIDDEN) then
-                if(not control:HasAction()) then
+            if control:GetButtonType() == ACTION_BUTTON_TYPE_HIDDEN then
+                if not control:HasAction() then
                     control.slot:SetHidden(true)
                 end
             end
@@ -419,7 +379,7 @@ local function ShowAppropriateAbilityActionButtonDropCallouts(abilityIndex)
         local isValid = IsValidAbilityForSlot(abilityIndex, i)
         local callout = ZO_ActionBar_GetButton(i).slot:GetNamedChild("DropCallout")
 
-        if(not isValid) then
+        if not isValid then
             callout:SetColor(1, 0, 0, 1)
         else
             callout:SetColor(1, 1, 1, 1)
@@ -430,30 +390,26 @@ local function ShowAppropriateAbilityActionButtonDropCallouts(abilityIndex)
 end
 
 local function HandleCursorPickup(eventCode, cursorType, param1, param2, param3)
-    if(cursorType == MOUSE_CONTENT_ACTION or cursorType == MOUSE_CONTENT_INVENTORY_ITEM or cursorType == MOUSE_CONTENT_QUEST_ITEM or cursorType == MOUSE_CONTENT_QUEST_TOOL) then
+    if cursorType == MOUSE_CONTENT_ACTION or cursorType == MOUSE_CONTENT_INVENTORY_ITEM or cursorType == MOUSE_CONTENT_QUEST_ITEM or cursorType == MOUSE_CONTENT_QUEST_TOOL then
         ShowHiddenButtons()
     end
 
-    if(cursorType == MOUSE_CONTENT_ACTION and param1 == ACTION_TYPE_ABILITY) then
+    if cursorType == MOUSE_CONTENT_ACTION and param1 == ACTION_TYPE_ABILITY then
         ShowAppropriateAbilityActionButtonDropCallouts(param3)
-        if(param3 ~= 0)
-        then
-            PlaySound(SOUNDS.ABILITY_PICKED_UP)
-        end
     end
 end
 
 local function HandleCursorDropped(eventCode, cursorType)
-    if(cursorType == MOUSE_CONTENT_ACTION or cursorType == MOUSE_CONTENT_INVENTORY_ITEM or cursorType == MOUSE_CONTENT_QUEST_ITEM or cursorType == MOUSE_CONTENT_QUEST_TOOL) then
+    if cursorType == MOUSE_CONTENT_ACTION or cursorType == MOUSE_CONTENT_INVENTORY_ITEM or cursorType == MOUSE_CONTENT_QUEST_ITEM or cursorType == MOUSE_CONTENT_QUEST_TOOL then
         HideHiddenButtons()
     end
 
-    if(cursorType == MOUSE_CONTENT_ACTION) then
+    if cursorType == MOUSE_CONTENT_ACTION then
         HideAllAbilityActionButtonDropCallouts()
     end
 end
 
-local function OnActiveQuickslotChanged(eventCode, slotId)
+local function OnActiveQuickslotChanged(eventCode, actionSlotIndex)
     HandleSlotChanged(ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1)
 end
 
@@ -469,7 +425,7 @@ local function OnCollectionUpdated()
 end
 
 local function OnActiveWeaponPairChanged(eventCode, activeWeaponPair)
-    if (activeWeaponPair ~= g_actionBarActiveWeaponPair) then
+    if activeWeaponPair ~= g_actionBarActiveWeaponPair then
         g_activeWeaponSwapInProgress = true
         UpdateUltimateMeter()
         g_actionBarActiveWeaponPair = activeWeaponPair
@@ -521,7 +477,6 @@ local function ApplyStyle(style)
                 local anchorTarget = lastButton and lastButton.slot
                 if not lastButton then
                     anchorTarget = ZO_ActionBar1WeaponSwap
-                    anchorOffsetX = 5
                 end
                 button:ApplyAnchor(anchorTarget, style.abilitySlotOffsetX)
                 lastButton = button
@@ -539,34 +494,33 @@ local function ApplyStyle(style)
     UpdateUltimateMeter()
 end
 
-function ZO_ActionBar_Initialize()    
+function ZO_ActionBar_OnInitialized(control)
     local MAIN_BAR_STYLE =
     {
         type = ACTION_BUTTON_TYPE_VISIBLE,
         template = ACTION_BUTTON_TEMPLATE,
         showBinds = true,
-        parentBar = ZO_ActionBar1,
+        parentBar = control,
     }
 
     --Quick Bar Slot
     local quickBarButton = MakeActionButton(ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1, MAIN_BAR_STYLE, QuickslotActionButton)
-    quickBarButton.slot:SetAnchor(TOPLEFT, nil, TOPLEFT, 0, 0)  
+    quickBarButton.slot:SetAnchor(TOPLEFT, nil, TOPLEFT, 0, 0)
     quickBarButton:SetupBounceAnimation()
-    
-    ZO_ActionBar1WeaponSwap:SetAnchor(LEFT, quickBarButton.slot, RIGHT, 5, 0)
+
+    control:GetNamedChild("WeaponSwap"):SetAnchor(LEFT, quickBarButton.slot, RIGHT, 5, 0)
 
     local function OnSwapAnimationHalfDone(animation, button)
         button:HandleSlotChanged()
 
-        if(button:GetSlot() == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1)
-        then
+        if button:GetSlot() == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1 then
             UpdateUltimateMeter()
         end
     end
 
     local function OnSwapAnimationDone(animation, button)
         button.noUpdates = false
-        if(button:GetSlot() == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1) then
+        if button:GetSlot() == ACTION_BAR_ULTIMATE_SLOT_INDEX + 1 then
             g_activeWeaponSwapInProgress = false
         end
     end
@@ -588,7 +542,7 @@ function ZO_ActionBar_Initialize()
         type = ACTION_BUTTON_TYPE_VISIBLE,
         template = "ZO_UltimateActionButton",
         showBinds = true,
-        parentBar = ZO_ActionBar1,
+        parentBar = control,
     }
 
     local ultimateButton = MakeActionButton(ACTION_BAR_ULTIMATE_SLOT_INDEX + 1, ULTIMATE_BUTTON_STYLE)
@@ -597,8 +551,8 @@ function ZO_ActionBar_Initialize()
     ultimateButton:SetupKeySlideAnimation()
     UpdateUltimateMeter()
 
-    local function OnActionSlotsFullUpdate(event, isHotbarSwap)
-        if isHotbarSwap then
+    local function OnActiveHotbarUpdated(event, didActiveHotbarChange)
+        if didActiveHotbarChange then
             for _, physicalSlot in pairs(g_actionBarButtons) do
                 if physicalSlot.hotbarSwapAnimation then
                     physicalSlot.noUpdates = true
@@ -611,8 +565,14 @@ function ZO_ActionBar_Initialize()
         end
     end
 
+    local function OnAllHotbarsUpdated(event)
+        g_activeWeaponSwapInProgress = false
+        UpdateAllSlots()
+    end
+
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOT_UPDATED, function (_, slotnum) HandleSlotChanged(slotnum) end)
-    EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOTS_FULL_UPDATE, OnActionSlotsFullUpdate)
+    EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, OnActiveHotbarUpdated)
+    EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOTS_ALL_HOTBARS_UPDATED, OnAllHotbarsUpdated)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOT_STATE_UPDATED, function (_, slotnum) HandleStateChanged(slotnum) end)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOT_ABILITY_USED, function (_, slotnum) HandleAbilityUsed(slotnum) end)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_UPDATE_COOLDOWNS, UpdateCooldowns)
@@ -625,18 +585,14 @@ function ZO_ActionBar_Initialize()
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_POWER_UPDATE, OnPowerUpdate)
     EVENT_MANAGER:AddFilterForEvent("ZO_ActionBar", EVENT_POWER_UPDATE, REGISTER_FILTER_POWER_TYPE, POWERTYPE_ULTIMATE, REGISTER_FILTER_UNIT_TAG, "player")
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ITEM_SLOT_CHANGED, OnItemSlotChanged)
-    EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTION_SLOT_ABILITY_SLOTTED, OnAbilitySlotted)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTIVE_QUICKSLOT_CHANGED, OnActiveQuickslotChanged)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_PLAYER_ACTIVATED, UpdateAllSlots)
     EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_ACTIVE_WEAPON_PAIR_CHANGED, OnActiveWeaponPairChanged)
-    EVENT_MANAGER:RegisterForEvent("ZO_ActionBar", EVENT_COLLECTION_UPDATED, OnCollectionUpdated)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectionUpdated", OnCollectionUpdated)
 
     ZO_PlatformStyle:New(ApplyStyle, KEYBOARD_CONSTANTS, GAMEPAD_CONSTANTS)
 
     HideHiddenButtons()
-end
 
-function ZO_ActionBar1_OnInitialized(self)
-    ACTION_BAR_FRAGMENT = ZO_HUDFadeSceneFragment:New(self)
+    ACTION_BAR_FRAGMENT = ZO_HUDFadeSceneFragment:New(control)
 end
-

@@ -33,39 +33,29 @@
                             <Anchor point="TOPLEFT" relativeTo="$(parent)Title" relativePoint="BOTTOMLEFT" offsetY="10" />
                         </Label>
 
-                        <Control name="$(parent)RewardsSection" override="true">
-                            <Anchor point="TOPLEFT" relativeTo="$(parent)Description" relativePoint="BOTTOMLEFT" offsetY="50" />
-                            
-                            <Controls>
-                                <Label name="$(parent)Header" override="true" font="ZoFontGamepad42">
-                                    <Anchor point="TOPLEFT" />
-                                </Label>
+                        <Control name="$(parent)SetTypesSection" override="true">
+                            <Anchor point="TOPLEFT" relativeTo="$(parent)Description" relativePoint="BOTTOMLEFT" offsetY="30"/>
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Description" relativePoint="BOTTOMRIGHT" offsetY="30"/>
 
-                                <Control name="$(parent)Entries" override="true">
+                            <Controls>
+                                <Label name="$(parent)Header" override="true" font="ZoFontGamepad27"/>
+
+                                <Label name="$(parent)List" override="true" font="ZoFontGamepadHeaderDataValue">
                                     <Anchor point="TOPLEFT" relativeTo="$(parent)Header" relativePoint="BOTTOMLEFT" offsetY="10" />
-                                    
-                                    <Controls>
-                                        <Control name="$(parent)ItemReward" override="true">
-                                            <Anchor point="TOPLEFT" />
-                                        </Control>
-                                    </Controls>
-                                </Control>
+                                    <Anchor point="TOPRIGHT" relativeTo="$(parent)Header" relativePoint="BOTTOMRIGHT" offsetY="10" />
+                                </Label>
                             </Controls>
                         </Control>
 
-                        <Control name="$(parent)Lock">
-                            <Anchor point="TOPLEFT" relativeTo="$(parent)RewardsSection" relativePoint="BOTTOMLEFT" offsetY="50"/>
-                            
-                            <Controls>
-                                <Texture name="$(parent)Icon" textureFile="EsoUI/Art/Miscellaneous/Gamepad/gp_icon_locked32.dds">
-                                    <Dimensions x="32" y="32" />
-                                    <Anchor point="TOPLEFT"/>
-                                </Texture>
+                        <Control name="$(parent)RewardsSection" override="true">
+                            <Anchor point="TOPLEFT" relativeTo="$(parent)SetTypesSection" relativePoint="BOTTOMLEFT" offsetY="50" />
 
-                                <Label name="$(parent)Reason" font="ZoFontGamepadCondensed42" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL">
-                                    <Dimensions x="720" />
-                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Icon" relativePoint="TOPRIGHT" offsetX="16" offsetY="-5" />
-                                </Label>
+                            <Controls>
+                                <Label name="$(parent)Header" override="true" font="ZoFontGamepad42" />
+
+                                <Control name="$(parent)Entries" override="true">
+                                    <Anchor point="TOPLEFT" relativeTo="$(parent)Header" relativePoint="BOTTOMLEFT" offsetY="10" />
+                                </Control>
                             </Controls>
                         </Control>
                     </Controls>

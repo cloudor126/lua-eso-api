@@ -1,17 +1,14 @@
 --[[ Global Helper Functions ]]--
 
 do
-    local function TryApplyingParametricScaling(control, parametricValue)
-        if control then
-            control:SetScale(zo_lerp(ZO_GAMEPAD_DEFAULT_LIST_MAX_CONTROL_SCALE, ZO_GAMEPAD_DEFAULT_LIST_MIN_CONTROL_SCALE, parametricValue))
-        end
+    local function ApplyParametricScaling(control, parametricValue)
+        control:SetScale(zo_lerp(ZO_GAMEPAD_DEFAULT_LIST_MAX_CONTROL_SCALE, ZO_GAMEPAD_DEFAULT_LIST_MIN_CONTROL_SCALE, parametricValue))
     end
 
     function ZO_GamepadMenuEntryTemplateParametricListFunction(control, distanceFromCenter, continousParametricOffset)
-        if control.icon or control.statusIndicator or control.alert or control.circleFrame then
+        if control.icon then
             local parametricValue = zo_abs(zo_clamp(distanceFromCenter - continousParametricOffset, -1, 1))
-            TryApplyingParametricScaling(control.icon, parametricValue)
-            TryApplyingParametricScaling(control.circleFrame, parametricValue)
+            ApplyParametricScaling(control.icon, parametricValue)
         end
     end
 end
@@ -41,7 +38,7 @@ function ZO_GamepadQuantitySpinner:InitializeSpinner(valueChangedCallback, direc
 end
 
 function ZO_GamepadQuantitySpinner:SetValueChangedCallback(callback)
-    self.valueChangedCallback = valueChangedCallback
+    self.valueChangedCallback = callback
 end
 
 function ZO_GamepadQuantitySpinner:SetMinMax(min, max)
@@ -85,8 +82,8 @@ function ZO_GamepadQuantitySpinner:OnValueChanged(newValue)
 
     if self.unitPrice then
         local totalCost = newValue * self.unitPrice
-        local notEnough = not self.ignoreInvalidCost and totalCost > GetCarriedCurrencyAmount(self.currencyType) or false
-        ZO_CurrencyControl_SetSimpleCurrency(self.currencyControl, self.currencyType, totalCost, ZO_GAMEPAD_CURRENCY_OPTIONS_LONG_FORMAT, CURRENCY_SHOW_ALL, notEnough)
+        local notEnough = not self.ignoreInvalidCost and totalCost > GetCurrencyAmount(self.currencyType, GetCurrencyPlayerStoredLocation(self.currencyType)) or false
+        ZO_CurrencyControl_SetSimpleCurrency(self.currencyControl, self.currencyType, totalCost, ZO_GAMEPAD_CURRENCY_OPTIONS, CURRENCY_SHOW_ALL, notEnough)
     end
 end
 

@@ -1,4 +1,4 @@
-USE_INTERNAL_FORMAT = true
+﻿USE_INTERNAL_FORMAT = true
 
 function ZO_ShouldPreferUserId()
     local setting = IsInGamepadPreferredMode() and UI_SETTING_PRIMARY_PLAYER_NAME_GAMEPAD or UI_SETTING_PRIMARY_PLAYER_NAME_KEYBOARD
@@ -55,4 +55,12 @@ function ZO_GetPrimaryPlayerNameWithSecondary(displayName, characterName)
     local primaryName = ZO_GetPrimaryPlayerName(displayName, characterName)
     local secondaryName = ZO_GetSecondaryPlayerName(displayName, characterName)
     return zo_strformat(SI_PLAYER_PRIMARY_AND_SECONDARY_NAME_FORMAT, primaryName, secondaryName)
+end
+
+function ZO_GetPrimaryPlayerNameHeader()
+    if ZO_ShouldPreferUserId() then
+        return ZO_GetPlatformAccountLabel()
+    else
+        return GetString(SI_SOCIAL_LIST_PANEL_HEADER_CHARACTER)
+    end
 end

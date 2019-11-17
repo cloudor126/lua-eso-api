@@ -35,7 +35,7 @@ function ZO_QuestJournal_Shared:Initialize(control)
     control:RegisterForEvent(EVENT_QUEST_REMOVED, function() self:OnQuestsUpdated() end)
     control:RegisterForEvent(EVENT_QUEST_LIST_UPDATED, function() self:OnQuestsUpdated() end)
     control:RegisterForEvent(EVENT_QUEST_ADVANCED, function(eventCode, questIndex) self:OnQuestAdvanced(questIndex) end)
-    control:RegisterForEvent(EVENT_QUEST_CONDITION_COUNTER_CHANGED, function(eventCode, questIndex) self:OnQuestConditionCounterChanged(questIndex) end)
+    control:RegisterForEvent(EVENT_QUEST_CONDITION_COUNTER_CHANGED, function(eventCode, ...) self:OnQuestConditionInfoChanged(...) end)
     control:RegisterForEvent(EVENT_LEVEL_UPDATE, function(eventCode, unitTag) self:OnLevelUpdated(unitTag) end)
 end
 
@@ -62,6 +62,7 @@ local function QuestJournal_Shared_GetDataFromTable(table, questType, instanceDi
     return data
 end
 
+--TODO: Get ride of this exstensibility.  The icon should only be controlled by the display type.
 function ZO_QuestJournal_Shared:RegisterIconTexture(questType, instanceDisplayType, texturePath)
     QuestJournal_Shared_RegisterDataInTable(self.icons, questType, instanceDisplayType, texturePath)
 end
@@ -70,13 +71,28 @@ function ZO_QuestJournal_Shared:GetIconTexture(questType, instanceDisplayType)
     return QuestJournal_Shared_GetDataFromTable(self.icons, questType, instanceDisplayType)
 end
 
-function ZO_QuestJournal_Shared:RegisterTooltipText(questType, instanceDisplayType, stringIdOrText)
+function ZO_QuestJournal_Shared:RegisterTooltipText(questType, instanceDisplayType, stringIdOrText, paramsFunction)
     local tooltipText = type(stringIdOrText) == "number" and GetString(stringIdOrText) or stringIdOrText
-    QuestJournal_Shared_RegisterDataInTable(self.tooltips, questType, instanceDisplayType, tooltipText)
+
+    local data = tooltipText
+    if paramsFunction then 
+        data =
+        {
+            text = tooltipText,
+            paramsFunction = paramsFunction,
+        }
+    end
+
+    QuestJournal_Shared_RegisterDataInTable(self.tooltips, questType, instanceDisplayType, data)
 end
 
 function ZO_QuestJournal_Shared:GetTooltipText(questType, instanceDisplayType)
-    return QuestJournal_Shared_GetDataFromTable(self.tooltips, questType, instanceDisplayType)
+    local data = QuestJournal_Shared_GetDataFromTable(self.tooltips, questType, instanceDisplayType)
+    local text = data
+    if type(data) == "table" then
+        text = zo_strformat(data.text, data.paramsFunction())
+    end
+    return text
 end
 
 function ZO_QuestJournal_Shared:InitializeQuestList()
@@ -185,7 +201,7 @@ function ZO_QuestJournal_Shared:OnQuestAdvanced(questIndex)
     end
 end
 
-function ZO_QuestJournal_Shared:OnQuestConditionCounterChanged(questIndex)
+function ZO_QuestJournal_Shared:OnQuestConditionInfoChanged(questIndex, questName, conditionText, conditionType, curCondtionVal, newConditionVal, conditionMax, isFailCondition, stepOverrideText, isPushed, isQuestComplete, isConditionComplete, isStepHidden, isConditionCompleteStatusChanged, isConditionCompletableBySiblingStatusChanged)
     local selectedQuestIndex = self:GetSelectedQuestIndex()
     if questIndex == selectedQuestIndex then
         self:RefreshDetails()

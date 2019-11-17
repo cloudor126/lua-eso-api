@@ -1,4 +1,4 @@
-ZO_PURCHASE_KIOSK_INTERACTION =
+﻿ZO_PURCHASE_KIOSK_INTERACTION =
 {
     type = "Purchase Kiosk",
     interactTypes = { INTERACTION_GUILDKIOSK_PURCHASE },
@@ -62,6 +62,14 @@ function ZO_GuildKiosk_Bid_Shared:Initialize()
 
     EVENT_MANAGER:RegisterForEvent("guildKioskBidShared", EVENT_GUILD_KIOSK_CONSIDER_BID_START, function() OnGuildKioskConsiderBidStart() end)
     EVENT_MANAGER:RegisterForEvent("guildKioskBidShared", EVENT_GUILD_KIOSK_CONSIDER_BID_STOP, function() OnGuildKioskConsiderBidStop() end)
+end
+
+function ZO_GuildKiosk_Bid_Shared.GetBidActionText(hasBidOnThisTraderAlready)
+    if hasBidOnThisTraderAlready then
+        return GetString(SI_GUILD_KIOSK_UPDATE_BID)
+    else
+        return GetString(SI_GUILD_KIOSK_INITIAL_BID)
+    end
 end
 
 ZO_GUILD_KIOSK_BID_SHARED = ZO_GuildKiosk_Bid_Shared:New()

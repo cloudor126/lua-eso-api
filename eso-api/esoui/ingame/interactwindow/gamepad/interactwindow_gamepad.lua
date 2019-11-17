@@ -2,8 +2,6 @@
 -- If we change the font of reticle in the future, we'll probably need to upgrade this magic number to meet the new position.
 ZO_INTERACT_CENTER_OFFSET = 15 + ZO_GAMEPAD_DEFAULT_LIST_ENTRY_SELECTED_HEIGHT / 2
 
-local GAMEPAD_INTERACT_GOLD_ICON = zo_iconFormat(ZO_GAMEPAD_CURRENCY_ICON_GOLD_TEXTURE, 28, 28)
-
 --Gamepad Interaction
 ---------------------
 
@@ -44,10 +42,6 @@ end
 
 local function SetupBodyText(control, data, selected, selectedDuringRebuild, enabled, activated)
     control:GetNamedChild("TargetArea"):GetNamedChild("BodyText"):SetText(data.bodyText)
-end
-
-local function SetupReward(control, data, selected, selectedDuringRebuild, enabled, activated)
-    ZO_SharedGamepadEntry_OnSetup(control, data, selected, selectedDuringRebuild, enabled, activated)
 end
 
 local function SetupOption(control, data, selected, selectedDuringRebuild, enabled, activated)
@@ -117,6 +111,7 @@ function ZO_GamepadInteraction:InitInteraction()
     self.itemList:SetFixedCenterOffset(ZO_INTERACT_CENTER_OFFSET)
     self.itemList:SetSelectedItemOffsets(0,10)
     self.itemList:SetAlignToScreenCenter(true)
+    self.itemList:SetValidateGradient(true)
     self.itemList:SetDrawScrollArrows(true)
 
     self.itemList:SetOnSelectedDataChangedCallback(function(list, selectedData)
@@ -125,7 +120,7 @@ function ZO_GamepadInteraction:InitInteraction()
 
     self.itemList:AddDataTemplate("ZO_InteractWindow_GamepadBodyTextItem", SetupBodyText, ZO_GamepadMenuEntryTemplateParametricListFunction)
     self.itemList:AddDataTemplateWithHeader("ZO_QuestReward_Title_Gamepad", SetupRewardTitle, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadQuestRewardEntryHeaderTemplate")
-    self.itemList:AddDataTemplate("ZO_QuestReward_Gamepad", SetupReward, ZO_GamepadMenuEntryTemplateParametricListFunction)
+    self.itemList:AddDataTemplate("ZO_QuestReward_Gamepad", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
     self.itemList:AddDataTemplate("ZO_ChatterOption_Gamepad", SetupOption, ZO_GamepadMenuEntryTemplateParametricListFunction)
     self.itemList:SetDataTemplateReleaseFunction("ZO_ChatterOption_Gamepad", ReleaseChatterOptionControl)
 end
@@ -229,8 +224,8 @@ function ZO_GamepadInteraction:UpdateChatterOptions(optionCount, backToTOCOption
 end
 
 function ZO_GamepadInteraction:ShowQuestRewards(journalQuestIndex)
-
-    local rewardData = self:GetRewardData(journalQuestIndex)
+    local IS_GAMEPAD = true
+    local rewardData = self:GetRewardData(journalQuestIndex, IS_GAMEPAD)
 
     if #rewardData == 0 then
         return
@@ -259,21 +254,22 @@ function ZO_GamepadInteraction:ShowQuestRewards(journalQuestIndex)
         if itemData.rewardType == REWARD_TYPE_PARTIAL_SKILL_POINTS then
             itemData.name = ZO_QuestReward_GetSkillPointText(itemData.amount)
             itemData.icon = nil
+        elseif itemData.rewardType == REWARD_TYPE_SKILL_LINE then
+            itemData.name = ZO_QuestReward_GetSkillLineEarnedText(itemData.name)
         elseif itemData.rewardType == REWARD_TYPE_AUTO_ITEM and itemData.itemType == REWARD_ITEM_TYPE_COLLECTIBLE then
             itemData.itemId = GetJournalQuestRewardCollectibleId(journalQuestIndex, i)
-            local name, description = GetCollectibleInfo(itemData.itemId)
-            itemData.collectibleData = 
-            {
-                id = itemData.itemId,
-                name = name,
-                nickname = GetCollectibleNickname(itemData.itemId),
-                description = description,
-                unlockState = GetCollectibleUnlockStateById(itemData.itemId),
-            }
         end
 
         local entry = ZO_GamepadEntryData:New(zo_strformat(SI_COLLECTIBLE_NAME_FORMATTER, itemData.name))
-        entry:InitializeInventoryVisualData(itemData)
+        if itemData.rewardType == REWARD_TYPE_AUTO_ITEM and itemData.itemType == REWARD_ITEM_TYPE_ITEM then
+            entry:InitializeInventoryVisualData(itemData)
+        else
+            entry:SetFontScaleOnSelection(false)
+            if itemData.icon then
+                entry:AddIcon(itemData.icon)
+            end
+        end
+
         entry.itemData = itemData
         entry:SetStackCount(itemData.amount)
 
@@ -287,10 +283,6 @@ function ZO_GamepadInteraction:RefreshList()
     if self.itemList then
         self.itemList:RefreshVisible()
     end
-end
-
-function ZO_GamepadInteraction:GetInteractGoldIcon()
-    return GAMEPAD_INTERACT_GOLD_ICON
 end
 
 function ZO_GamepadInteraction:UpdateClemencyOnTimeComplete(control, data)

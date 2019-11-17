@@ -122,4 +122,204 @@
 -- @param #string name
 -- @function[parent = #WindowManager] SetMouseFocusByName
 
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table apRetWindowManager
+-- @function[parent = #WindowManager] GetWindowManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table control
+-- @param #number leftOffset
+-- @param #number topOffset
+-- @param #number rightOffset
+-- @param #number bottomOffset
+-- @return #boolean isOver
+-- @function[parent = #WindowManager] MouseIsOver
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #table control
+-- @param #number leftOffset
+-- @param #number topOffset
+-- @param #number rightOffset
+-- @param #number bottomOffset
+-- @return #boolean isInside
+-- @function[parent = #WindowManager] MouseIsInside
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number x,y
+-- @function[parent = #WindowManager] GetUIMousePosition
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number deltaX,deltaY
+-- @function[parent = #WindowManager] GetUIMouseDeltas
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number scale
+-- @function[parent = #WindowManager] GetUIGlobalScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number scale
+-- @function[parent = #WindowManager] GetUICustomScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string message
+-- @function[parent = #WindowManager] LuaWarning
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string formatString
+-- @return #string localizedString
+-- @function[parent = #WindowManager] LocalizeString
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table apRetAnimationManager
+-- @function[parent = #WindowManager] GetAnimationManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #table addOnManager
+-- @function[parent = #WindowManager] GetAddOnManager
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string originalTexture
+-- @param #string newTexture
+-- @function[parent = #WindowManager] RedirectTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string text
+-- @param #AllowMarkupType allowMarkupType
+-- @return #string escapedText
+-- @function[parent = #WindowManager] EscapeMarkup
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fontSymbolName
+-- @param #string fontDescriptor
+-- @return #table fontObject
+-- @function[parent = #WindowManager] CreateFont
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numFiles
+-- @function[parent = #WindowManager] GetNumControlCreatingSources
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number index
+-- @return #string sourceName
+-- @function[parent = #WindowManager] GetControlCreatingSourceName
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string sourceName
+-- @return #integer numCallSites
+-- @function[parent = #WindowManager] GetNumControlCreatingSourceCallSites
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string sourceName
+-- @param #number index
+-- @return #string,#integer creationStack,count
+-- @function[parent = #WindowManager] GetControlCreatingSourceCallSiteInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #WindowManager] StartScriptProfiler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #WindowManager] StopScriptProfiler
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean enabled
+-- @function[parent = #WindowManager] IsScriptProfilerEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numFrames
+-- @function[parent = #WindowManager] GetScriptProfilerNumFrames
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number frameIndex
+-- @return #integer numRecords
+-- @function[parent = #WindowManager] GetScriptProfilerFrameNumRecords
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number frameIndex
+-- @param #number recordIndex
+-- @return #number,#number,#number,#luaindex:nilable,#ScriptProfilerRecordDataType recordDataIndex,startTimeNS,endTimeNS,callerRecordIndex,recordDataType
+-- @function[parent = #WindowManager] GetScriptProfilerRecordInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numClosures
+-- @function[parent = #WindowManager] GetScriptProfilerNumClosures
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recordDataIndex
+-- @return #string,#string,#integer displayName,fileName,fileLineNumber
+-- @function[parent = #WindowManager] GetScriptProfilerClosureInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numCFunctions
+-- @function[parent = #WindowManager] GetScriptProfilerNumCFunctions
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recordDataIndex
+-- @return #string functionName
+-- @function[parent = #WindowManager] GetScriptProfilerCFunctionInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numGarbageCollectionTypes
+-- @function[parent = #WindowManager] GetScriptProfilerNumGarbageCollectionTypes
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recordDataIndex
+-- @return #ScriptProfilerGarbageCollectionType GarbageCollectionType
+-- @function[parent = #WindowManager] GetScriptProfilerGarbageCollectionInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string userEventData
+-- @function[parent = #WindowManager] RecordScriptProfilerUserEvent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #integer numUserEvents
+-- @function[parent = #WindowManager] GetScriptProfilerNumUserEvents
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number recordDataIndex
+-- @return #string userEventData
+-- @function[parent = #WindowManager] GetScriptProfilerUserEventInfo
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number minWidth
+-- @function[parent = #WindowManager] GetMinUICanvasWidth
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number minHeight
+-- @function[parent = #WindowManager] GetMinUICanvasHeight
+
 return nil

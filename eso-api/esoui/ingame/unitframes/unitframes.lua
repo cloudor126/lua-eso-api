@@ -17,7 +17,7 @@ local TARGET_UNIT_FRAME = "ZO_TargetUnitFrame"
 
 local untrackedBarTypes =
 {
-    
+
 }
 
 local NUM_SUBGROUPS = GROUP_SIZE_MAX / SMALL_GROUP_SIZE_THRESHOLD
@@ -167,6 +167,20 @@ end
 --]]
 
 UNIT_FRAMES = nil
+
+ZO_MostRecentPowerUpdateHandler = ZO_MostRecentEventHandler:Subclass()
+
+do
+    local function PowerUpdateEqualityFunction(existingEventInfo, unitTag, powerPoolIndex, powerType, powerPool, powerPoolMax)
+        local existingUnitTag = existingEventInfo[1]
+        local existingPowerType = existingEventInfo[3]
+        return existingUnitTag == unitTag and existingPowerType == powerType
+    end
+
+    function ZO_MostRecentPowerUpdateHandler:New(namespace, handlerFunction)
+        return ZO_MostRecentEventHandler.New(self, namespace, EVENT_POWER_UPDATE, PowerUpdateEqualityFunction, handlerFunction)
+    end
+end
 
 --[[
     Local object declarations
@@ -497,13 +511,13 @@ local function CreateBarTextControls(baseBarName, parent, style, mechanic)
     local text1, text2
     local textTemplate = barData.textTemplate or "ZO_UnitFrameBarText"
 
-    if(textAnchor1) then
+    if textAnchor1 then
         text1 = CreateControlFromVirtual(baseBarName.."Text1", parent, textTemplate)
         text1:SetFont(GetPlatformBarFont())
         textAnchor1:Set(text1)
     end
 
-    if(textAnchor2) then
+    if textAnchor2 then
         text2 = CreateControlFromVirtual(baseBarName.."Text2", parent, textTemplate)
         text2:SetFont(GetPlatformBarFont())
         textAnchor2:Set(text2)
@@ -523,7 +537,7 @@ function UnitFrameBar:New(baseBarName, parent, showFrameBarText, style, mechanic
         newFrameBar.showBarText = showFrameBarText
         newFrameBar.style = style
         newFrameBar.mechanic = mechanic
-		newFrameBar.resourceNumbersLabel = parent:GetNamedChild("ResourceNumbers")
+        newFrameBar.resourceNumbersLabel = parent:GetNamedChild("ResourceNumbers")
 
         if showFrameBarText ~= HIDE_BAR_TEXT then
             newFrameBar.leftText, newFrameBar.rightText = CreateBarTextControls(baseBarName, parent, style, mechanic)
@@ -536,7 +550,7 @@ function UnitFrameBar:Update(barType, cur, max, forceInit)
     local barCur = cur
     local barMax = max
 
-    if(#self.barControls == 2) then
+    if #self.barControls == 2 then
         barCur = cur / 2
         barMax = max / 2
     end
@@ -550,7 +564,7 @@ function UnitFrameBar:Update(barType, cur, max, forceInit)
     self.currentValue = cur
     self.maxValue = max
 
-    if(barType ~= self.barType) then
+    if barType ~= self.barType then
         updateBarType = true
         self.barType = barType
         self.barTypeName = GetString("SI_COMBATMECHANICTYPE", self.barType)
@@ -567,9 +581,9 @@ local function GetVisibility(self)
 end
 
 function UnitFrameBar:UpdateText(updateBarType, updateValue)
-    if(self.showBarText == SHOW_BAR_TEXT or self.showBarText == SHOW_BAR_TEXT_MOUSE_OVER) then
+    if self.showBarText == SHOW_BAR_TEXT or self.showBarText == SHOW_BAR_TEXT_MOUSE_OVER then
         local visible = GetVisibility(self)
-        if(self.leftText and self.rightText) then
+        if self.leftText and self.rightText then
             self.leftText:SetHidden(not visible)
             self.rightText:SetHidden(not visible)
             if visible then
@@ -580,7 +594,7 @@ function UnitFrameBar:UpdateText(updateBarType, updateValue)
                     self.rightText:SetText(zo_strformat(SI_UNIT_FRAME_BARVALUE, self.currentValue, self.maxValue))
                 end
             end
-        elseif(self.leftText) then
+        elseif self.leftText then
             if visible then
                 self.leftText:SetHidden(false)
                 if updateValue then
@@ -592,9 +606,9 @@ function UnitFrameBar:UpdateText(updateBarType, updateValue)
         end
     end
 
-	if self.resourceNumbersLabel then
-		self.resourceNumbersLabel:SetText(ZO_FormatResourceBarCurrentAndMax(self.currentValue, self.maxValue))
-	end
+    if self.resourceNumbersLabel then
+        self.resourceNumbersLabel:SetText(ZO_FormatResourceBarCurrentAndMax(self.currentValue, self.maxValue))
+    end
 end
 
 function UnitFrameBar:SetMouseInside(inside)
@@ -815,7 +829,7 @@ function UnitFrame:New(unitTag, anchors, showBarText, style)
     local baseWindowName = style..unitTag
     local parent = ZO_UnitFrames
 
-    if(ZO_Group_IsGroupUnitTag(unitTag)) then
+    if ZO_Group_IsGroupUnitTag(unitTag) then
         parent = ZO_UnitFramesGroups
     end
 
@@ -838,7 +852,7 @@ function UnitFrame:New(unitTag, anchors, showBarText, style)
 
     newFrame.levelLabel = newFrame:AddFadeComponent("Level")
 
-    if(layoutData.captionControlName) then
+    if layoutData.captionControlName then
         newFrame.captionLabel = newFrame:AddFadeComponent(layoutData.captionControlName)
     end
 
@@ -847,7 +861,7 @@ function UnitFrame:New(unitTag, anchors, showBarText, style)
 
     local DONT_COLOR_RANK_ICON = false
     newFrame.rankIcon = newFrame:AddFadeComponent("RankIcon", DONT_COLOR_RANK_ICON)
-    newFrame.roleIcon = newFrame:AddFadeComponent("RoleIcon", DONT_COLOR_RANK_ICON)
+    newFrame.assignmentIcon = newFrame:AddFadeComponent("AssignmentIcon", DONT_COLOR_RANK_ICON)
     newFrame.championIcon = newFrame:AddFadeComponent("ChampionIcon")
     newFrame.leftBracket = newFrame:AddFadeComponent("LeftBracket")
     newFrame.leftBracketGlow = GetControl(newFrame.frame, "LeftBracketGlow")
@@ -985,48 +999,48 @@ end
 
 function UnitFrame:RefreshVisible(instant)
     local hidden = self:ComputeHidden()
-    if(hidden ~= self.hidden) then
+    if hidden ~= self.hidden then
         self.hidden = hidden
-        if(not hidden and self.dirty) then
+        if not hidden and self.dirty then
             self.dirty = nil
             self:RefreshControls()
         end
 
-        if(self.animateShowHide and not instant) then
-            if(not self.showHideTimeline) then
+        if self.animateShowHide and not instant then
+            if not self.showHideTimeline then
                 self.showHideTimeline = ANIMATION_MANAGER:CreateTimelineFromVirtual("ZO_UnitFrameFadeAnimation", self.frame)
             end
-            if(hidden) then
-                if(self.showHideTimeline:IsPlaying()) then
+            if hidden then
+                if self.showHideTimeline:IsPlaying() then
                     self.showHideTimeline:PlayBackward()
                 else
                     self.showHideTimeline:PlayFromEnd()
                 end
             else
-                if(self.showHideTimeline:IsPlaying()) then
+                if self.showHideTimeline:IsPlaying() then
                     self.showHideTimeline:PlayForward()
                 else
                     self.showHideTimeline:PlayFromStart()
                 end
             end
         else
-            if(self.showHideTimeline) then
+            if self.showHideTimeline then
                 self.showHideTimeline:Stop()
             end
             self.frame:SetHidden(hidden)
         end
 
-        if(self.buffTracker) then
+        if self.buffTracker then
             self.buffTracker:SetDisabled(hidden)
         end
     end
 end
 
 function UnitFrame:RefreshControls()
-    if(self.hidden) then
+    if self.hidden then
         self.dirty = true
     else
-        if(self.hasTarget) then
+        if self.hasTarget then
             self:UpdateName()
             self:UpdateUnitReaction()
             self:UpdateLevel()
@@ -1042,26 +1056,26 @@ function UnitFrame:RefreshControls()
 
             self:UpdateStatus(IsUnitDead(self.unitTag), IsUnitOnline(self.unitTag))
             self:UpdateRank()
-            self:UpdateRole()
+            self:UpdateAssignment()
             self:UpdateDifficulty()
-            self:DoAlphaUpdate(IsUnitInGroupSupportRange(self.unitTag), IsUnitOnline(self.unitTag), IsUnitGroupLeader(unitTag))
+            self:DoAlphaUpdate(IsUnitInGroupSupportRange(self.unitTag), IsUnitOnline(self.unitTag), IsUnitGroupLeader(self.unitTag))
         end
     end
 end
 
-function UnitFrame:RefreshUnit(unitChanged)            
+function UnitFrame:RefreshUnit(unitChanged)
     local validTarget = DoesUnitExist(self.unitTag)
-    if(validTarget) then
+    if validTarget then
         if(self.unitTag == "reticleovertarget") then
             local localPlayerIsTarget = AreUnitsEqual("player", "reticleover")
             validTarget = UnitFrames:IsTargetOfTargetEnabled() and not localPlayerIsTarget
         end
     end
 
-    if(unitChanged or self.hasTarget ~= validTarget) then
+    if unitChanged or self.hasTarget ~= validTarget then
         MenuOwnerClosed(self.frame)
 
-        if(self.castBar) then
+        if self.castBar then
             self.castBar:UpdateAfterUnitChange()
         end
     end
@@ -1089,10 +1103,14 @@ function UnitFrame:DoAlphaUpdate(isNearby, isOnline, isLeader)
     -- Don't fade out just the frame, because that needs to appear correctly (along with BG, etc...)
     -- Just make the status bars and any text on the frame fade out.
     local color
-    if IsInGamepadPreferredMode() then
-        color = (self.unitTag == "reticleover" and ZO_SELECTED_TEXT) or (not isLeader and isNearby and ZO_HIGHLIGHT_TEXT) or ZO_NORMAL_TEXT
+    if self.unitTag == "reticleover" then
+        color = ZO_SELECTED_TEXT
     else
-        color = (self.unitTag == "reticleover" and ZO_SELECTED_TEXT) or (not isLeader and ZO_HIGHLIGHT_TEXT) or ZO_NORMAL_TEXT
+        if isLeader then
+            color = ZO_HIGHLIGHT_TEXT
+        else
+            color = ZO_NORMAL_TEXT
+        end
     end
 
     local alphaValue = isNearby and FULL_ALPHA_VALUE or FADED_ALPHA_VALUE
@@ -1215,15 +1233,26 @@ function UnitFrame:UpdateRank()
     end
 end
 
-function UnitFrame:UpdateRole()
-    if self.roleIcon then
+function UnitFrame:UpdateAssignment()
+    if self.assignmentIcon then
         local unitTag = self:GetUnitTag()
-        local assignedRole = GetGroupMemberAssignedRole(unitTag)
-        local hasAssignedRole = assignedRole ~= LFG_ROLE_INVALID
-        if hasAssignedRole then
-            self.roleIcon:SetTexture(GetRoleIcon(assignedRole))
+        local assignmentTexture = nil
+        if IsActiveWorldBattleground() then
+            local battlegroundAlliance = GetUnitBattlegroundAlliance(unitTag)
+            if battlegroundAlliance ~= BATTLEGROUND_ALLIANCE_NONE then
+                assignmentTexture = GetBattlegroundTeamIcon(battlegroundAlliance)
+            end
+        else
+            local selectedRole = GetGroupMemberSelectedRole(unitTag)
+            if selectedRole ~= LFG_ROLE_INVALID then
+                assignmentTexture = GetRoleIcon(selectedRole)
+            end
         end
-        self.roleIcon:SetHidden(not hasAssignedRole)
+
+        if assignmentTexture then
+            self.assignmentIcon:SetTexture(assignmentTexture)
+        end
+        self.assignmentIcon:SetHidden(assignmentTexture == nil)
     end
 end
 
@@ -1280,31 +1309,29 @@ function UnitFrame:SetPlatformDifficultyTextures(difficulty)
 end
 
 function UnitFrame:UpdateDifficulty()
-    if(self.leftBracket) then
+    if self.leftBracket then
         local difficulty = GetUnitDifficulty(self:GetUnitTag())
 
         --show difficulty for neutral and hostile NPCs
-        local showsDifficulty = difficulty > MONSTER_DIFFICULTY_EASY
-        if(showsDifficulty) then
-            local unitReaction = GetUnitReaction(self:GetUnitTag())
-            if(unitReaction ~= UNIT_REACTION_NEUTRAL and unitReaction ~= UNIT_REACTION_HOSTILE) then
-                showsDifficulty = false
-            end
-        end
+        local unitReaction = GetUnitReaction(self:GetUnitTag())
+        local showsDifficulty = (difficulty > MONSTER_DIFFICULTY_EASY) and (unitReaction == UNIT_REACTION_NEUTRAL or unitReaction == UNIT_REACTION_HOSTILE)
 
         self.leftBracket:SetHidden(not showsDifficulty)
         self.rightBracket:SetHidden(not showsDifficulty)
         self.leftBracketUnderlay:SetHidden(true)
         self.rightBracketUnderlay:SetHidden(true)
 
-        if(showsDifficulty) then
+        if showsDifficulty then
             self:SetPlatformDifficultyTextures(difficulty)
 
-            if(difficulty == MONSTER_DIFFICULTY_DEADLY) then
+            if difficulty == MONSTER_DIFFICULTY_DEADLY and not IsInGamepadPreferredMode() then
                 self.leftBracketUnderlay:SetHidden(false)
                 self.rightBracketUnderlay:SetHidden(false)
             end
-            TriggerTutorial(TUTORIAL_TRIGGER_COMBAT_MONSTER_DIFFICULTY)
+
+            if unitReaction == UNIT_REACTION_HOSTILE then
+                TriggerTutorial(TUTORIAL_TRIGGER_COMBAT_MONSTER_DIFFICULTY)
+            end
         end
     end
 end
@@ -1336,21 +1363,21 @@ end
 
 function UnitFrame:UpdateCaption()
     local captionLabel = self.captionLabel
-    if(captionLabel) then
-        local caption
+    if captionLabel then
+        local caption = ""
         local unitTag = self:GetUnitTag()
-        if(IsUnitPlayer(unitTag)) then
+        if IsUnitPlayer(unitTag) then
             caption = ZO_GetSecondaryPlayerNameWithTitleFromUnitTag(unitTag)
         else
-            caption = zo_strformat(SI_TOOLTIP_UNIT_CAPTION, GetUnitCaption(unitTag))
+            local unitCaption = GetUnitCaption(unitTag)
+            if unitCaption then
+                caption = zo_strformat(SI_TOOLTIP_UNIT_CAPTION, unitCaption)
+            end
         end
 
-        if(caption ~= "") then
-            captionLabel:SetHidden(false)
-            captionLabel:SetText(caption)
-        else
-            captionLabel:SetHidden(true)
-        end
+        local hideCaption = caption == ""
+        captionLabel:SetHidden(hideCaption)
+        captionLabel:SetText(caption) -- still set the caption text when empty so we collapse the label for anything anchoring off the bottom of it
     end
 end
 
@@ -1423,7 +1450,7 @@ end
 
 function ZO_UnitFrames_UpdateWindow(unitTag, unitChanged)
     local unitFrame = UnitFrames:GetFrame(unitTag)
-    if(unitFrame) then
+    if unitFrame then
         unitFrame:RefreshUnit(unitChanged)
         unitFrame:RefreshControls()
     end
@@ -1560,6 +1587,8 @@ local TARGET_ATTRIBUTE_VISUALIZER_SOUNDS =
         [STAT_STATE_SHIELD_LOST]        = SOUNDS.UAV_DAMAGE_SHIELD_LOST_TARGET,
         [STAT_STATE_POSSESSION_APPLIED] = SOUNDS.UAV_POSSESSION_APPLIED_TARGET,
         [STAT_STATE_POSSESSION_REMOVED] = SOUNDS.UAV_POSSESSION_REMOVED_TARGET,
+        [STAT_STATE_TRAUMA_GAINED]      = SOUNDS.UAV_TRAUMA_ADDED_TARGET,
+        [STAT_STATE_TRAUMA_LOST]        = SOUNDS.UAV_TRAUMA_LOST_TARGET,
     },
 }
 
@@ -1628,7 +1657,7 @@ local function CreateTargetFrame()
     }
     visualizer:AddModule(ZO_UnitVisualizer_UnwaveringModule:New(VISUALIZER_ANGLE_UNWAVERING_LAYOUT_DATA))
 
-	VISUALIZER_ANGLE_POSSESSION_LAYOUT_DATA =
+    VISUALIZER_ANGLE_POSSESSION_LAYOUT_DATA =
     {
         type = "Angle",
         overlayContainerTemplate = "ZO_PossessionOverlayContainerAngle",
@@ -1850,7 +1879,7 @@ local function RegisterForEvents()
         ZO_UnitFrames_UpdateWindow("reticleovertarget", UNIT_CHANGED)
     end
     
-    local function OnUnitFrameUpdate(evt, unitTag)
+    local function OnUnitCharacterNameChanged(evt, unitTag)
         ZO_UnitFrames_UpdateWindow(unitTag)
     end
 
@@ -1859,16 +1888,14 @@ local function RegisterForEvents()
         ZO_UnitFrames_UpdateWindow("reticleovertarget", UNIT_CHANGED)
     end
 
-    local function OnPowerUpdate(evt, unitTag, powerPoolIndex, powerType, powerPool, powerPoolMax)
+    local function PowerUpdateHandlerFunction(unitTag, powerPoolIndex, powerType, powerPool, powerPoolMax)
         local unitFrame = UnitFrames:GetFrame(unitTag)
-    
         if unitFrame then
             if powerType == POWERTYPE_HEALTH then
-                local oldHealth = unitFrame.healthBar.currentValue
-    
+                local oldHealth = unitFrame.healthBar.currentValue    
                 unitFrame.healthBar:Update(POWERTYPE_HEALTH, powerPool, powerPoolMax)
     
-                if(oldHealth ~= nil and oldHealth == 0) then
+                if oldHealth ~= nil and oldHealth == 0 then
                     -- Unit went from dead to non dead...update reaction
                     unitFrame:UpdateUnitReaction()
                 end
@@ -1877,6 +1904,7 @@ local function RegisterForEvents()
             end
         end
     end
+    ZO_MostRecentPowerUpdateHandler:New("UnitFrames", PowerUpdateHandlerFunction)
 
     local function OnUnitCreated(evt, unitTag)
         if(ZO_Group_IsGroupUnitTag(unitTag)) then
@@ -1935,12 +1963,11 @@ local function RegisterForEvents()
     end
 
     local function OnGroupUpdate(eventCode)
-        -- RefreshGroups will get called in the CreateGroupsAfter function that is called whenever the unit frames are refreshed
-        if UnitFrames:GetIsDirty() then
-            RefreshUnitFrames()
-        else
-            RefreshGroups(eventCode)
-        end
+        --Pretty much anything can happen on a full group update so refresh everything
+        UnitFrames:SetGroupSize(GetGroupSize())
+        UnitFrames:DisableGroupAndRaidFrames()
+        CreateGroups()
+        UnitFrames:ClearDirty()
     end
 
     local function OnGroupMemberLeft(eventCode, characterName, reason, wasLocalPlayer, amLeader)
@@ -1953,6 +1980,13 @@ local function RegisterForEvents()
         UpdateStatus(unitTag, IsUnitDead(unitTag), isOnline)
     end
     
+    local function OnGroupMemberRoleChanged(event, unitTag, role)
+        local unitFrame = UnitFrames:GetFrame(unitTag)    
+        if unitFrame then
+            unitFrame:UpdateAssignment()
+        end
+    end
+
     local function OnUnitDeathStateChanged(event, unitTag, isDead)
         UpdateStatus(unitTag, isDead, IsUnitOnline(unitTag))
     end
@@ -2000,11 +2034,27 @@ local function RegisterForEvents()
         RefreshGroups(eventCode)
     end
 
+    local function OnGuildNameAvailable()
+        --only reticle over can show a guild name in a caption
+        local unitFrame = UnitFrames:GetFrame("reticleover")
+        if unitFrame then
+            unitFrame:UpdateCaption()
+        end
+    end
+
+    local function OnGuildIdChanged()
+        --this is filtered to only fire on reticle over unit tag
+        local unitFrame = UnitFrames:GetFrame("reticleover")
+        if unitFrame then
+            unitFrame:UpdateCaption()
+        end
+    end
+
     ZO_UnitFrames:RegisterForEvent(EVENT_TARGET_CHANGED, OnTargetChanged)
     ZO_UnitFrames:AddFilterForEvent(EVENT_TARGET_CHANGED, REGISTER_FILTER_UNIT_TAG, "reticleover")
-    ZO_UnitFrames:RegisterForEvent(EVENT_UNIT_FRAME_UPDATE, OnUnitFrameUpdate)
+    ZO_UnitFrames:RegisterForEvent(EVENT_UNIT_CHARACTER_NAME_CHANGED, OnUnitCharacterNameChanged)
+    ZO_UnitFrames:AddFilterForEvent(EVENT_UNIT_CHARACTER_NAME_CHANGED, REGISTER_FILTER_UNIT_TAG, "reticleover")
     ZO_UnitFrames:RegisterForEvent(EVENT_RETICLE_TARGET_CHANGED, OnReticleTargetChanged)
-    ZO_UnitFrames:RegisterForEvent(EVENT_POWER_UPDATE, OnPowerUpdate)
     ZO_UnitFrames:RegisterForEvent(EVENT_UNIT_CREATED, OnUnitCreated)
     ZO_UnitFrames:RegisterForEvent(EVENT_UNIT_DESTROYED, OnUnitDestroyed)
     ZO_UnitFrames:RegisterForEvent(EVENT_LEVEL_UPDATE, OnLevelUpdate)
@@ -2014,12 +2064,16 @@ local function RegisterForEvents()
     ZO_UnitFrames:RegisterForEvent(EVENT_GROUP_UPDATE, OnGroupUpdate)
     ZO_UnitFrames:RegisterForEvent(EVENT_GROUP_MEMBER_LEFT, OnGroupMemberLeft)
     ZO_UnitFrames:RegisterForEvent(EVENT_GROUP_MEMBER_CONNECTED_STATUS, OnGroupMemberConnectedStateChanged)
+    ZO_UnitFrames:RegisterForEvent(EVENT_GROUP_MEMBER_ROLE_CHANGED, OnGroupMemberRoleChanged)
     ZO_UnitFrames:RegisterForEvent(EVENT_UNIT_DEATH_STATE_CHANGED, OnUnitDeathStateChanged)
     ZO_UnitFrames:RegisterForEvent(EVENT_RANK_POINT_UPDATE, OnRankPointUpdate)
     ZO_UnitFrames:RegisterForEvent(EVENT_CHAMPION_POINT_UPDATE, OnChampionPointsUpdate)
     ZO_UnitFrames:RegisterForEvent(EVENT_TITLE_UPDATE, OnTitleUpdated)
     ZO_UnitFrames:RegisterForEvent(EVENT_PLAYER_ACTIVATED, OnPlayerActivated)
     ZO_UnitFrames:RegisterForEvent(EVENT_INTERFACE_SETTING_CHANGED, OnInterfaceSettingChanged)
+    ZO_UnitFrames:RegisterForEvent(EVENT_GUILD_NAME_AVAILABLE, OnGuildNameAvailable)
+    ZO_UnitFrames:RegisterForEvent(EVENT_GUILD_ID_CHANGED, OnGuildIdChanged)
+    ZO_UnitFrames:AddFilterForEvent(EVENT_GUILD_ID_CHANGED, REGISTER_FILTER_UNIT_TAG, "reticleover")
 
     CALLBACK_MANAGER:RegisterCallback("TargetOfTargetEnabledChanged", OnTargetOfTargetEnabledChanged)
 end

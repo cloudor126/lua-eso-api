@@ -262,7 +262,7 @@ function ZO_GroupMenu_Gamepad:UpdateMenuList()
     list:AddEntry(MENU_ENTRY_TEMPLATE, self.menuEntries[MENU_ENTRY_TYPE_CURRENT_GROUP])
     list:AddEntryWithHeader("ZO_GroupMenuGamepadDungeonDifficultyEntry", self.menuEntries[MENU_ENTRY_TYPE_DUNGEON_DIFFICULTY])  
     
-    if groupSize == 0 or (playerIsLeader and groupSize < GROUP_SIZE_MAX) then
+    if IsGroupModificationAvailable() and (groupSize == 0 or (playerIsLeader and groupSize < GROUP_SIZE_MAX)) then
         table.insert(groupActionEntries, self.menuEntries[MENU_ENTRY_TYPE_INVITE_PLAYER])
         local platform = GetUIPlatform()
         if platform == UI_PLATFORM_XBOX and GetNumberConsoleFriends() > 0 then
@@ -275,7 +275,7 @@ function ZO_GroupMenu_Gamepad:UpdateMenuList()
         table.insert(groupActionEntries, self.menuEntries[MENU_ENTRY_TYPE_READY_CHECK])
     end
 
-    if playerIsLeader and not DoesGroupModificationRequireVote() then
+    if playerIsLeader and IsGroupModificationAvailable() and not DoesGroupModificationRequireVote() then
         table.insert(groupActionEntries, self.menuEntries[MENU_ENTRY_TYPE_DISBAND_GROUP])
     end
 
@@ -343,7 +343,7 @@ function ZO_GroupMenu_Gamepad:SetupList(list)
         UpdateDifficultyIcon(comboBox.icon, entry.isVeteran, comboBox.normalIcon, comboBox.veteranIcon)        
     end
 
-    local function SetupDungeonDifficultyEntry(control, data, selected, selectedDuringRebuild, enabled, activated)
+    local function SetupDungeonDifficultyEntry(control, data, selected, selectedDuringRebuild, enabled, active)
         ZO_SharedGamepadEntry_OnSetup(control, data, selected, selectedDuringRebuild, enabled, active)
 
         local isVeteran = ZO_GetEffectiveDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN
@@ -411,12 +411,7 @@ function ZO_GroupMenu_Gamepad:SetupList(list)
 
     list:SetOnSelectedDataChangedCallback(OnSelectedMenuEntry)
 
-    local listControl = list.control
-    local _, point1, relativeTo1, relativePoint1, offsetX1, offsetY1 = listControl:GetAnchor(0)
-    local _, point2, relativeTo2, relativePoint2, offsetX2, offsetY2 = listControl:GetAnchor(1)
-    listControl:ClearAnchors()
-    listControl:SetAnchor(point1, relativeTo1, relativePoint1, offsetX1, offsetY1 + ZO_GAMEPAD_ROLES_BAR_ADDITIONAL_HEADER_SPACE)
-    listControl:SetAnchor(point2, relativeTo2, relativePoint2, offsetX2, offsetY2)
+    GAMEPAD_GROUP_ROLES_BAR:SetupListAnchorsBelowGroupBar(list.control)
 
     list:SetDefaultSelectedIndex(2) --don't select MENU_ENTRY_TYPE_ROLES by default
 

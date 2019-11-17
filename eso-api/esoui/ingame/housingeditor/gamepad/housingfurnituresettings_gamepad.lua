@@ -63,12 +63,7 @@ function ZO_HousingFurnitureSettings_Gamepad:InitializeKeybindStripDescriptors()
                             local targetData = self.mainList:GetTargetData()
                             if targetData.permissionOption == HOUSE_PERMISSION_OPTIONS_CATEGORIES_GENERAL then
                                 if targetData.generalInfo == ZO_HOUSING_SETTINGS_CONTROL_DATA[ZO_HOUSING_SETTINGS_CONTROL_DATA_PRIMARY_RESIDENCE] then
-                                    if self.currentHouse ~= self.primaryResidence then
-                                        local collectibleId = GetCollectibleIdForHouse(self.currentHouse)
-                                        local name = GetCollectibleName(collectibleId)
-                                        local nickname = GetCollectibleNickname(collectibleId)
-                                        ZO_Dialogs_ShowGamepadDialog("CONFIRM_PRIMARY_RESIDENCE", { currentHouse = self.currentHouse}, { mainTextParams = { name, nickname} })
-                                    end
+                                    self:SetPrimaryResidence()
                                 end
                             elseif self.activePanel then
                                 self.owner:DeactivateCurrentList()
@@ -80,7 +75,7 @@ function ZO_HousingFurnitureSettings_Gamepad:InitializeKeybindStripDescriptors()
                             local targetData = self.mainList:GetTargetData()
                             if targetData.permissionOption == HOUSE_PERMISSION_OPTIONS_CATEGORIES_GENERAL then
                                 if targetData.generalInfo == ZO_HOUSING_SETTINGS_CONTROL_DATA[ZO_HOUSING_SETTINGS_CONTROL_DATA_PRIMARY_RESIDENCE] then
-                                    return self.primaryResidence ~= self.currentHouse
+                                    return self.primaryResidence ~= GetCurrentZoneHouseId()
                                 end
                             elseif self.activePanel then
                                 return self.activePanel:GetNumPossibleEntries() > 0
@@ -110,7 +105,7 @@ function ZO_HousingFurnitureSettings_Gamepad:InitializeKeybindStripDescriptors()
                           return self.activePanel ~= nil
                       end,
             callback = function()
-                local data = { activePanel = self.activePanel, currentHouse = self.currentHouse }
+                local data = { activePanel = self.activePanel, currentHouse = GetCurrentZoneHouseId() }
                 if self.activePanel == self.visitorList then
                     ZO_Dialogs_ShowGamepadDialog("GAMEPAD_REQUEST_ADD_INDIVIDUAL_PERMISSION", data)
                 elseif self.activePanel == self.guildVisitorList then
@@ -163,7 +158,14 @@ do
 
             control.horizontalListObject:Clear()
             local horizontalList = control.horizontalListObject
-            local currentHouse = self.currentHouse
+            self.defaultAccessList = horizontalList
+
+            local currentHouse = GetCurrentZoneHouseId()
+            if not currentHouse then
+                return
+            end
+
+            self.horizontalListCurrentHouse = currentHouse
 
             local updateTooltipFunction = function()
                                                 local targetData = self.mainList:GetTargetData()
@@ -173,7 +175,7 @@ do
                                             end
 
             local allDefaultAccessSettings = HOUSE_SETTINGS_MANAGER:GetAllDefaultAccessSettings()
-            for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MIN_VALUE, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_MAX_VALUE do
+            for i = HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_BEGIN, HOUSE_PERMISSION_DEFAULT_ACCESS_SETTING_ITERATION_END do
                 local entryData = 
                 {
                     text = allDefaultAccessSettings[i],
@@ -195,11 +197,10 @@ do
             horizontalList:Commit()
             horizontalList:SetActive(selected)
 
-            local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(self.currentHouse)
+            local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(currentHouse)
 
             horizontalList:SetSelectedDataIndex(defaultAccess + 1, ALLOW_EVEN_IF_DISABLED, NO_ANIMATION) -- plus 1 is for lua index offset
             horizontalList:SetOnSelectedDataChangedCallback(HorizontalScrollListSelectionChanged)
-            self.defaultAccessList = horizontalList
         end
 
         self.mainList:AddDataTemplate("ZO_HousingPermissionsSettingsRow_Gamepad", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
@@ -262,6 +263,7 @@ end
 
 function ZO_HousingFurnitureSettings_Gamepad:OnShowing()
     self.owner:SetCurrentList(self.mainList)
+    self:UpdateLists()
     self.mainList:RefreshVisible()
     self:UpdateInfoFromTargetData()
     KEYBIND_STRIP:AddKeybindButtonGroup(self.keybindStripDescriptor)
@@ -312,12 +314,20 @@ end
 
 function ZO_HousingFurnitureSettings_Gamepad:UpdateGeneralSettings()
     self.primaryResidence = GetHousingPrimaryHouse()
-    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(self.currentHouse)
+    local currentHouse = GetCurrentZoneHouseId()
+    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(currentHouse)
+
+    -- if the horizontal list was not built with the current house Id
+    -- we need to rebuild it so that when we select the current entry it doesn't
+    -- cause us to set the permissions on an old house
+    if self.horizontalListCurrentHouse ~= currentHouse then
+        self.mainList:RefreshVisible()
+    end
 
     local ALLOW_EVEN_IF_DISABLED = true
     local NO_ANIMATION = true
     self.defaultAccessList:SetSelectedDataIndex(defaultAccess + 1, ALLOW_EVEN_IF_DISABLED, NO_ANIMATION) -- plus 1 is for lua index offset
-    
+
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
 end
 
@@ -326,7 +336,7 @@ function ZO_HousingFurnitureSettings_Gamepad:BuildCategories()
 end
 
 function ZO_HousingFurnitureSettings_Gamepad:ShowDefaultAccessTooltip()
-    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(self.currentHouse)
+    local defaultAccess = HOUSE_SETTINGS_MANAGER:GetDefaultHousingPermission(GetCurrentZoneHouseId())
     GAMEPAD_TOOLTIPS:LayoutDefaultAccessTooltip(GAMEPAD_LEFT_TOOLTIP, defaultAccess)
 end
 
@@ -602,7 +612,7 @@ do
             setup = function(control, data, selected, reselectingDuringRebuild, enabled, active)
                 local dropdown = control.dropdown
                 data.dialog.houseSelectorDropdown = dropdown
-                dropdown:SetSortsItems(false)
+                dropdown:SetSortsItems(false) -- sorted on setup
                 dropdown:ClearItems()
 
                 local function OnHouseSelected(_, entryText, entry)
@@ -640,10 +650,10 @@ do
                     targetData.callback(dialog)
                 end
             end,
-            enabled = function(control)
-                local targetData = control.dialog.entryList:GetTargetData()
+            enabled = function(dialog)
+                local targetData = dialog.entryList:GetTargetData()
                 if targetData.validInput then
-                    return targetData.validInput(control.dialog)
+                    return targetData.validInput(dialog)
                 end
 
                 return true
@@ -658,6 +668,48 @@ do
             end,
         },
     }
+
+    -- Add Friend Button
+    local addFriendButtonData =
+    {
+        keybind = "DIALOG_SECONDARY",
+        text = SI_GAMEPAD_CONSOLE_CHOOSE_FRIEND,
+        callback =  function(dialog)
+            local data = dialog.entryList:GetTargetData()
+            local editbox = data.control.editBoxControl
+            local HandleUserIdResult = function(hasResult, displayName, consoleId)
+                if hasResult then
+                    editbox:SetText(displayName)
+                end
+            end
+
+            local INCLUDE_ONLINE_FRIENDS = true
+            local INCLUDE_OFFLINE_FRIENDS = true
+            PLAYER_CONSOLE_INFO_REQUEST_MANAGER:RequestIdFromUserListDialog(HandleUserIdResult, GetString(SI_GAMEPAD_CONSOLE_SELECT_FOR_HOUSE_PERMISSIONS), INCLUDE_ONLINE_FRIENDS, INCLUDE_OFFLINE_FRIENDS)
+        end,
+        visible = function(dialog)
+            local data = dialog.entryList:GetTargetData()
+            if data and data.control and data.control.editBoxControl then
+                local platform = GetUIPlatform()
+                if platform == UI_PLATFORM_PS4 then
+                    return true
+                elseif platform == UI_PLATFORM_XBOX then
+                    if GetNumberConsoleFriends() > 0 then
+                        return true
+                    end
+                end
+            end
+
+            return false
+        end
+    }
+
+    -- Individual Add/Ban Dialog Button Data
+    local individualDialogButtonData = {}
+    for i,buttonInfo in ipairs(buttonsData) do
+        table.insert(individualDialogButtonData, buttonInfo)
+    end
+    table.insert(individualDialogButtonData, addFriendButtonData)
 
     function ZO_HousingFurnitureSettings_Gamepad:InitializeAddIndividualDialog()
         local dialogName = "GAMEPAD_REQUEST_ADD_INDIVIDUAL_PERMISSION"
@@ -710,7 +762,7 @@ do
                 },
             },
             blockDialogReleaseOnPress = true,
-            buttons = buttonsData,
+            buttons = individualDialogButtonData,
             noChoiceCallback = NoChoiceCallback,
         })
     end
@@ -826,7 +878,7 @@ do
                 },
             },
             blockDialogReleaseOnPress = true,
-            buttons = buttonsData,
+            buttons = individualDialogButtonData,
         })
     end
 
@@ -982,6 +1034,7 @@ do
             gamepadInfo =
             {
                 dialogType = GAMEPAD_DIALOGS.PARAMETRIC,
+                allowShowOnNextScene = true
             },
             setup = function(dialog)
                 SetupCopyDialog(dialog, dialogName)

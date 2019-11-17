@@ -59,6 +59,9 @@ function ZO_Tutorials:Initialize(control)
     self:AddTutorialHandler(ZO_BriefHudTutorial:New(control))
     self:AddTutorialHandler(ZO_HudInfoTutorial:New(control))
     self:AddTutorialHandler(ZO_UiInfoBoxTutorial:New(control))
+    if IsKeyboardUISupported() then
+        self:AddTutorialHandler(ZO_PointerBoxTutorial:New(control))
+    end
 end
 
 function ZO_Tutorials:DisplayOrQueueTutorial(tutorialIndex, priority)
@@ -76,7 +79,21 @@ function ZO_Tutorials:AddTutorialHandler(handler)
 end
 
 function ZO_Tutorials:SuppressTutorialType(tutorialType, suppress, reason)
-    self.tutorialHandlers[tutorialType]:SuppressTutorials(suppress, reason)
+    if self.tutorialHandlers[tutorialType] then
+        self.tutorialHandlers[tutorialType]:SuppressTutorials(suppress, reason)
+    end
+end
+
+function ZO_Tutorials:RegisterTriggerLayoutInfo(tutorialType, ...)
+    if self.tutorialHandlers[tutorialType] then
+        self.tutorialHandlers[tutorialType]:RegisterTriggerLayoutInfo(...)
+    end
+end
+
+function ZO_Tutorials:RemoveTutorialByTrigger(tutorialType, tutorialTrigger)
+    if self.tutorialHandlers[tutorialType] then
+        self.tutorialHandlers[tutorialType]:RemoveTutorialByTrigger(tutorialTrigger)
+    end
 end
 
 function ZO_Tutorials:OnTutorialEnabledStateChanged(enabled)
@@ -117,6 +134,20 @@ function ZO_Tutorials:ShowHelp()
         end
     end
     return false
+end
+
+function ZO_Tutorials:TriggerTutorialWithDeferredAction(triggerType, tutorialCompletedCallback)
+    local triggerEventTag = "ZO_TutorialTrigger"..triggerType
+
+    local function OnTutorialTriggerCompleted(eventCode, completedTriggerType)
+        if completedTriggerType == triggerType then
+            EVENT_MANAGER:UnregisterForEvent(triggerEventTag, EVENT_TUTORIAL_TRIGGER_COMPLETED)
+            tutorialCompletedCallback()
+        end
+    end
+    EVENT_MANAGER:RegisterForEvent(triggerEventTag, EVENT_TUTORIAL_TRIGGER_COMPLETED, OnTutorialTriggerCompleted)
+
+    TriggerTutorial(triggerType)
 end
 
 function ZO_Tutorial_Initialize(control)

@@ -24,18 +24,6 @@ local function GetCustomerServiceIcon(isCustomerServiceAccount)
 end
 
 local ChatEventFormatters = {
-    [EVENT_SERVER_SHUTDOWN_INFO] = function(action, timeRemaining)
-        if action == SERVER_SHUTDOWN_CANCELED then
-            return GetString(SI_CHAT_SHUTDOWN_CANCEL)
-        elseif action == SERVER_SHUTDOWN_START then
-            return zo_strformat(SI_CHAT_SHUTDOWN_START, FormatShutdownTime(timeRemaining))
-        elseif action == SERVER_SHUTDOWN_RESCHEDULED then
-            return zo_strformat(SI_CHAT_SHUTDOWN_RESCHEDULE, FormatShutdownTime(timeRemaining))
-        elseif action == SERVER_SHUTDOWN_UPDATE then
-            return FormatShutdownTime(timeRemaining)
-        end
-    end,
-
     [EVENT_CHAT_MESSAGE_CHANNEL] = function(messageType, fromName, text, isFromCustomerService, fromDisplayName)
         local channelInfo = ChannelInfo[messageType]
 
@@ -51,19 +39,31 @@ local ChatEventFormatters = {
                 userFacingName = fromName
             end
 
+            userFacingName = zo_strformat(SI_CHAT_MESSAGE_PLAYER_FORMATTER, userFacingName)
             local fromLink = channelInfo.playerLinkable and ZO_LinkHandler_CreatePlayerLink(userFacingName) or userFacingName
 
-            -- Channels with links will not have CS messages
-            if channelLink then
-                return zo_strformat(channelInfo.format, channelLink, fromLink, text), channelInfo.saveTarget, fromDisplayName, text
+            if channelInfo.formatMessage then
+                text = zo_strformat(SI_CHAT_MESSAGE_FORMATTER, text)
             end
 
-            return zo_strformat(channelInfo.format, fromLink, text, GetCustomerServiceIcon(isFromCustomerService)), channelInfo.saveTarget, fromDisplayName, text
+            -- Channels with links will not have CS messages
+            local formattedText
+            if channelLink then
+                formattedText = string.format(GetString(channelInfo.format), channelLink, fromLink, text)
+            else
+                if channelInfo.supportCSIcon then
+                    formattedText = string.format(GetString(channelInfo.format), GetCustomerServiceIcon(isFromCustomerService), fromLink, text)
+                else
+                    formattedText = string.format(GetString(channelInfo.format), fromLink, text)
+                end
+            end
+
+            return formattedText, channelInfo.saveTarget, fromDisplayName, text
         end
     end,
 
     [EVENT_BROADCAST] = function(message)
-        return zo_strformat(SI_CHAT_MESSAGE_SYSTEM, GetString("SI_CHATCHANNELCATEGORIES", CHAT_CATEGORY_SYSTEM), message)
+        return string.format(GetString(SI_CHAT_MESSAGE_SYSTEM), GetString("SI_CHATCHANNELCATEGORIES", CHAT_CATEGORY_SYSTEM), message)
     end,
 
     [EVENT_FRIEND_PLAYER_STATUS_CHANGED] = function(displayName, characterName, oldStatus, newStatus)
@@ -122,7 +122,7 @@ local ChatEventFormatters = {
         if(not IsGroupErrorIgnoreResponse(response) and ShouldShowGroupErrorInChat(response)) then
             local alertMessage = nameToDisplay ~= "" and zo_strformat(GetString("SI_GROUPINVITERESPONSE", response), nameToDisplay) or GetString(SI_PLAYER_BUSY)
     
-            return alertMessage, nil, diplayName
+            return alertMessage, nil, displayName
         end
     end,
 
@@ -142,6 +142,10 @@ local ChatEventFormatters = {
         if reason == GROUP_LEAVE_REASON_KICKED and isLocalPlayer and actionRequiredVote then
             return GetString(SI_GROUP_ELECTION_KICK_PLAYER_PASSED)
         end
+    end,
+
+    [EVENT_BATTLEGROUND_INACTIVITY_WARNING] = function()
+        return GetString(SI_BATTLEGROUND_INACTIVITY_WARNING)
     end,
 }
 

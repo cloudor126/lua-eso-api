@@ -92,20 +92,9 @@ function ZO_Achievements_Gamepad:Initialize(control)
 end
 
 function ZO_Achievements_Gamepad:SetupList(list)
-    local function MenuEntryTemplateSetup(control, data, selected, selectedDuringRebuild, enabled, activated)
-        ZO_SharedGamepadEntry_OnSetup(control, data, selected, reselectingDuringRebuild, enabled, activated)
-
-        control.barContainer:SetMinMax(0, data.totalPoints)
-        control.barContainer:SetValue(data.earnedPoints)
-        control.barContainer:SetHidden(not selected)
-        ZO_StatusBar_SetGradientColor(control.barContainer, ZO_SKILL_XP_BAR_GRADIENT_COLORS)
-    end
-
-    list:SetDirectionalInputEnabled(false)
-
     list:AddDataTemplate("ZO_GamepadAchievementsEntryTemplate", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
     list:AddDataTemplateWithHeader("ZO_GamepadAchievementsEntryTemplate", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction, nil, "ZO_GamepadMenuEntryHeaderTemplate")
-    list:AddDataTemplate("ZO_GamepadMenuEntryWithBarTemplate", MenuEntryTemplateSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
+    list:AddDataTemplate("ZO_GamepadMenuEntryWithBarTemplate", ZO_SharedGamepadEntry_OnSetup, ZO_GamepadMenuEntryTemplateParametricListFunction)
 
     self.itemList = list
 end
@@ -179,6 +168,7 @@ function ZO_Achievements_Gamepad:OnDeferredInitialize()
     self.recentAchievementContainer = rootContainer:GetNamedChild("Recent")
     self.recentAchievementFocus, self.recentAchievementControls = SetupAchievementList(self.recentAchievementContainer:GetNamedChild("Centerer"), NUM_RECENT_ACHIEVEMENTS_TO_SHOW, {ZO_DI_LEFT_STICK, ZO_DI_DPAD})
     self.recentAchievementFocus:SetFocusChangedCallback(function(...) self:AchievementListSelectionChanged(self.recentAchievementFocus, ...) end)
+    self:SetupHeaderFocus(self.recentAchievementFocus)
 
     self.chainContainer = self.control:GetNamedChild("Chain")
     self.chainFocus, self.chainControls = SetupAchievementList(self.chainContainer, MAX_CHAIN_SIZE, {ZO_DI_LEFT_STICK}, CanFocusAchievement)
@@ -222,28 +212,19 @@ function ZO_Achievements_Gamepad:SetRecentAchievementsHidden(hidden)
     end
 end
 
-function ZO_Achievements_Gamepad:UpdateDirectionalInput()
-    local result = self.movementController:CheckMovement()
-    if result == MOVEMENT_CONTROLLER_MOVE_NEXT then
-        if self.recentAchievementFocus.active then
-            self.recentAchievementFocus:Deactivate()
-            self:ShowAchievementSummaryTooltip() -- We are selecting the "summary" entry.
-            self.itemList:Activate()
-            PlaySound(SOUNDS.GAMEPAD_MENU_DOWN)
-            KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
-        else
-            self.itemList:MoveNext()
-        end
-    elseif result == MOVEMENT_CONTROLLER_MOVE_PREVIOUS then
-        if self.itemList.selectedIndex ~= 1 then
-            self.itemList:MovePrevious()
-        elseif not self.recentAchievementContainer:IsControlHidden() then
-            self.itemList:Deactivate()
-            self.recentAchievementFocus:Activate()
-            PlaySound(SOUNDS.GAMEPAD_MENU_UP)
-            KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
-        end
-    end
+function ZO_Achievements_Gamepad:OnEnterHeader()
+    PlaySound(SOUNDS.GAMEPAD_MENU_UP)
+    KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
+end
+
+function ZO_Achievements_Gamepad:OnLeaveHeader()
+    self:ShowAchievementSummaryTooltip() -- We are selecting the "summary" entry.
+    PlaySound(SOUNDS.GAMEPAD_MENU_DOWN)
+    KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
+end
+
+function ZO_Achievements_Gamepad:CanEnterHeader()
+    return not self.recentAchievementContainer:IsControlHidden()
 end
 
 function ZO_Achievements_Gamepad:AchievementListSelectionChanged(list, entry)
@@ -261,7 +242,7 @@ end
 
 function ZO_Achievements_Gamepad:RefreshRecentAchievements()
     local recentAchievements = {GetRecentlyCompletedAchievements(NUM_RECENT_ACHIEVEMENTS_TO_SHOW)}
-    for i=1, NUM_RECENT_ACHIEVEMENTS_TO_SHOW do
+    for i = 1, NUM_RECENT_ACHIEVEMENTS_TO_SHOW do
         local control = self.recentAchievementControls[i]
         local achievementId = recentAchievements[i]
 
@@ -292,7 +273,6 @@ function ZO_Achievements_Gamepad:OnShowing()
 
     ZO_Gamepad_ParametricList_Screen.OnShowing(self)
 
-    DIRECTIONAL_INPUT:Activate(self, self.control)
     self.recentAchievementFocus:Deactivate()
 end
 
@@ -306,7 +286,6 @@ function ZO_Achievements_Gamepad:OnHide()
     self:HideTooltip()
 
     self.recentAchievementFocus:Deactivate()
-    DIRECTIONAL_INPUT:Deactivate(self)
 end
 
 function ZO_Achievements_Gamepad:SwitchToFilterMode(newMode)
@@ -568,18 +547,18 @@ function ZO_Achievements_Gamepad:OnSelectionChanged(list, selectedData, oldSelec
 end
 
 function ZO_Achievements_Gamepad:PopulateCategories()
+    local MIN_POINTS = 0
     local totalPoints = GetTotalAchievementPoints()
     local earnedPoints = GetEarnedAchievementPoints()
     self.footerBarName:SetText(GetString(SI_GAMEPAD_ACHIEVEMENTS_POINTS_LABEL))
     self.footerBarValue:SetText(earnedPoints)
-    self.footerBarBar:SetMinMax(0, totalPoints)
+    self.footerBarBar:SetMinMax(MIN_POINTS, totalPoints)
     self.footerBarBar:SetValue(earnedPoints)
 
     -- Create summary "category".
     local entryData = ZO_GamepadEntryData:New(zo_strformat(SI_JOURNAL_PROGRESS_SUMMARY), SUMMARY_ICON)
     entryData:SetIconTintOnSelection(true)
-    entryData.earnedPoints = earnedPoints
-    entryData.totalPoints = totalPoints
+    entryData:SetBarValues(MIN_POINTS, totalPoints, earnedPoints)
     entryData.canEnter = false
     entryData.isSummary = true
     self.itemList:AddEntry("ZO_GamepadMenuEntryWithBarTemplate", entryData)
@@ -591,9 +570,8 @@ function ZO_Achievements_Gamepad:PopulateCategories()
 
         local entryData = ZO_GamepadEntryData:New(zo_strformat(categoryName), gamepadIcon)
         entryData:SetIconTintOnSelection(true)
+        entryData:SetBarValues(MIN_POINTS, totalPoints, earnedPoints)
         entryData.categoryIndex = categoryIndex
-        entryData.earnedPoints = earnedPoints
-        entryData.totalPoints = totalPoints
         entryData.canEnter = true
 
         self.itemList:AddEntry("ZO_GamepadMenuEntryWithBarTemplate", entryData)

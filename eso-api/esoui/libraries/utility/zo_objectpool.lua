@@ -32,16 +32,21 @@
 
 ZO_ObjectPool = ZO_Object:Subclass()
 
-function ZO_ObjectPool:New(factoryFunction, resetFunction)
+function ZO_ObjectPool:New(factoryFunctionOrObjectClass, resetFunction)
     local pool = ZO_Object.New(self)
         
-    if(factoryFunction)
-    then
+    if factoryFunctionOrObjectClass then
         resetFunction = resetFunction or ZO_ObjectPool_DefaultResetControl
 
         pool.m_Active   = {}
         pool.m_Free     = {}
-        pool.m_Factory  = factoryFunction   -- Signature: function(ZO_ObjectPool)
+
+        if type(factoryFunctionOrObjectClass) == "function" then
+            pool.m_Factory  = factoryFunctionOrObjectClass   -- Signature: function(ZO_ObjectPool)
+        else
+            pool.m_Factory = function() return factoryFunctionOrObjectClass:New() end
+        end
+        
         pool.m_Reset    = resetFunction     -- Signature: function(objectBeingReset)
         pool.m_NextFree = 1                 -- Just in case the user would like the pool to generate object keys.
         pool.m_NextControlId = 0            -- Just in case the user would like the pool to generate id-based control suffixes
@@ -51,12 +56,10 @@ function ZO_ObjectPool:New(factoryFunction, resetFunction)
 end
 
 function ZO_ObjectPool:GetNextFree()
-    local nextPotentialFree = self.m_NextFree
-    self.m_NextFree = self.m_NextFree + 1
-
     local freeKey, object = next(self.m_Free)
-    if(freeKey == nil or object == nil)
-    then
+    if freeKey == nil or object == nil then
+        local nextPotentialFree = self.m_NextFree
+        self.m_NextFree = self.m_NextFree + 1
         return nextPotentialFree, nil
     end
 
@@ -82,6 +85,10 @@ end
 
 function ZO_ObjectPool:GetFreeObjectCount()
     return NonContiguousCount(self.m_Free)
+end
+
+function ZO_ObjectPool:SetCustomAcquireBehavior(customAcquireBehavior)
+    self.customAcquireBehavior = customAcquireBehavior
 end
 
 function ZO_ObjectPool:AcquireObject(objectKey)
@@ -117,6 +124,10 @@ function ZO_ObjectPool:AcquireObject(objectKey)
     end
            
     self.m_Active[objectKey] = object
+
+    if self.customAcquireBehavior then
+        self.customAcquireBehavior(object)
+    end
         
     return object, objectKey
 end

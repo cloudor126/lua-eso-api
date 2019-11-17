@@ -15,7 +15,7 @@ function ZO_SmithingResearch:Initialize(control, owner)
     ZO_InventoryInfoBar_ConnectStandardBar(control:GetNamedChild("InfoBar"))
 end
 
-function ZO_SharedSmithingResearch:SetHidden(hidden)
+function ZO_SmithingResearch:SetHidden(hidden)
     self.control:SetHidden(hidden)
     if not hidden and self.dirty then
         self:Refresh()
@@ -52,8 +52,9 @@ function ZO_SmithingResearch:InitializeFilterTypeBar()
         }
     end
 
-    ZO_MenuBar_AddButton(self.tabs, CreateNewTabFilterData(ZO_SMITHING_RESEARCH_FILTER_TYPE_ARMOR, GetString("SI_ITEMFILTERTYPE", ITEMFILTERTYPE_ARMOR), "EsoUI/Art/Inventory/inventory_tabIcon_armor_up.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_down.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_over.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_disabled.dds", CanSmithingApparelPatternsBeCraftedHere))
-    ZO_MenuBar_AddButton(self.tabs, CreateNewTabFilterData(ZO_SMITHING_RESEARCH_FILTER_TYPE_WEAPONS, GetString("SI_ITEMFILTERTYPE", ITEMFILTERTYPE_WEAPONS), "EsoUI/Art/Inventory/inventory_tabIcon_weapons_up.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_down.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_over.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_disabled.dds", CanSmithingWeaponPatternsBeCraftedHere))
+    ZO_MenuBar_AddButton(self.tabs, CreateNewTabFilterData(SMITHING_FILTER_TYPE_JEWELRY, GetString("SI_SMITHINGFILTERTYPE", SMITHING_FILTER_TYPE_JEWELRY), "EsoUI/Art/Crafting/jewelry_tabIcon_icon_up.dds", "EsoUI/Art/Crafting/jewelry_tabIcon_down.dds", "EsoUI/Art/Crafting/jewelry_tabIcon_icon_over.dds", "EsoUI/Art/Inventory/inventory_tabIcon_jewelry_disabled.dds", CanSmithingJewelryPatternsBeCraftedHere))
+    ZO_MenuBar_AddButton(self.tabs, CreateNewTabFilterData(SMITHING_FILTER_TYPE_ARMOR, GetString("SI_SMITHINGFILTERTYPE", SMITHING_FILTER_TYPE_ARMOR), "EsoUI/Art/Inventory/inventory_tabIcon_armor_up.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_down.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_over.dds", "EsoUI/Art/Inventory/inventory_tabIcon_armor_disabled.dds", CanSmithingApparelPatternsBeCraftedHere))
+    ZO_MenuBar_AddButton(self.tabs, CreateNewTabFilterData(SMITHING_FILTER_TYPE_WEAPONS, GetString("SI_SMITHINGFILTERTYPE", SMITHING_FILTER_TYPE_WEAPONS), "EsoUI/Art/Inventory/inventory_tabIcon_weapons_up.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_down.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_over.dds", "EsoUI/Art/Inventory/inventory_tabIcon_weapons_disabled.dds", CanSmithingWeaponPatternsBeCraftedHere))
 
     ZO_CraftingUtils_ConnectMenuBarToCraftingProcess(self.tabs)
 end
@@ -66,9 +67,17 @@ end
 
 function ZO_SmithingResearch:SetupTooltip(row)
     InitializeTooltip(InformationTooltip, row, RIGHT, -10)
+
     SetTooltipText(InformationTooltip, GetString("SI_ITEMTRAITTYPE", row.traitType))
     ZO_Tooltip_AddDivider(InformationTooltip)
-    InformationTooltip:AddLine(row.traitDescription)
+
+    local r, g, b = ZO_SELECTED_TEXT:UnpackRGB()
+    local SET_TO_FULL_SIZE = true
+    InformationTooltip:AddLine(row.traitDescription, "", r, g, b, CENTER, MODIFY_TEXT_TYPE_NONE, TEXT_ALIGN_CENTER, SET_TO_FULL_SIZE)
+    if row.traitResearchSourceDescription then
+        InformationTooltip:AddLine(zo_strformat(SI_SMITHING_TRAIT_RESEARCH_SOURCE_DESCRIPTION, row.traitResearchSourceDescription), "", r, g, b, CENTER, MODIFY_TEXT_TYPE_NONE, TEXT_ALIGN_CENTER, SET_TO_FULL_SIZE)
+        InformationTooltip:AddLine(zo_strformat(SI_SMITHING_TRAIT_MATERIAL_SOURCE_DESCRIPTION, row.traitMaterialSourceDescription), "", r, g, b, CENTER, MODIFY_TEXT_TYPE_NONE, TEXT_ALIGN_CENTER, SET_TO_FULL_SIZE)
+    end
 end
 
 function ZO_SmithingResearch:ClearTooltip(row)
@@ -79,10 +88,8 @@ function ZO_SmithingResearch:Research(overrideRow)
     local canResearchCurrentTrait = self:CanResearchCurrentTraitLine()
 
     if self.atMaxResearchLimit then
-        local skillType, skillIndex = GetCraftingSkillLineIndices(GetCraftingInteractionType())
-        local lineName = GetSkillLineInfo(skillType, skillIndex)
-
-        ZO_Alert(UI_ALERT_CATEGORY_ALERT, SOUNDS.NEGATIVE_CLICK, SI_SMITHING_RESEARCH_ALL_SLOTS_IN_USE, lineName)
+        local craftingSkillLineData = SKILLS_DATA_MANAGER:GetCraftingSkillLineData(GetCraftingInteractionType())
+        ZO_Alert(UI_ALERT_CATEGORY_ALERT, SOUNDS.NEGATIVE_CLICK, SI_SMITHING_RESEARCH_ALL_SLOTS_IN_USE, craftingSkillLineData:GetName())
     elseif not canResearchCurrentTrait then
         ZO_Alert(UI_ALERT_CATEGORY_ALERT, SOUNDS.NEGATIVE_CLICK, SI_SMITHING_RESEARCH_TRAIT_ALREADY_BEING_RESEARCHED, self.traitLineText)
     else
@@ -215,10 +222,12 @@ function ZO_SmithingResearchSelect:SetupDialog(craftingType, researchLineIndex, 
     listDialog:ClearList()
 
     local function IsResearchableItem(bagId, slotIndex)
-        return CanItemBeSmithingTraitResearched(bagId, slotIndex, craftingType, researchLineIndex, traitIndex) and not IsItemPlayerLocked(bagId, slotIndex)
+        return ZO_SharedSmithingResearch.IsResearchableItem(bagId, slotIndex, craftingType, researchLineIndex, traitIndex)
     end
 
-    local virtualInventoryList = PLAYER_INVENTORY:GenerateListOfVirtualStackedItems(INVENTORY_BANK, IsResearchableItem, PLAYER_INVENTORY:GenerateListOfVirtualStackedItems(INVENTORY_BACKPACK, IsResearchableItem))
+    local virtualInventoryList = PLAYER_INVENTORY:GenerateListOfVirtualStackedItems(INVENTORY_BACKPACK, IsResearchableItem)
+    PLAYER_INVENTORY:GenerateListOfVirtualStackedItems(INVENTORY_BANK, IsResearchableItem, virtualInventoryList)
+
     for itemId, itemInfo in pairs(virtualInventoryList) do
         itemInfo.name = zo_strformat(SI_TOOLTIP_ITEM_NAME, GetItemName(itemInfo.bag, itemInfo.index))
         listDialog:AddListItem(itemInfo)
@@ -227,6 +236,55 @@ function ZO_SmithingResearchSelect:SetupDialog(craftingType, researchLineIndex, 
     listDialog:CommitList(SortComparator)
 
     listDialog:AddCustomControl(self.control, LIST_DIALOG_CUSTOM_CONTROL_LOCATION_BOTTOM)
+end
+
+--Global XML
+
+function ZO_SmithingResearchSlot_OnInitialized(self)
+    self.nameLabel = self:GetNamedChild("Name")
+    self.statusLabel = self:GetNamedChild("Status")
+    self.lockIcon = self:GetNamedChild("LockIcon")
+    self.timerIcon = self:GetNamedChild("TimerIcon")
+end
+
+function ZO_SmithingResearchSlot_OnMouseDoubleClick(self)
+    if self.owner:IsResearchable() then
+        self.owner:Research()
+    end
+end
+
+function ZO_SmithingResearchSlot_OnClicked(self, button)
+    if button == MOUSE_BUTTON_INDEX_RIGHT then
+        if self.owner:IsResearchable() then
+            ClearMenu()
+            AddMenuItem(GetString(SI_ITEM_ACTION_RESEARCH), function() self.owner:Research(self) end)
+            ShowMenu(self)
+        elseif self.owner:IsResearching() then
+            ClearMenu()
+            AddMenuItem(GetString(SI_CRAFTING_CANCEL_RESEARCH), function() self.owner:CancelResearch() end)
+            ShowMenu(self)
+        end
+    end
+end
+
+function ZO_SmithingResearchSlot_OnMouseEnter(self)
+    if not self.fadeAnimation then
+        self.fadeAnimation = ANIMATION_MANAGER:CreateTimelineFromVirtual("ShowOnMouseOverLabelAnimation", self:GetNamedChild("Highlight"))
+        self.scaleAnimation = ANIMATION_MANAGER:CreateTimelineFromVirtual("IconSlotMouseOverAnimation", self.icon)
+    end
+    self.fadeAnimation:PlayForward()
+    self.scaleAnimation:PlayForward()
+
+    self.owner:OnResearchRowActivate(self)
+end
+
+function ZO_SmithingResearchSlot_OnMouseExit(self)
+    if self.fadeAnimation then
+        self.fadeAnimation:PlayBackward()
+        self.scaleAnimation:PlayBackward()
+    end
+                
+    self.owner:OnResearchRowDeactivate(self)
 end
 
 function ZO_SmithingResearchSelect_OnInitialize(control)

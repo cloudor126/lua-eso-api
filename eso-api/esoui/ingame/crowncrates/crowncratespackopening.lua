@@ -194,11 +194,11 @@ function ZO_CrownCratesCard:New(...)
 end
 
 function ZO_CrownCratesCard:CreateTextureControl(drawLevel)
-	local textureControl = CreateControlFromVirtual("", self.control, "ZO_CrownCrateCardTexture")
-	textureControl:SetDrawLevel(drawLevel)
-	textureControl:Create3DRenderSpace()
-	self:AddTexture(textureControl)
-	return textureControl
+    local textureControl = CreateControlFromVirtual("", self.control, "ZO_CrownCrateCardTexture")
+    textureControl:SetDrawLevel(drawLevel)
+    textureControl:Create3DRenderSpace()
+    self:AddTexture(textureControl)
+    return textureControl
 end
 
 function ZO_CrownCratesCard:Initialize(control, owner)
@@ -210,6 +210,7 @@ function ZO_CrownCratesCard:Initialize(control, owner)
     self.owner = owner
     
     self.rewardTextureControl = self:CreateTextureControl(ZO_CROWN_CRATES_CARD_TEXTURE_LEVEL_REWARD)
+    self.rewardTextureControl:SetTextureReleaseOption(RELEASE_TEXTURE_AT_ZERO_REFERENCES)
     --SetCollectibleActiveAreaOverlay will be on this level, set in XML--
     self.cardTextureControl = self:CreateTextureControl(ZO_CROWN_CRATES_CARD_TEXTURE_LEVEL_FRAME)
     self.cardGlowTextureControl = self:CreateTextureControl(ZO_CROWN_CRATES_CARD_TEXTURE_LEVEL_GLOW)
@@ -233,7 +234,8 @@ function ZO_CrownCratesCard:Initialize(control, owner)
 
     local function ActivateCollectibleCallback()
         if not self.activateCollectibleAreaControl:IsHidden() then
-            UseCollectible(self.rewardReferenceDataId)
+            local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(self.rewardReferenceDataId)
+            collectibleData:Use()
         end
     end
     self.activateCollectibleKeybindControl:SetCallback(ActivateCollectibleCallback)
@@ -461,7 +463,7 @@ function ZO_CrownCratesCard:Reset()
     self.resizePending = nil
     self:SetState(CARD_STATES.START)
 
-	self:SetCardFaceDesaturation(0)
+    self:SetCardFaceDesaturation(0)
     self.singleGemPool:ReleaseAllObjects()
 
     self.control:SetHandler("OnUpdate", nil)
@@ -797,27 +799,27 @@ function ZO_CrownCratesCard:Reveal()
     local startPitch, startYaw, startRoll = self.control:Get3DRenderSpaceOrientation()
     local endX, endY, endZ = self.owner:ComputeRevealEndPosition(self.visualSlotIndex)
 
-	local function TransitionCardReveal()
-		if not self.cardTextureControl:Is3DQuadFacingCamera() and self.side ~= ZO_CROWN_CRATES_CARD_SIDE_FACE then
-			self:SetupCardSide(ZO_CROWN_CRATES_CARD_SIDE_FACE)
-			self.cardGlowTextureControl:SetAlpha(0)
-			self.control:SetHandler("OnUpdate", nil)
-			if self:IsSelected() then
-				self:RevealedSelect()
-			end
-			self:ShowInfo()
-		end
-	end
+    local function TransitionCardReveal()
+        if not self.cardTextureControl:Is3DQuadFacingCamera() and self.side ~= ZO_CROWN_CRATES_CARD_SIDE_FACE then
+            self:SetupCardSide(ZO_CROWN_CRATES_CARD_SIDE_FACE)
+            self.cardGlowTextureControl:SetAlpha(0)
+            self.control:SetHandler("OnUpdate", nil)
+            if self:IsSelected() then
+                self:RevealedSelect()
+            end
+            self:ShowInfo()
+        end
+    end
 
     local AnimationOnStop = function(timeline, completedPlaying)
         if completedPlaying then
-			-- this is some edge case protection incase the player gets a massive frame time spike while revealing all cards
-			-- which would cause this animation stop function to be called before the OnUpdate callback gets handled
-			-- resulting in the cards 'side' state being incorrect
-			TransitionCardReveal()
+            -- this is some edge case protection incase the player gets a massive frame time spike while revealing all cards
+            -- which would cause this animation stop function to be called before the OnUpdate callback gets handled
+            -- resulting in the cards 'side' state being incorrect
+            TransitionCardReveal()
 
             if self.playRevealSounds then
-                TriggerCrownCrateNPCAnimation(self.rewardReaction)
+                TriggerCrownCrateNPCAnimation(self.rewardReaction, self.rewardIndex)
             end
             if self.gemsExchanged == 0 then
                 self:SetState(CARD_STATES.REVEALED)
@@ -841,11 +843,11 @@ function ZO_CrownCratesCard:Reveal()
 
     --Setup update handler to watch for facing away from camera
     self.control:SetHandler("OnUpdate", function(control)
-		TransitionCardReveal()
+        TransitionCardReveal()
     end)
 
     --PFX
-	self:StartTierSpecificParticleEffects(ZO_CROWN_CRATES_PARTICLE_TYPE_LIFECYCLE, CROWN_CRATE_TIERED_PARTICLES_REVEAL)
+    self:StartTierSpecificParticleEffects(ZO_CROWN_CRATES_PARTICLE_TYPE_LIFECYCLE, CROWN_CRATE_TIERED_PARTICLES_REVEAL)
 
     --Resize the mouse over area back to the card dimensions
     self.mouseAreaControl:Set3DLocalDimensions(ZO_CROWN_CRATES_CARD_WIDTH_WORLD, ZO_CROWN_CRATES_CARD_HEIGHT_WORLD)
@@ -853,22 +855,22 @@ function ZO_CrownCratesCard:Reveal()
 end
 
 function ZO_CrownCratesCard:Gemify()
-	local function TransitionCardGemify()
-		if self.cardTextureControl:Is3DQuadFacingCamera() and self.side ~= ZO_CROWN_CRATES_CARD_SIDE_GEMIFIED_FACE then
+    local function TransitionCardGemify()
+        if self.cardTextureControl:Is3DQuadFacingCamera() and self.side ~= ZO_CROWN_CRATES_CARD_SIDE_GEMIFIED_FACE then
             self:SetupCardSide(ZO_CROWN_CRATES_CARD_SIDE_GEMIFIED_FACE)
             self.colorTintOverlayTextureControl:SetAlpha(ZO_CROWN_CRATES_GEMIFY_TINT_ALPHA)
             self.colorFlashOverlayTextureControl:SetAlpha(0)
             self.nameLabel:SetText(zo_strformat(SI_CROWN_CRATE_REWARD_WITH_GEMS_EXCHANGED, self.gemsExchanged, self.formattedGemIcon, self.rewardName))
             self.control:SetHandler("OnUpdate", nil)
         end 
-	end
+    end
 
     local AnimationOnStop = function(timeline, completedPlaying)
         if completedPlaying then
-			-- this is some edge case protection incase the player gets a massive frame time spike while revealing all cards
-			-- which would cause this animation stop function to be called before the OnUpdate callback gets handled
-			-- resulting in the cards 'side' state being incorrect
-			TransitionCardGemify()
+            -- this is some edge case protection incase the player gets a massive frame time spike while revealing all cards
+            -- which would cause this animation stop function to be called before the OnUpdate callback gets handled
+            -- resulting in the cards 'side' state being incorrect
+            TransitionCardGemify()
 
             local currentPitch, currentYaw, currentRoll = self.control:Get3DRenderSpaceOrientation()
             self.control:Set3DRenderSpaceOrientation(ZO_CROWN_CRATES_GEMIFY_BEGIN_PITCH_RADIANS, currentYaw, currentRoll)
@@ -884,7 +886,7 @@ function ZO_CrownCratesCard:Gemify()
     self:StartAnimation(cardAnimationTimeline)
     --Setup update handler to watch for facing toward the camera again
     self.control:SetHandler("OnUpdate", function(control)
-		TransitionCardGemify()
+        TransitionCardGemify()
     end)
 
     self:StartCrateSpecificParticleEffects(ZO_CROWN_CRATES_PARTICLE_TYPE_LIFECYCLE, CROWN_CRATE_PARTICLES_GEMIFY)
@@ -1006,7 +1008,7 @@ end
 function ZO_CrownCratesCard:ShowInfo()
     --Name
     if self.stackCount > 1 then
-       	self.nameLabel:SetText(zo_strformat(SI_CROWN_CRATE_REWARD_WITH_STACK_NAME, self.rewardName, self.stackCount))
+        self.nameLabel:SetText(zo_strformat(SI_CROWN_CRATE_REWARD_WITH_STACK_NAME, self.rewardName, self.stackCount))
     else
         self.nameLabel:SetText(zo_strformat(SI_CROWN_CRATE_REWARD_NAME, self.rewardName))
     end
@@ -1024,7 +1026,7 @@ function ZO_CrownCratesCard:ShowInfo()
 end
 
 function ZO_CrownCratesCard:HideInfo()
-    self:StopAllAnimationsOfType(ZO_CROWN_CRATES_ANIMATION_SHOW_INFO)
+    self:StopAllAnimationsOfType(ZO_CROWN_CRATES_ANIMATION_CARD_SHOW_INFO)
 
     --Name
     local animationTimeline = self:AcquireAndApplyAnimationTimeline(ZO_CROWN_CRATES_ANIMATION_CARD_HIDE_INFO, self.nameAreaControl)
@@ -1127,15 +1129,16 @@ do
         [COLLECTIBLE_CATEGORY_TYPE_ASSISTANT] = true,
         [COLLECTIBLE_CATEGORY_TYPE_MEMENTO] = true,
         [COLLECTIBLE_CATEGORY_TYPE_DLC] = true,
+        [COLLECTIBLE_CATEGORY_TYPE_HOUSE] = true,
+        [COLLECTIBLE_CATEGORY_TYPE_FURNITURE] = true,
+        [COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE] = true,
     }
 
     function ZO_CrownCratesCard:CanActivateCollectible()
         if self.rewardProductType == MARKET_PRODUCT_TYPE_COLLECTIBLE and not self:IsGemified() then
-            local collectibleId = self.rewardReferenceDataId
-            if IsCollectibleUsable(collectibleId) and IsCollectibleValidForPlayer(collectibleId) and not IsCollectibleBlocked(collectibleId) then
-                local isActive, categoryType = select(7, GetCollectibleInfo(collectibleId))
-
-                return not (isActive or DISALLOWED_EQUIPPABLE_COLLECTIBLE_TYPES[categoryType])
+            local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(self.rewardReferenceDataId)
+            if collectibleData:IsUsable() and collectibleData:IsValidForPlayer() and not collectibleData:IsBlocked() then
+                return not (collectibleData:IsActive() or DISALLOWED_EQUIPPABLE_COLLECTIBLE_TYPES[collectibleData:GetCategoryType()])
             end
         end
         return false
@@ -1200,15 +1203,15 @@ function ZO_CrownCratesPackOpening:OnScreenResized()
 end
 
 function ZO_CrownCratesPackOpening:GetStateMachine(stateMachine)
-	return self.stateMachine
+    return self.stateMachine
 end
 
 function ZO_CrownCratesPackOpening:SetStateMachine(stateMachine)
-	self.stateMachine = stateMachine
+    self.stateMachine = stateMachine
 end
 
 function ZO_CrownCratesPackOpening:GetOwner()
-	return self.owner
+    return self.owner
 end
 
 function ZO_CrownCratesPackOpening:RefreshCameraPlaneMetrics()
@@ -1245,11 +1248,14 @@ function ZO_CrownCratesPackOpening:InitializeKeybinds()
     -- Keyboard --
     local activateCollectibleKeybind =
     {
+        --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+        name = "Crown Crates Card Use Collectible",
         keybind = "UI_SHORTCUT_TERTIARY",
         callback = function()
             local card = self:GetSelectedCard()
             if card and card:IsRevealed() and card:CanActivateCollectible() then
-                UseCollectible(card.rewardReferenceDataId)
+                local collectibleData = ZO_COLLECTIBLE_DATA_MANAGER:GetCollectibleDataById(card.rewardReferenceDataId)
+                collectibleData:Use()
             end
         end,
         ethereal = true,
@@ -1293,6 +1299,8 @@ function ZO_CrownCratesPackOpening:InitializeKeybinds()
     -- Gamepad --
     local function CreateRevealedSelectedKeybindDescriptor(keybind)     
         local descriptor = {
+            --Ethereal binds show no text, the name field is used to help identify the keybind when debugging. This text does not have to be localized.
+            name = "Crown Crates Select Revealed Card",
             keybind = keybind,
             ethereal = true,
             callback = function()
@@ -1360,9 +1368,8 @@ function ZO_CrownCratesPackOpening:InitializeKeybinds()
         end
     end
 
-    COLLECTIONS_BOOK_SINGLETON:RegisterCallback("OnCollectibleUpdated", RefreshActivateCollectibleBindingKeybindings)
-    COLLECTIONS_BOOK_SINGLETON:RegisterCallback("OnCollectionUpdated", RefreshActivateCollectibleBindingKeybindings)
-    COLLECTIONS_BOOK_SINGLETON:RegisterCallback("OnCollectiblesUpdated", RefreshActivateCollectibleBindingKeybindings)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectibleUpdated", RefreshActivateCollectibleBindingKeybindings)
+    ZO_COLLECTIBLE_DATA_MANAGER:RegisterCallback("OnCollectionUpdated", RefreshActivateCollectibleBindingKeybindings)
 end
 
 function ZO_CrownCratesPackOpening:RefreshKeybindings()
@@ -1424,7 +1431,7 @@ function ZO_CrownCratesPackOpening:RevealAllCards()
     for i, card in ipairs(mysteryCards) do
         card:SuppressRevealSounds()
         if card == highestTierCard then
-            TriggerCrownCrateNPCAnimation(highestTierCard.rewardReaction)
+            TriggerCrownCrateNPCAnimation(highestTierCard.rewardReaction, highestTierCard.rewardIndex)
         end
         card:SetState(CARD_STATES.FLIPPING)
         card:CallLater(function()
@@ -1537,12 +1544,12 @@ function ZO_CrownCratesPackOpening:ComputeRevealEndPosition(visualSlotIndex)
 end
 
 function ZO_CrownCratesPackOpening:OnDealComplete()
-	for _, card in ipairs(self.cardsInVisualOrder) do
-		card:OnDealComplete()
-	end
-	if SCENE_MANAGER:IsCurrentSceneGamepad() then
-		self:SetSelectedCard(self:GetNextMysteryCard())
-	end
+    for _, card in ipairs(self.cardsInVisualOrder) do
+        card:OnDealComplete()
+    end
+    if SCENE_MANAGER:IsCurrentSceneGamepad() then
+        self:SetSelectedCard(self:GetNextMysteryCard())
+    end
 end
 
 function ZO_CrownCratesPackOpening:StartLeaveAnimation()

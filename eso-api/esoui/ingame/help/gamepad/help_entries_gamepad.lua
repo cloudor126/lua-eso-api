@@ -25,7 +25,22 @@ function HelpTutorialsEntriesGamepad:Initialize(control)
     self.image = messageContainer:GetNamedChild("DetailsImage")
 end
 
-function HelpTutorialsEntriesGamepad:Push(categoryIndex, helpIndex)
+function HelpTutorialsEntriesGamepad:InitializeEvents()
+    ZO_HelpTutorialsGamepad.InitializeEvents(self)
+
+    local function OnShowSpecificPage(eventId, helpCategoryIndex, helpIndex)
+        if IsInGamepadPreferredMode() then
+            -- ideally we would do a push here, but that is currently not playing
+            -- well with opening help from the Crown Store
+            -- specifically: attempting to gift from the furniture browser with gifting locked
+            self:Show(helpCategoryIndex, helpIndex)
+        end
+    end
+
+    self.control:RegisterForEvent(EVENT_HELP_SHOW_SPECIFIC_PAGE, OnShowSpecificPage)
+end
+
+function HelpTutorialsEntriesGamepad:SelectOrQueueHelpEntry(categoryIndex, helpIndex)
     if self.categoryIndex ~= categoryIndex then
         self.dirty = true
         self.showHelpIndex = helpIndex
@@ -34,13 +49,45 @@ function HelpTutorialsEntriesGamepad:Push(categoryIndex, helpIndex)
     end
 
     self.categoryIndex = categoryIndex
-	SCENE_MANAGER:Push("helpTutorialsEntriesGamepad")
+end
+
+function HelpTutorialsEntriesGamepad:Push(categoryIndex, helpIndex)
+    self:SelectOrQueueHelpEntry(categoryIndex, helpIndex)
+    SCENE_MANAGER:Push("helpTutorialsEntriesGamepad")
+end
+
+function HelpTutorialsEntriesGamepad:Show(categoryIndex, helpIndex)
+    self:SelectOrQueueHelpEntry(categoryIndex, helpIndex)
+    SCENE_MANAGER:Show("helpTutorialsEntriesGamepad")
 end
 
 function HelpTutorialsEntriesGamepad:InitializeKeybindStripDescriptors()
     self.keybindStripDescriptor =
     {
         alignment = KEYBIND_STRIP_ALIGN_LEFT,
+
+        -- Link in Chat
+        {
+            name = GetString(SI_ITEM_ACTION_LINK_TO_CHAT),
+            keybind = "UI_SHORTCUT_SECONDARY",
+
+            callback = function()
+                local targetData = self.itemList:GetTargetData()
+                local link = ZO_LinkHandler_CreateChatLink(GetHelpLink, self.categoryIndex, targetData.helpIndex)
+                ZO_LinkHandler_InsertLink(link)
+                CHAT_SYSTEM:SubmitTextEntry()
+            end,
+
+            visible = function()
+                local targetData = self.itemList:GetTargetData()
+                if targetData then
+                    return IsChatSystemAvailableForCurrentPlatform()
+                end
+
+                return false
+            end,
+        },
+
         -- Back
         KEYBIND_STRIP:GetDefaultGamepadBackButtonDescriptor(),
     }
@@ -76,14 +123,15 @@ function HelpTutorialsEntriesGamepad:PerformUpdate()
         end
     end
 
-	self.itemList:SetKeyForNextCommit(self.categoryIndex)
+    self.itemList:SetKeyForNextCommit(self.categoryIndex)
     self.itemList:Commit()
 
     -- Update the key bindings.
     KEYBIND_STRIP:UpdateKeybindButtonGroup(self.keybindStripDescriptor)
 
     -- Update the header.
-    local categoryName, _, _, _, _ = GetHelpCategoryInfo(self.categoryIndex)
+    local name, _, _, _, _, _, gamepadName = GetHelpCategoryInfo(self.categoryIndex)
+    local categoryName = gamepadName ~= "" and gamepadName or name
     self.headerData.titleText = categoryName
 
     self:SetupSearchHeaderData(self.searchString, self.headerData)
@@ -112,8 +160,8 @@ function HelpTutorialsEntriesGamepad:OnSelectionChanged(list, selectedData, oldS
 
     self.scrollContainer:ResetToTop()
 
-	local _, keyboardDescription1, keyboardDescription2, image, gamepadDescription1, gamepadDescription2 = GetHelpInfo(self.categoryIndex, selectedData.helpIndex)
-	local description1 = gamepadDescription1 ~= "" and gamepadDescription1 or keyboardDescription1
+    local _, keyboardDescription1, keyboardDescription2, image, gamepadDescription1, gamepadDescription2 = GetHelpInfo(self.categoryIndex, selectedData.helpIndex)
+    local description1 = gamepadDescription1 ~= "" and gamepadDescription1 or keyboardDescription1
     local description2 = gamepadDescription2 ~= "" and gamepadDescription2 or keyboardDescription2
 
     self.description1:SetText(description1)
@@ -135,7 +183,10 @@ end
 
 local GAMEPAD_HELP_MAX_IMAGE_WIDTH = 767
 function ZO_Gamepad_Tutorials_Entries_OnTextureLoaded(control)
-    ZO_ResizeTextureWidthAndMaintainAspectRatio(control, GAMEPAD_HELP_MAX_IMAGE_WIDTH)
+    -- when hidden we directly manipulate the height, so don't apply constraints in those cases
+    if not control:IsHidden() then
+        ZO_ResizeTextureWidthAndMaintainAspectRatio(control, GAMEPAD_HELP_MAX_IMAGE_WIDTH)
+    end
 end
 
 function ZO_Gamepad_Tutorials_Entries_OnInitialize(control)

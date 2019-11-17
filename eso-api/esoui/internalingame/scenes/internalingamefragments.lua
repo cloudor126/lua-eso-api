@@ -21,45 +21,18 @@ end
 
 KEYBIND_STRIP_FADE_FRAGMENT = ZO_KeybindStripFragment:New(ZO_KeybindStripControl)
 
--------------------------
---Action Layer Fragment
--------------------------
-
-ZO_ActionLayerFragment = ZO_SceneFragment:Subclass()
-
-function ZO_ActionLayerFragment:New(actionLayerName)
-    local fragment = ZO_SceneFragment.New(self)
-    fragment.actionLayerName = actionLayerName
-    return fragment
-end
-
-function ZO_ActionLayerFragment:Show()
-    PushActionLayerByName(self.actionLayerName)
-    self:OnShown()
-end
-
-function ZO_ActionLayerFragment:Hide()
-    RemoveActionLayerByName(self.actionLayerName)
-    self:OnHidden()
-end
-
 MARKET_ITEM_PREVIEW_OPTIONS_FRAGMENT = ZO_ItemPreviewOptionsFragment:New({
     paddingLeft = 0,
     paddingRight = 950,
     dynamicFramingConsumedWidth = 1150,
     dynamicFramingConsumedHeight = 300,
-    forcePreparePreview = false,
+    forcePreparePreview = true,
 })
 RIGHT_BG_FRAGMENT = ZO_FadeSceneFragment:New(ZO_SharedRightBackground)
-MARKET_FRAGMENT = ZO_FadeSceneFragment:New(ZO_Market)
 GENERAL_ACTION_LAYER_FRAGMENT = ZO_ActionLayerFragment:New(GetString(SI_KEYBINDINGS_LAYER_GENERAL))
 UI_SHORTCUTS_ACTION_LAYER_FRAGMENT = ZO_ActionLayerFragment:New(GetString(SI_KEYBINDINGS_LAYER_USER_INTERFACE_SHORTCUTS))
 MOUSE_UI_MODE_FRAGMENT = ZO_ActionLayerFragment:New("MouseUIMode")
-
-MARKET_TREE_UNDERLAY_FRAGMENT = ZO_FadeSceneFragment:New(ZO_SharedTreeUnderlay)
-MARKET_TREE_UNDERLAY_FRAGMENT:SetConditional(   function()
-                                                    return MARKET:GetState() == MARKET_STATE_OPEN
-                                                end)
+TREE_UNDERLAY_FRAGMENT = ZO_FadeSceneFragment:New(ZO_SharedTreeUnderlay)
 
 ----------------------------------------
 --Window Sound Fragment

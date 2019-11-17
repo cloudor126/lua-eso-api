@@ -44,9 +44,19 @@ function ZO_QuestJournal_Keyboard:RegisterIcons()
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_PUBLIC_DUNGEON,   "EsoUI/Art/Journal/journal_Quest_Dungeon.dds")
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DELVE,            "EsoUI/Art/Journal/journal_Quest_Delve.dds")
     self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_HOUSING,          "EsoUI/Art/Journal/journal_Quest_Housing.dds")
+    self:RegisterIconTexture(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_ZONE_STORY,       "EsoUI/Art/Journal/journal_Quest_ZoneStory.dds")
 end
 
 function ZO_QuestJournal_Keyboard:RegisterTooltips()
+    local function ZoneStoryParamFunction()
+        local questData = self:GetSelectedQuestData()
+        if questData then
+            local zoneId = GetJournalQuestZoneStoryZoneId(questData.questIndex)
+            return GetZoneNameById(zoneId)
+        end
+        return ""
+    end
+
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_SOLO,             SI_QUEST_JOURNAL_SOLO_TOOLTIP)
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DUNGEON,          SI_QUEST_JOURNAL_DUNGEON_TOOLTIP)
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_RAID,             SI_QUEST_JOURNAL_RAID_TOOLTIP)
@@ -56,6 +66,7 @@ function ZO_QuestJournal_Keyboard:RegisterTooltips()
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_PUBLIC_DUNGEON,   SI_QUEST_JOURNAL_PUBLIC_DUNGEON_TOOLTIP)
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_DELVE,            SI_QUEST_JOURNAL_DELVE_TOOLTIP)
     self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_HOUSING,          SI_QUEST_JOURNAL_HOUSING_TOOLTIP)
+    self:RegisterTooltipText(ZO_ANY_QUEST_TYPE,     INSTANCE_DISPLAY_TYPE_ZONE_STORY,       SI_QUEST_JOURNAL_ZONE_STORY_TOOLTIP, ZoneStoryParamFunction)
 end
 
 function ZO_QuestJournal_Keyboard:SetIconTexture(iconControl, iconData, selected)
@@ -72,7 +83,7 @@ function ZO_QuestJournal_Keyboard:SetIconTexture(iconControl, iconData, selected
         if texturePath then
             texture:SetTexture(texturePath)
             texture.tooltipText = self:GetTooltipText(iconData.questType, iconData.displayType)
-        
+
             texture:SetAlpha(0.50)
             texture:SetHidden(false)
         else
@@ -118,7 +129,7 @@ function ZO_QuestJournal_Keyboard:InitializeQuestList()
             self:RefreshDetails()
             -- The quest tracker performs focus logic on quest/remove/update, only force focus if the player has clicked on the quest through the journal UI
             if SCENE_MANAGER:IsShowing(self.sceneName) then
-                QUEST_TRACKER:ForceAssist(data.questIndex)
+                FOCUSED_QUEST_TRACKER:ForceAssist(data.questIndex)
             end
         end
 
@@ -146,7 +157,7 @@ function ZO_QuestJournal_Keyboard:InitializeKeybindStripDescriptors()
 
             callback = function()
                 local IGNORE_SCENE_RESTRICTION = true
-                QUEST_TRACKER:AssistNext(IGNORE_SCENE_RESTRICTION)
+                FOCUSED_QUEST_TRACKER:AssistNext(IGNORE_SCENE_RESTRICTION)
                 self:FocusQuestWithIndex(QUEST_JOURNAL_MANAGER:GetFocusedQuestIndex())
             end,
 
@@ -275,15 +286,16 @@ function ZO_QuestJournal_Keyboard:RefreshQuestList()
 
     for i = 1, #categories do
         local categoryInfo = categories[i]
-        categoryNodes[categoryInfo.name] = self.navigationTree:AddNode("ZO_QuestJournalHeader", categoryInfo.name, nil, SOUNDS.QUEST_BLADE_SELECTED)
+        categoryNodes[categoryInfo.name] = self.navigationTree:AddNode("ZO_QuestJournalHeader", categoryInfo.name)
     end
 
     local firstNode
     local lastNode
+    local assistedNode
     for i = 1, #quests do
         local questInfo = quests[i]
         local parent = categoryNodes[questInfo.categoryName]
-        local questNode = self.navigationTree:AddNode("ZO_QuestJournalNavigationEntry", questInfo, parent, SOUNDS.QUEST_SELECTED)
+        local questNode = self.navigationTree:AddNode("ZO_QuestJournalNavigationEntry", questInfo, parent)
         firstNode = firstNode or questNode
         self.questIndexToTreeNode[questInfo.questIndex] = questNode
 
@@ -295,10 +307,14 @@ function ZO_QuestJournal_Keyboard:RefreshQuestList()
             questNode.nextNode = firstNode
         end
 
+        if assistedNode == nil and GetTrackedIsAssisted(TRACK_TYPE_QUEST, questInfo.questIndex) then
+            assistedNode = questNode
+        end
+
         lastNode = questNode
     end
 
-    self.navigationTree:Commit()
+    self.navigationTree:Commit(assistedNode)
 
     self:RefreshDetails()
 
@@ -461,30 +477,34 @@ function ZO_QuestJournalNavigationEntry_GetTextColor(self)
 end
 
 function ZO_QuestJournalNavigationEntry_OnMouseUp(label, button, upInside)
-    if(button == MOUSE_BUTTON_INDEX_RIGHT and upInside) then
-
+    if button == MOUSE_BUTTON_INDEX_RIGHT and upInside then
         local node = label.node
         local questIndex = node.data.questIndex
         if questIndex then
             ClearMenu()
 
             AddMenuItem(GetString(SI_QUEST_JOURNAL_SHOW_ON_MAP), function() ZO_WorldMap_ShowQuestOnMap(questIndex) end)
+
             if GetIsQuestSharable(questIndex) and IsUnitGrouped("player") then
                 AddMenuItem(GetString(SI_QUEST_JOURNAL_SHARE), function() QUEST_JOURNAL_MANAGER:ShareQuest(questIndex) end)
             end
+
             if(node.data.questType ~= QUEST_TYPE_MAIN_STORY) then
                 AddMenuItem(GetString(SI_QUEST_JOURNAL_ABANDON), function() QUEST_JOURNAL_MANAGER:ConfirmAbandonQuest(questIndex) end)
             end
 
-            AddMenuItem(GetString(SI_QUEST_JOURNAL_REPORT_QUEST), function() 
-																	HELP_CUSTOMER_SUPPORT_KEYBOARD:OpenScreen(HELP_CUSTOMER_SERVICE_QUEST_ASSISTANCE_KEYBOARD:GetFragment())
-																	HELP_CUSTOMER_SERVICE_QUEST_ASSISTANCE_KEYBOARD:SetDetailsText(node.data.name)
-																end)
+            AddMenuItem(GetString(SI_QUEST_JOURNAL_REPORT_QUEST), function()
+                                                                    HELP_CUSTOMER_SUPPORT_KEYBOARD:OpenScreen(HELP_CUSTOMER_SERVICE_QUEST_ASSISTANCE_KEYBOARD:GetFragment())
+                                                                    HELP_CUSTOMER_SERVICE_QUEST_ASSISTANCE_KEYBOARD:SetDetailsText(node.data.name)
+                                                                end)
 
             ShowMenu(label)
         end
         return
     end
+
+    ZO_ZoneStories_Manager.StopZoneStoryTracking()
+
     ZO_TreeEntry_OnMouseUp(label, upInside)
 end
 
