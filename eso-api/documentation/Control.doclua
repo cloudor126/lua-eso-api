@@ -183,6 +183,7 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string handlerName
+-- @param #string name
 -- @return #function functionRef
 -- @function[parent = #Control] GetHandler
 
@@ -299,6 +300,7 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string handlerName
+-- @param #string name
 -- @return #boolean isSet
 -- @function[parent = #Control] IsHandlerSet
 
@@ -459,6 +461,9 @@
 -- @param self
 -- @param #string handlerName
 -- @param #function functionRef
+-- @param #string name
+-- @param #ControlHandlerOrder controlHandlerOrder
+-- @param #string targetName
 -- @function[parent = #Control] SetHandler
 
 -------------------------------------------------------------------------------

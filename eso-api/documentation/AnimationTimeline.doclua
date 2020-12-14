@@ -62,8 +62,9 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #string EventName
--- @return #function FunctionRef
+-- @param #string eventName
+-- @param #string name
+-- @return #function functionRef
 -- @function[parent = #AnimationTimeline] GetHandler
 
 -------------------------------------------------------------------------------
@@ -231,8 +232,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #string EventName
--- @param #function FunctionRef
+-- @param #string eventName
+-- @param #function functionRef
+-- @param #string name
+-- @param #ControlHandlerOrder controlHandlerOrder
+-- @param #string targetName
 -- @function[parent = #AnimationTimeline] SetHandler
 
 -------------------------------------------------------------------------------

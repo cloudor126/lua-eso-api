@@ -131,6 +131,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #string aText
+-- @function[parent = #EditControl] SetDefaultTextForVirtualKeyboard
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #boolean enabled
 -- @function[parent = #EditControl] SetEditEnabled
 

@@ -52,6 +52,7 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string handlerName
+-- @param #string name
 -- @return #function functionRef
 -- @function[parent = #WindowManager] GetHandler
 
@@ -110,6 +111,9 @@
 -- @param self
 -- @param #string handlerName
 -- @param #function functionRef
+-- @param #string name
+-- @param #ControlHandlerOrder controlHandlerOrder
+-- @param #string targetName
 -- @function[parent = #WindowManager] SetHandler
 
 -------------------------------------------------------------------------------
@@ -166,11 +170,6 @@
 -- @param self
 -- @return #number scale
 -- @function[parent = #WindowManager] GetUICustomScale
-
--------------------------------------------------------------------------------
--- @param self
--- @param #string message
--- @function[parent = #WindowManager] LuaWarning
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -321,5 +320,21 @@
 -- @param self
 -- @return #number minHeight
 -- @function[parent = #WindowManager] GetMinUICanvasHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number red
+-- @param #number green
+-- @param #number blue
+-- @return #number,#number,#number hue,saturation,value
+-- @function[parent = #WindowManager] ConvertRGBToHSV
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number red
+-- @param #number green
+-- @param #number blue
+-- @return #number,#number,#number hue,saturation,lightness
+-- @function[parent = #WindowManager] ConvertRGBToHSL
 
 return nil

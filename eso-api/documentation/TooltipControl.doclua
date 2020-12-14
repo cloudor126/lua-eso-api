@@ -188,6 +188,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #number rewardIndex
+-- @function[parent = #TooltipControl] SetCrownCrateReward
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #CurrencyType currencyType
 -- @param #integer quantity
 -- @function[parent = #TooltipControl] SetCurrency
