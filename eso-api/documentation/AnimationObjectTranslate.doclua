@@ -48,49 +48,49 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number deltaX
+-- @param #layout_measurement deltaX
 -- @param #TranslateAnimationDeltaType translateAnimationDeltaType
 -- @function[parent = #AnimationObjectTranslate] SetDeltaOffsetX
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number deltaY
+-- @param #layout_measurement deltaY
 -- @param #TranslateAnimationDeltaType translateAnimationDeltaType
 -- @function[parent = #AnimationObjectTranslate] SetDeltaOffsetY
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number endX
+-- @param #layout_measurement endX
 -- @function[parent = #AnimationObjectTranslate] SetEndOffsetX
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number endY
+-- @param #layout_measurement endY
 -- @function[parent = #AnimationObjectTranslate] SetEndOffsetY
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number startX
+-- @param #layout_measurement startX
 -- @function[parent = #AnimationObjectTranslate] SetStartOffsetX
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number startY
+-- @param #layout_measurement startY
 -- @function[parent = #AnimationObjectTranslate] SetStartOffsetY
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number deltaX
--- @param #number deltaY
+-- @param #layout_measurement deltaX
+-- @param #layout_measurement deltaY
 -- @param #TranslateAnimationDeltaType translateAnimationDeltaType
 -- @function[parent = #AnimationObjectTranslate] SetTranslateDeltas
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number startX
--- @param #number startY
--- @param #number endX
--- @param #number endY
+-- @param #layout_measurement startX
+-- @param #layout_measurement startY
+-- @param #layout_measurement endX
+-- @param #layout_measurement endY
 -- @function[parent = #AnimationObjectTranslate] SetTranslateOffsets
 
 -------------------------------------------------------------------------------

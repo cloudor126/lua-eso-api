@@ -3,6 +3,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #TextureBlendMode blendMode
+-- @function[parent = #BackdropControl] GetBlendMode
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #number,#number,#number,#number r,g,b,a
 -- @function[parent = #BackdropControl] GetCenterColor
 
@@ -10,6 +15,11 @@
 -- @param self
 -- @return #boolean pixelRoundingEnabled
 -- @function[parent = #BackdropControl] IsPixelRoundingEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #TextureBlendMode blendMode
+-- @function[parent = #BackdropControl] SetBlendMode
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -22,8 +32,8 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string filename
--- @param #integer tileSize
--- @param #integer addressMode
+-- @param #layout_measurement tilingInterval
+-- @param #TextureAddressMode addressMode
 -- @function[parent = #BackdropControl] SetCenterTexture
 
 -------------------------------------------------------------------------------
@@ -39,16 +49,16 @@
 -- @param #string filename
 -- @param #integer edgeFileWidth
 -- @param #integer edgeFileHeight
--- @param #integer edgeSize
+-- @param #layout_measurement cornerSize
 -- @param #integer edgeFilePadding
 -- @function[parent = #BackdropControl] SetEdgeTexture
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number left
--- @param #number top
--- @param #number right
--- @param #number bottom
+-- @param #layout_measurement left
+-- @param #layout_measurement top
+-- @param #layout_measurement right
+-- @param #layout_measurement bottom
 -- @function[parent = #BackdropControl] SetInsets
 
 -------------------------------------------------------------------------------

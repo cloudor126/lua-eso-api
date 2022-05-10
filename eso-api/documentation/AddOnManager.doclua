@@ -8,9 +8,18 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #boolean areAddOnsEnabled
+-- @function[parent = #AddOnManager] AreAddOnsEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #AddOnManager] ClearWarnOutOfDateAddOns
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #number addOnIndex
 -- @param #number addOnDependencyIndex
--- @return #string,#boolean,#boolean,#integer,#integer name,exists,active,minVersion,version
+-- @return #string,#boolean,#boolean,#integer,#integer,#boolean name,exists,active,minVersion,version,isLibrary
 -- @function[parent = #AddOnManager] GetAddOnDependencyInfo
 
 -------------------------------------------------------------------------------
@@ -78,7 +87,12 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #boolean loadOutOfDateAddons
--- @function[parent = #AddOnManager] SetLoadOutOfDateAddOns
+-- @param #boolean enabled
+-- @function[parent = #AddOnManager] SetAddOnsEnabled
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean warnOutOfDateAddons
+-- @function[parent = #AddOnManager] ShouldWarnOutOfDateAddOns
 
 return nil

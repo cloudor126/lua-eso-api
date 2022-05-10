@@ -7,6 +7,7 @@
 -- @param #number right
 -- @param #number top
 -- @param #number bottom
+-- @return #number surfaceIndex
 -- @function[parent = #TextureCompositeControl] AddSurface
 
 -------------------------------------------------------------------------------
@@ -127,6 +128,20 @@
 -- @param #number surfaceIndex
 -- @param #boolean hidden
 -- @function[parent = #TextureCompositeControl] SetSurfaceHidden
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number scale
+-- @function[parent = #TextureCompositeControl] SetSurfaceScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number surfaceIndex
+-- @param #number angleInRadians
+-- @param #number normalizedRotationPointX
+-- @param #number normalizedRotationPointY
+-- @function[parent = #TextureCompositeControl] SetSurfaceTextureRotation
 
 -------------------------------------------------------------------------------
 -- @param self

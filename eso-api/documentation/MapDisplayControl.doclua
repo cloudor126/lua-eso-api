@@ -8,6 +8,32 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #MapDisplayPinType pinType
+-- @param #MapArrowType arrowType
+-- @param #number pinSize
+-- @param #number pinXInset
+-- @param #number pinYInset
+-- @param #number arrowSize
+-- @param #string textureFilename
+-- @param #string arrowTextureFilename
+-- @param #string areaTextureFilename
+-- @param #string aboveTextureFilename
+-- @param #string belowTextureFilename
+-- @param #string linkTextureFilename
+-- @param #string animation
+-- @param #string addedAnimation
+-- @param #string removedAnimation
+-- @param #MapPinAnimationTarget animationTarget
+-- @function[parent = #MapDisplayControl] SetBasePinData
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number offset
+-- @param #number size
+-- @function[parent = #MapDisplayControl] SetGutterOffsetAndSize
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #string pinFont
 -- @function[parent = #MapDisplayControl] SetPinFont
 

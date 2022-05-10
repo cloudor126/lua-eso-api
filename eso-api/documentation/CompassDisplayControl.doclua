@@ -72,6 +72,33 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #MapDisplayPinType type
+-- @param #number pinSize
+-- @param #string pinTexture
+-- @param #string areaTexture
+-- @param #string aboveTexture
+-- @param #string belowTexture
+-- @param #string linkTexture
+-- @param #boolean clamped
+-- @param #boolean allowUpdatesWhenAnimating
+-- @param #number maxDistanceM
+-- @param #number closeScale
+-- @param #number farScale
+-- @param #number closeScaleDistanceM
+-- @param #number farScaleDistanceM
+-- @param #number closeAlpha
+-- @param #number farAlpha
+-- @param #number closeAlphaDistanceM
+-- @param #number farAlphaDistanceM
+-- @param #string animation
+-- @param #string addedAnimation
+-- @param #string removedAnimation
+-- @param #DrawLayer layer
+-- @param #integer drawLevelOffsetBase
+-- @function[parent = #CompassDisplayControl] SetPinInfo
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #MapDisplayPinType pinType
 -- @param #number closeScale
 -- @param #number farScale

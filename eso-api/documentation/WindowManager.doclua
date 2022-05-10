@@ -19,7 +19,7 @@
 -- @param #string name
 -- @param #table parent
 -- @param #ControlType type
--- @return #table apRet
+-- @return #table control
 -- @function[parent = #WindowManager] CreateControl
 
 -------------------------------------------------------------------------------
@@ -28,14 +28,21 @@
 -- @param #table parent
 -- @param #string virtualName
 -- @param #string optionalSuffix
--- @return #table apRet
+-- @return #table control
 -- @function[parent = #WindowManager] CreateControlFromVirtual
 
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string name
--- @return #table apRet
+-- @return #table control
 -- @function[parent = #WindowManager] CreateTopLevelWindow
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement x
+-- @param #layout_measurement y
+-- @return #table mouseOverControl
+-- @function[parent = #WindowManager] GetControlAtPoint
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -76,6 +83,11 @@
 -- @param self
 -- @return #integer numCandidates
 -- @function[parent = #WindowManager] GetNumIMECandidates
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean hasFocusControl
+-- @function[parent = #WindowManager] HasFocusControl
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -320,6 +332,16 @@
 -- @param self
 -- @return #number minHeight
 -- @function[parent = #WindowManager] GetMinUICanvasHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number FoVYRadians
+-- @function[parent = #WindowManager] GetInterfaceVerticalFieldOfView
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number FoVYRadians
+-- @function[parent = #WindowManager] SetInterfaceVerticalFieldOfView
 
 -------------------------------------------------------------------------------
 -- @param self

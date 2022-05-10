@@ -4,13 +4,72 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #integer event
+-- @param #variant filterParameter
 -- @return #boolean success
 -- @function[parent = #Control] AddFilterForEvent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaXRadians
+-- @param #number deltaYRadians
+-- @param #number deltaZRadians
+-- @function[parent = #Control] AddTransformRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaXRadians
+-- @function[parent = #Control] AddTransformRotationX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaYRadians
+-- @function[parent = #Control] AddTransformRotationY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaZRadians
+-- @function[parent = #Control] AddTransformRotationZ
 
 -------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
 -- @function[parent = #Control] ClearAnchors
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearCircularClip
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearClips
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearFadeGradients
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearMask
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearRectangularClip
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearTransformOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearTransformRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearTransformScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ClearTransformSkew
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -50,8 +109,9 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #integer type
--- @return #table apRet
+-- @param #string childControlName
+-- @param #ControlType childControlType
+-- @return #table childControl
 -- @function[parent = #Control] CreateControl
 
 -------------------------------------------------------------------------------
@@ -62,6 +122,11 @@
 -- @param self
 -- @return #boolean usesDepthBuffer
 -- @function[parent = #Control] Does3DRenderSpaceUseDepthBuffer
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #AxisRotationOrder axisRotationOrder
+-- @function[parent = #Control] Get3DRenderSpaceAxisRotationOrder
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -142,6 +207,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #Space space
+-- @function[parent = #Control] GetControlSpace
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #number height
 -- @function[parent = #Control] GetDesiredHeight
 
@@ -182,6 +252,12 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #number gradientIndex
+-- @return #number,#number,#number normalX,normalY,gradientLength
+-- @function[parent = #Control] GetFadeGradient
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #string handlerName
 -- @param #string name
 -- @return #function functionRef
@@ -216,6 +292,16 @@
 -- @param self
 -- @return #number left
 -- @function[parent = #Control] GetLeft
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number normalizedThickness
+-- @function[parent = #Control] GetMaskThresholdThickness
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number normalizedEdge
+-- @function[parent = #Control] GetMaskThresholdZeroAlphaEdge
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -269,8 +355,43 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #Space space
+-- @function[parent = #Control] GetSpace
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #number top
 -- @function[parent = #Control] GetTop
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number normalizedX,normalizedY
+-- @function[parent = #Control] GetTransformNormalizedOriginPoint
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number x,y,z
+-- @function[parent = #Control] GetTransformOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number,#number xRadians,yRadians,zRadians
+-- @function[parent = #Control] GetTransformRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #AxisRotationOrder order
+-- @function[parent = #Control] GetTransformRotationAxisOrder
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number scaleX,scaleY
+-- @function[parent = #Control] GetTransformScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #number,#number skewXRadians,skewYRadians
+-- @function[parent = #Control] GetTransformSkew
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -321,12 +442,12 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number x
--- @param #number y
--- @param #number leftOffset
--- @param #number topOffset
--- @param #number rightOffset
--- @param #number bottomOffset
+-- @param #layout_measurement x
+-- @param #layout_measurement y
+-- @param #layout_measurement:nilable leftOffset
+-- @param #layout_measurement:nilable topOffset
+-- @param #layout_measurement:nilable rightOffset
+-- @param #layout_measurement:nilable bottomOffset
 -- @return #boolean isInside
 -- @function[parent = #Control] IsPointInside
 
@@ -336,6 +457,15 @@
 -- @param #function callback
 -- @return #boolean success
 -- @function[parent = #Control] RegisterForEvent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @function[parent = #Control] ResetTransformNormalizedOriginPoint
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #AxisRotationOrder axisRotationOrder
+-- @function[parent = #Control] Set3DRenderSpaceAxisRotationOrder
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -391,11 +521,11 @@
 -------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
--- @param #integer whereOnMe
--- @param #table anchorTargetControl
--- @param #integer whereOnTarget
--- @param #number offsetX
--- @param #number offsetY
+-- @param #AnchorPosition point
+-- @param #table relativeTo
+-- @param #AnchorPosition relativePoint
+-- @param #layout_measurement offsetX
+-- @param #layout_measurement offsetY
 -- @param #AnchorConstrains anchorConstrains
 -- @function[parent = #Control] SetAnchor
 
@@ -404,6 +534,18 @@
 -- @param self
 -- @param #table anchorTargetControl
 -- @function[parent = #Control] SetAnchorFill
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean autoRectClipChildren
+-- @function[parent = #Control] SetAutoRectClipChildren
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number centerX
+-- @param #number centerY
+-- @param #number radius
+-- @function[parent = #Control] SetCircularClip
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -420,17 +562,17 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number minWidth
--- @param #number minHeight
--- @param #number maxWidth
--- @param #number maxHeight
+-- @param #layout_measurement minWidth
+-- @param #layout_measurement minHeight
+-- @param #layout_measurement maxWidth
+-- @param #layout_measurement maxHeight
 -- @function[parent = #Control] SetDimensionConstraints
 
 -------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
--- @param #number width
--- @param #number height
+-- @param #layout_measurement width
+-- @param #layout_measurement height
 -- @function[parent = #Control] SetDimensions
 
 -------------------------------------------------------------------------------
@@ -459,6 +601,14 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #number gradientIndex
+-- @param #number normalX
+-- @param #number normalY
+-- @param #number gradientLength
+-- @function[parent = #Control] SetFadeGradient
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #string handlerName
 -- @param #function functionRef
 -- @param #string name
@@ -469,7 +619,7 @@
 -------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
--- @param #number height
+-- @param #layout_measurement height
 -- @function[parent = #Control] SetHeight
 
 -------------------------------------------------------------------------------
@@ -480,10 +630,10 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number left
--- @param #number top
--- @param #number right
--- @param #number bottom
+-- @param #layout_measurement left
+-- @param #layout_measurement top
+-- @param #layout_measurement right
+-- @param #layout_measurement bottom
 -- @function[parent = #Control] SetHitInsets
 
 -------------------------------------------------------------------------------
@@ -508,6 +658,31 @@
 -- @function[parent = #Control] SetKeyboardEnabled
 
 -------------------------------------------------------------------------------
+-- @param self
+-- @param #ControlMaskMode maskMode
+-- @function[parent = #Control] SetMaskMode
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string fileName
+-- @function[parent = #Control] SetMaskTexture
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ReleaseReferenceOptions releaseOption
+-- @function[parent = #Control] SetMaskTextureReleaseOption
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number normalizedThickness
+-- @function[parent = #Control] SetMaskThresholdThickness
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number normalizedEdge
+-- @function[parent = #Control] SetMaskThresholdZeroAlphaEdge
+
+-------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
 -- @param #boolean enabled
@@ -523,6 +698,14 @@
 -- @param self
 -- @param #table newParent
 -- @function[parent = #Control] SetParent
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number left
+-- @param #number top
+-- @param #number right
+-- @param #number bottom
+-- @function[parent = #Control] SetRectangularClip
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -569,9 +752,108 @@
 -- @function[parent = #Control] SetSimpleAnchorParent
 
 -------------------------------------------------------------------------------
+-- @param self
+-- @param #Space space
+-- @function[parent = #Control] SetSpace
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number normalizedX
+-- @param #number normalizedY
+-- @function[parent = #Control] SetTransformNormalizedOriginPoint
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement x
+-- @param #layout_measurement y
+-- @param #layout_measurement z
+-- @function[parent = #Control] SetTransformOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement x
+-- @function[parent = #Control] SetTransformOffsetX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement y
+-- @function[parent = #Control] SetTransformOffsetY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement z
+-- @function[parent = #Control] SetTransformOffsetZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number xRadians
+-- @param #number yRadians
+-- @param #number zRadians
+-- @function[parent = #Control] SetTransformRotation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number deltaXRadians
+-- @param #number deltaYRadians
+-- @param #number deltaZRadians
+-- @param #AxisRotationOrder order
+-- @function[parent = #Control] SetTransformRotationAndOrder
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #AxisRotationOrder order
+-- @function[parent = #Control] SetTransformRotationAxisOrder
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number xRadians
+-- @function[parent = #Control] SetTransformRotationX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number yRadians
+-- @function[parent = #Control] SetTransformRotationY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number zRadians
+-- @function[parent = #Control] SetTransformRotationZ
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number scale
+-- @function[parent = #Control] SetTransformScale
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number scaleX
+-- @function[parent = #Control] SetTransformScaleX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number scaleY
+-- @function[parent = #Control] SetTransformScaleY
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number skewXRadians
+-- @param #number skewYRadians
+-- @function[parent = #Control] SetTransformSkew
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number skewXRadians
+-- @function[parent = #Control] SetTransformSkewX
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number skewYRadians
+-- @function[parent = #Control] SetTransformSkewY
+
+-------------------------------------------------------------------------------
 -- *protected-attributes*
 -- @param self
--- @param #number width
+-- @param #layout_measurement width
 -- @function[parent = #Control] SetWidth
 
 -------------------------------------------------------------------------------

@@ -33,6 +33,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #number thickness
+-- @function[parent = #LineControl] GetThickness
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #boolean pixelRoundingEnabled
 -- @function[parent = #LineControl] IsPixelRoundingEnabled
 
@@ -92,7 +97,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number thickness
+-- @param #layout_measurement thickness
 -- @function[parent = #LineControl] SetThickness
 
 -------------------------------------------------------------------------------

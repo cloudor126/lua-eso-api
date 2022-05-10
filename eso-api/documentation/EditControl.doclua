@@ -61,6 +61,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @return #boolean enabled
+-- @function[parent = #EditControl] GetSelectAllOnFocus
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @return #string apRet
 -- @function[parent = #EditControl] GetText
 
@@ -166,6 +171,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #boolean enabled
+-- @function[parent = #EditControl] SetSelectAllOnFocus
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #integer selectionStartIndex
 -- @param #integer selectionEndIndex
 -- @function[parent = #EditControl] SetSelection
@@ -181,6 +191,7 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #string aText
+-- @param #boolean aSuppressCallbackHandler
 -- @function[parent = #EditControl] SetText
 
 -------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #integer buttonNum
+-- @param #MouseButtonIndex button
 -- @param #boolean enabled
 -- @function[parent = #ButtonControl] EnableMouseButton
 
@@ -65,7 +65,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #integer endCapWidth
+-- @param #layout_measurement endCapWidth
 -- @function[parent = #ButtonControl] SetEndCapWidth
 
 -------------------------------------------------------------------------------
@@ -77,6 +77,16 @@
 -- @param self
 -- @param #integer horizontalAlign
 -- @function[parent = #ButtonControl] SetHorizontalAlignment
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement:nilable lineHeight
+-- @function[parent = #ButtonControl] SetLineHeight
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #ModifyTextType modifyTextType
+-- @function[parent = #ButtonControl] SetModifyTextType
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -106,8 +116,8 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number x
--- @param #number y
+-- @param #layout_measurement x
+-- @param #layout_measurement y
 -- @function[parent = #ButtonControl] SetNormalOffset
 
 -------------------------------------------------------------------------------
@@ -135,8 +145,8 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number x
--- @param #number y
+-- @param #layout_measurement x
+-- @param #layout_measurement y
 -- @function[parent = #ButtonControl] SetPressedOffset
 
 -------------------------------------------------------------------------------

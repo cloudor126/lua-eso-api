@@ -55,6 +55,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #integer digSiteId
+-- @function[parent = #TooltipControl] AppendDigSiteAntiquities
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #integer pingType
 -- @param #string unitTag
 -- @function[parent = #TooltipControl] AppendMapPing
@@ -70,6 +75,11 @@
 -- @param self
 -- @param #number questIndex
 -- @function[parent = #TooltipControl] AppendQuestEnding
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer skyshardId
+-- @function[parent = #TooltipControl] AppendSkyshardHint
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -135,6 +145,16 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #integer antiquityId
+-- @function[parent = #TooltipControl] SetAntiquityLead
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer antiquityId
+-- @function[parent = #TooltipControl] SetAntiquitySetFragment
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @function[parent = #TooltipControl] SetAsComparativeTooltip1
 
 -------------------------------------------------------------------------------
@@ -173,10 +193,11 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number disiplineIndex
--- @param #number skillIndex
+-- @param #integer championSkillId
 -- @param #integer numPendingPoints
--- @function[parent = #TooltipControl] SetChampionSkillAbility
+-- @param #integer nextJumpPoint
+-- @param #boolean isPendingSlotted
+-- @function[parent = #TooltipControl] SetChampionSkill
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -184,7 +205,13 @@
 -- @param #boolean addNickname
 -- @param #boolean showPurchasableHint
 -- @param #boolean showBlockReason
+-- @param #GameplayActorCategory actorCategory
 -- @function[parent = #TooltipControl] SetCollectible
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer abilityId
+-- @function[parent = #TooltipControl] SetCompanionSkill
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -220,8 +247,18 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #integer itemSetId
+-- @function[parent = #TooltipControl] SetGenericItemSet
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #number guildSpecificItemIndex
 -- @function[parent = #TooltipControl] SetGuildSpecificItem
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #number headerCellEmptyHorizontalSpace
+-- @function[parent = #TooltipControl] SetHeaderCellEmptyHorizontalSpace
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -232,6 +269,12 @@
 -- @param self
 -- @param #number verticalOffset
 -- @function[parent = #TooltipControl] SetHeaderVerticalOffset
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #string aLink
+-- @param #boolean aHideTrait
+-- @function[parent = #TooltipControl] SetItemSetCollectionPieceLink
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -295,10 +338,10 @@
 -------------------------------------------------------------------------------
 -- @param self
 -- @param #table owner
--- @param #integer position
+-- @param #AnchorPosition position
 -- @param #number offsetX
 -- @param #number offsetY
--- @param #integer relativePoint
+-- @param #AnchorPosition relativePoint
 -- @function[parent = #TooltipControl] SetOwner
 
 -------------------------------------------------------------------------------
@@ -412,7 +455,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #integer skillType
+-- @param #SkillType skillType
 -- @param #number skillLineIndex
 -- @function[parent = #TooltipControl] SetSkillLine
 
@@ -424,6 +467,11 @@
 -- @param #number skillLineAbilityIndex
 -- @param #integer morphChoice
 -- @function[parent = #TooltipControl] SetSkillLineAbilityId
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #integer skillLineId
+-- @function[parent = #TooltipControl] SetSkillLineById
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -489,7 +537,8 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #integer equipSlot
+-- @param #EquipSlot equipSlot
+-- @param #Bag bagId
 -- @function[parent = #TooltipControl] SetWornItem
 
 -------------------------------------------------------------------------------

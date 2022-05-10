@@ -3,6 +3,14 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #number left
+-- @param #number right
+-- @param #number top
+-- @param #number bottom
+-- @function[parent = #AnimationObjectTextureSlide] SetBaseTextureCoords
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @param #number slideDistanceU
 -- @param #number slideDistanceV
 -- @function[parent = #AnimationObjectTextureSlide] SetSlideDistances

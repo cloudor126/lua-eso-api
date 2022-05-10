@@ -107,8 +107,8 @@
 -- @param #string filename
 -- @param #string disabledFilename
 -- @param #string highlightedFilename
--- @param #number thumbWidth
--- @param #number thumbHeight
+-- @param #layout_measurement thumbWidth
+-- @param #layout_measurement thumbHeight
 -- @param #number texTop
 -- @param #number texLeft
 -- @param #number texBottom
@@ -117,7 +117,21 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number height
+-- @param #string filename
+-- @param #string disabledFilename
+-- @param #string highlightedFilename
+-- @param #layout_measurement thumbWidth
+-- @param #layout_measurement thumbHeight
+-- @param #number texTop
+-- @param #number texLeft
+-- @param #number texBottom
+-- @param #number texRight
+-- @param #boolean flush
+-- @function[parent = #SliderControl] SetThumbTextureAndFlush
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #layout_measurement height
 -- @function[parent = #SliderControl] SetThumbTextureHeight
 
 -------------------------------------------------------------------------------

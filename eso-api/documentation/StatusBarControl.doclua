@@ -3,6 +3,12 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #number value
+-- @return #number mainBarSize
+-- @function[parent = #StatusBarControl] CalculateSizeWithoutLeadingEdgeForValue
+
+-------------------------------------------------------------------------------
+-- @param self
 -- @function[parent = #StatusBarControl] ClearFadeOutLossAdjustedTopValue
 
 -------------------------------------------------------------------------------
@@ -29,6 +35,11 @@
 -- @param self
 -- @return #number value
 -- @function[parent = #StatusBarControl] GetValue
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @return #boolean pixelRoundingEnabled
+-- @function[parent = #StatusBarControl] IsPixelRoundingEnabled
 
 -------------------------------------------------------------------------------
 -- @param self
@@ -117,6 +128,11 @@
 -- @param self
 -- @param #integer orientation
 -- @function[parent = #StatusBarControl] SetOrientation
+
+-------------------------------------------------------------------------------
+-- @param self
+-- @param #boolean pixelRoundingEnabled
+-- @function[parent = #StatusBarControl] SetPixelRoundingEnabled
 
 -------------------------------------------------------------------------------
 -- @param self

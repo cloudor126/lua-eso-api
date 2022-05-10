@@ -3,12 +3,6 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number gradientIndex
--- @return #number,#number,#number normalX,normalY,gradientLength
--- @function[parent = #ScrollControl] GetFadeGradient
-
--------------------------------------------------------------------------------
--- @param self
 -- @return #number,#number horizontal,vertical
 -- @function[parent = #ScrollControl] GetScrollExtents
 
@@ -24,15 +18,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number gradientIndex
--- @param #number normalX
--- @param #number normalY
--- @param #number gradientLength
--- @function[parent = #ScrollControl] SetFadeGradient
-
--------------------------------------------------------------------------------
--- @param self
--- @param #number offset
+-- @param #layout_measurement offset
 -- @function[parent = #ScrollControl] SetHorizontalScroll
 
 -------------------------------------------------------------------------------
@@ -42,7 +28,7 @@
 
 -------------------------------------------------------------------------------
 -- @param self
--- @param #number offset
+-- @param #layout_measurement offset
 -- @function[parent = #ScrollControl] SetVerticalScroll
 
 -------------------------------------------------------------------------------

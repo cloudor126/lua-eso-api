@@ -192,10 +192,12 @@
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #boolean ignoreCallbacks
 -- @function[parent = #AnimationTimeline] PlayInstantlyToEnd
 
 -------------------------------------------------------------------------------
 -- @param self
+-- @param #boolean ignoreCallbacks
 -- @function[parent = #AnimationTimeline] PlayInstantlyToStart
 
 -------------------------------------------------------------------------------
